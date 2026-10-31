@@ -44,7 +44,7 @@ export interface SettingsPresentationProps {
   onReplayTours: () => void
   cheatSheetKeys: readonly string[]
   onOpenShortcuts: () => void
-  /** Whether this build records sessions with Clarity, so there is something to turn off. */
+  /** Whether this build can record sessions with Clarity, so there is something to choose. */
   clarityConfigured: boolean
   message: string | null
 }
@@ -79,11 +79,7 @@ export function SettingsPresentation(props: SettingsPresentationProps) {
         <ManHead
           kind="foot"
           left="Changes apply at once."
-          center={
-            props.clarityConfigured
-              ? 'Your progress stays in your browser. No accounts. We record how the game is played.'
-              : 'Your progress stays in your browser. No accounts.'
-          }
+          center="Your progress stays in your browser. No accounts."
           right={APP_VERSION_LABEL}
         />
       }
@@ -127,7 +123,7 @@ export function SettingsPresentation(props: SettingsPresentationProps) {
           {props.section === 'privacy' && (
             <PrivacySection
               clarityConfigured={props.clarityConfigured}
-              shareRecordings={values.shareRecordings}
+              consent={values.clarityConsent}
               onChange={onChange}
             />
           )}

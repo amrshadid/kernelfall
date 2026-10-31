@@ -1,11 +1,18 @@
-import { type ClarityWindow, loadClarity } from '@features/analytics/utils/clarity'
+import { type ClarityWindow, startClarity, stopClarity } from '@features/analytics/utils/clarity'
+import type { ClarityConsent } from '@shared/types'
 import { useEffect } from 'react'
 
-/** An opt-out takes effect on the next page load: a tag already running is left alone. */
-export function useClarity(clarityId: string | null, shareRecordings: boolean): void {
+/** Loads Clarity only once the player allows it; any other answer stops a tag this page already has. */
+export function useClarity(clarityId: string | null, consent: ClarityConsent): void {
   useEffect(() => {
-    if (clarityId !== null && shareRecordings) {
-      loadClarity(clarityId, window as Window & ClarityWindow, document)
+    if (clarityId === null) {
+      return
     }
-  }, [clarityId, shareRecordings])
+    const win = window as Window & ClarityWindow
+    if (consent === 'granted') {
+      startClarity(clarityId, win, document)
+    } else {
+      stopClarity(win, document)
+    }
+  }, [clarityId, consent])
 }

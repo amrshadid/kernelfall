@@ -128,7 +128,7 @@ kernel name when there is one (`copy_to_user`, `sys_enter`).
 ```
 apps/web/src/
   main.tsx, App.tsx   configure every package, then render
-  app/                providers (setupXListeners), routing, store, theme
+  app/                config (configureApp), providers (setupXListeners), routing, store, theme
   pages/<area>/       XPage.tsx, lazy-loaded from index.ts
   features/<f>/
     components/<group>/   LevelScreenPresentation.tsx, LevelTopBar.tsx, index.ts

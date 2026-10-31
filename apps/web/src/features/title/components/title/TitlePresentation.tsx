@@ -27,8 +27,6 @@ export interface TitlePresentationProps {
   newGame: NewGameDialog
   saveText: string
   onShortcuts: () => void
-  /** Whether this build records sessions with Clarity; the footer says so. */
-  recorded: boolean
   privacyHref: string
 }
 
@@ -43,7 +41,6 @@ export function TitlePresentation({
   newGame,
   saveText,
   onShortcuts,
-  recorded,
   privacyHref,
 }: TitlePresentationProps) {
   return (
@@ -57,8 +54,7 @@ export function TitlePresentation({
           left={saveText}
           center={
             <>
-              Your progress stays in your browser. No accounts.
-              {recorded && ' We record how the game is played.'}{' '}
+              Your progress stays in your browser. No accounts.{' '}
               <a className="title__privacy" href={privacyHref}>
                 Privacy
               </a>

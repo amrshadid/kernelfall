@@ -7,6 +7,22 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ## [Unreleased]
 
+### Added
+
+- `pnpm vm:facts` records what the Machine prints for the commands levels quote (uname,
+  lspci, /proc, ps, BusyBox errors) into `packages/levels/src/test/machine-facts.json`.
+- **Usage recordings with Microsoft Clarity** on the public site, only with the player's
+  consent: a notice asks once ("Allow" or "No thanks"), and nothing loads until they
+  allow it. Once allowed, Clarity records what is typed in the terminal and the editor
+  too, and sets its analytics cookies. Settings → Privacy explains what is recorded and
+  changes the answer; "Don't allow" stops a running recording. Builds without
+  `VITE_CLARITY_ID` never ask or load it.
+
+### Changed
+
+- The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p
+  root, the IDE disk, virtio-net, and bash as init's shell.
+
 ## [0.1.0-alpha.1] - 2026-10-31
 
 The first public pre-release: the engine, and the levels built so far, playable at

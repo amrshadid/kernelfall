@@ -42,6 +42,9 @@ export interface Settings {
   /** By `<level>:<view>:<kind>:<stage>`: an answered Predict isn't asked again. */
   readonly xrayGuesses: Readonly<Record<string, string>>
   readonly panelSizes: PanelSizes
-  /** Off: Microsoft Clarity isn't loaded from the next page load on. */
-  readonly shareRecordings: boolean
+  /** Microsoft Clarity loads only when `granted`; `unset` shows the consent notice. */
+  readonly clarityConsent: ClarityConsent
 }
+
+/** The player's answer to the recording notice; `unset` until they choose. */
+export type ClarityConsent = 'unset' | 'granted' | 'denied'

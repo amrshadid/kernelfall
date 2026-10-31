@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '@kernelfall/core/types'
 import type {
+  ClarityConsent,
   MotionSetting,
   PanelId,
   Settings,
@@ -12,6 +13,7 @@ import type {
 import {
   addKey,
   DEFAULT_SETTINGS,
+  migrateSettings,
   readGuesses,
   readLenses,
   readPanelSizes,
@@ -42,8 +44,8 @@ interface AppState extends Settings {
   setXrayGuess: (key: string, option: string) => void
   /** Null puts the panel back to the screen's default size. */
   setPanelSize: (panel: PanelId, size: number | null) => void
-  setShareRecordings: (shareRecordings: boolean) => void
-  /** Also removes the stored copy. */
+  setClarityConsent: (clarityConsent: ClarityConsent) => void
+  /** Also removes the stored copy; consent goes back to `unset`, so the notice asks again. */
   resetSettings: () => void
 
   // Not persisted from here on.
@@ -93,7 +95,7 @@ export const useAppStore = create<AppState>()(
             false,
             'setPanelSize'
           ),
-        setShareRecordings: (shareRecordings) => set({ shareRecordings }, false, 'setShareRecordings'),
+        setClarityConsent: (clarityConsent) => set({ clarityConsent }, false, 'setClarityConsent'),
         resetSettings: () => {
           set(DEFAULT_SETTINGS, false, 'resetSettings')
           useAppStore.persist.clearStorage()
@@ -132,7 +134,7 @@ export const useAppStore = create<AppState>()(
         storage: settingsStorage(pageTextStorage),
         partialize: settingsOf,
         // Every stored version is read field by field, so an old or hand-edited value never breaks start-up.
-        migrate: (stored) => readSettings(stored),
+        migrate: migrateSettings,
         merge: (stored, current) => ({ ...current, ...readSettings(stored) }),
       }
     ),
@@ -162,7 +164,7 @@ export const useSettings = () => {
       setMotion: state.setMotion,
       setUiScale: state.setUiScale,
       setShowAllPanels: state.setShowAllPanels,
-      setShareRecordings: state.setShareRecordings,
+      setClarityConsent: state.setClarityConsent,
       resetSettings: state.resetSettings,
     }))
   )
@@ -216,7 +218,13 @@ export const useTourState = () =>
     }))
   )
 
-export const useShareRecordings = () => useAppStore((state) => state.shareRecordings)
+export const useClarityConsent = () =>
+  useAppStore(
+    useShallow((state) => ({
+      consent: state.clarityConsent,
+      setConsent: state.setClarityConsent,
+    }))
+  )
 
 export const useCheatSheet = () =>
   useAppStore(

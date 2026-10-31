@@ -6,7 +6,11 @@ How the code fits together. The code rules (layout, imports, file names) are in
 ## Constraints
 
 - **Client-side only.** A static site; the Linux machine runs in the player's browser.
-  No backend.
+  No backend; one third-party service: Microsoft Clarity session recordings, loaded
+  only when the build sets `VITE_CLARITY_ID` and the player allows it in the consent
+  notice (or later in Settings → Privacy). Once allowed, Clarity may set its analytics
+  cookies (ad storage stays denied); nothing is masked, and Settings → Privacy says what
+  is recorded.
 - **Real Linux.** The Machine is a real Linux 6.18 kernel with real programs. What
   players see is what that kernel does and prints.
 - **Same state, same start.** Every level starts from the same saved boot and the same
@@ -74,8 +78,10 @@ The game is an engine; the levels are data.
 - **The VM.** v86 0.5.471 emulates a 32-bit PC with one CPU and 256 MiB of memory.
   The guest is Alpine 3.24 (i386) with kernel 6.18 (`linux-virt`), bash 5.3, BusyBox,
   gcc 15, tcc, musl, man pages and strace. The root filesystem is served over
-  virtio-9p. An 8 MiB ext4 data disk is the first IDE disk (`/dev/sda1`, not mounted
-  at boot). eth0 is a virtio network card with no backend.
+  virtio-9p. A 16 MiB data disk is the first IDE disk: GRUB 2.14 in its MBR, and an
+  ext4 `/dev/sda1` holding `/boot` (not mounted at boot). On a restart SeaBIOS boots
+  GRUB from it, which loads the kernel and initramfs; the root stays on 9p. eth0 is a
+  virtio network card with no backend.
 - **The worker.** v86 runs in a Web Worker, reached through Comlink (`VmSession`). The
   page never touches the emulator; it uses `machine`'s hooks.
 - **The player.** busybox init starts bash on the serial console as `you` (uid 1000,
@@ -124,12 +130,18 @@ program runs on the real kernel, traced like any other command.
 
 Everything stays in the player's browser.
 
-| Data                         | Where                                                       |
-| ---------------------------- | ----------------------------------------------------------- |
-| Settings                     | localStorage `kernelfall:v1:settings`                       |
-| Progress, Taint, hints, code | localStorage `kernelfall:v1:profile:<slot>`                 |
-| The booted Machine           | IndexedDB `kernelfall-vm`, store `boots`, per image version |
-| The image's files            | Cache Storage `kernelfall-vm-files-v1`                      |
+| Data                         | Where                                                         |
+| ---------------------------- | ------------------------------------------------------------- |
+| Settings, recording consent  | localStorage `kernelfall:v1:settings`                         |
+| Progress, Taint, hints, code | localStorage `kernelfall:v1:profile:<slot>`                   |
+| The booted Machine           | IndexedDB `kernelfall-vm`, store `boots`, per image version   |
+| The image's files            | Cache Storage `kernelfall-vm-files-v1`                        |
+| The app, for offline play    | Cache Storage `kernelfall-app-<build>`, by the service worker |
+| The image's last manifest    | Cache Storage `kernelfall-offline-v1`, used only offline      |
+
+- The service worker (`apps/web/src/sw.ts`, production builds only) precaches the built
+  app and serves it when the network is gone; the manifest stays network-first. A new
+  build takes over on the next load, never mid-level.
 
 - Saves go through the `StorageAdapter` the app passes to `configureGame()`; tests use
   an in-memory one.
@@ -171,6 +183,9 @@ without booting a VM.
 ## Decisions
 
 - Client-side only: free to host as a static site.
+- Microsoft Clarity for session recordings, only after the player allows it: analytics
+  cookies then (never ad storage), unmasked; "No thanks" or a later change in Settings
+  stops it and it isn't loaded again.
 - The Machine is real Linux in v86, in a Web Worker reached through Comlink.
 - One CPU (v86 emulates one); levels teach time slicing on one CPU.
 - Linux 6.18 LTS for the Machine, the Codex and the take-home kits.

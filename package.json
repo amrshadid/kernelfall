@@ -1,0 +1,34 @@
+{
+  "name": "kernelfall",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26"
+  },
+  "packageManager": "pnpm@10.29.2",
+  "scripts": {
+    "dev": "pnpm --filter @kernelfall/web dev",
+    "vm:image": "node packages/machine/scripts/vm-image/build.ts",
+    "vm:syscalls": "node packages/machine/scripts/vm-image/syscall-table.ts",
+    "vm:record": "pnpm --filter @kernelfall/levels vm:record",
+    "vm:mirror": "node packages/machine/scripts/vm-image/build.ts --mirror-out node_modules/.cache/kernelfall-vm-mirror",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "type-check": "pnpm -r --if-present type-check",
+    "check": "biome check . && pnpm check:c",
+    "check:c": "git ls-files '*.c' '*.h' | xargs clang-format --dry-run --Werror",
+    "format": "biome check --write . && git ls-files '*.c' '*.h' | xargs clang-format -i",
+    "verify": "pnpm check && pnpm type-check && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.4",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.6",
+    "@wasm-fmt/clang-format": "23.1.1",
+    "jsdom": "^30.1.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

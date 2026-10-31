@@ -1,0 +1,60 @@
+# The Linux kernel coding style (Documentation/process/coding-style.rst), as the
+# kernel tree's own .clang-format sets it: tabs 8 wide, 80 columns, K&R braces with
+# function braces on their own line. Used for all C here, userspace included, so
+# players read one style from the Prologue to the driver.
+BasedOnStyle: LLVM
+UseTab: Always
+IndentWidth: 8
+TabWidth: 8
+ContinuationIndentWidth: 8
+ColumnLimit: 80
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlignAfterOpenBracket: Align
+# clang-format can't tab-align #define tables to the next tab stop the way many
+# kernel files do, so macros get one space, which the kernel tree also uses.
+AlignConsecutiveMacros: None
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: false
+AlwaysBreakBeforeMultilineStrings: false
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: false
+BreakStringLiterals: false
+IndentCaseLabels: false
+IndentGotoLabels: false
+InsertBraces: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+PointerAlignment: Right
+ReflowComments: Never
+SortIncludes:
+  Enabled: false
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+SpacesInContainerLiterals: false
+# Kernel iterator macros format like `for` loops (the kernel's list is longer;
+# add a macro here when a level uses it).
+ForEachMacros:
+  - list_for_each
+  - list_for_each_entry
+  - list_for_each_entry_safe
+  - hlist_for_each_entry

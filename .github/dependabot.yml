@@ -19,6 +19,10 @@ updates:
     commit-message:
       prefix: build
       include: scope
+    # The emulator is upgraded by hand: saved boots and the trace setup depend on its exact
+    # version, so a new one means a rebuilt image and re-recorded golden runs.
+    ignore:
+      - dependency-name: v86
     groups:
       development:
         dependency-type: development

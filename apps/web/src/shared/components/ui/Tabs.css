@@ -1,0 +1,42 @@
+.kf-tabs {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.kf-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  border: 0;
+  border-right: var(--rule);
+  background: var(--soft);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.kf-tabs--file .kf-tab {
+  font-family: var(--mono);
+  font-variant-ligatures: none;
+}
+
+.kf-tabs--view .kf-tab {
+  font-weight: 500;
+}
+
+.kf-tab[aria-selected="true"] {
+  background: var(--sheet);
+  font-weight: 600;
+  box-shadow: inset 0 -4px 0 var(--red);
+}
+
+.kf-tab:focus-visible {
+  outline-offset: -3px;
+}
+
+.kf-tab__mark {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--ink);
+}

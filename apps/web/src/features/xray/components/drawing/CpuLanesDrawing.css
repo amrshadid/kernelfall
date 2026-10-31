@@ -1,0 +1,83 @@
+/* CPU lanes: one ruled band per CPU, its slices left to right, its run queue underneath. */
+.xr-cpus {
+  display: grid;
+  border: var(--rule);
+  background: var(--sheet);
+}
+
+.xr-cpus__lane {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.375rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: var(--rule);
+}
+
+.xr-cpus__lane:last-child {
+  border-bottom: 0;
+}
+
+.xr-cpus__name {
+  grid-row: span 2;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.xr-cpus__slices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  list-style: none;
+}
+
+.xr-cpus__slice {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid var(--red);
+  background: var(--red-wash);
+  font-size: 0.75rem;
+}
+
+.xr-cpus__slice code {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+}
+
+.xr-cpus__idle {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.xr-cpus__queue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.75rem;
+}
+
+.xr-cpus__queue ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.xr-cpus__queue-name {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xr-cpus__state {
+  font-family: var(--mono);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.xr-cpus__state--T,
+.xr-cpus__state--Z {
+  color: var(--red);
+}

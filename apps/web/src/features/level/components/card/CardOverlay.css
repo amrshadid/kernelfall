@@ -1,0 +1,56 @@
+.level-card {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--sheet);
+  overflow: hidden;
+}
+
+.level-card__head {
+  padding: 1.25rem 1.75rem 1rem;
+  border-bottom: var(--rule);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.level-card__head h2 {
+  font-size: 2rem;
+  font-variation-settings: "wdth" 125;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.level-card__head p {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.level-card__actions {
+  display: flex;
+  gap: 0.625rem;
+}
+
+.level-card__cards {
+  overflow: auto;
+  padding: 1.25rem 1.75rem;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+/* The card feeds out of a printer slot in discrete steps, like machinery. */
+.level-card__feed {
+  animation: level-card-feed var(--t-slow) steps(14, end) both;
+}
+
+@keyframes level-card-feed {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}

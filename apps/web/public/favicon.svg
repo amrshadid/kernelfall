@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img">
+  <title>Kernelfall</title>
+  <style>
+    .sheet { fill: #fafaf7; }
+    .ink { fill: #141414; }
+    .hatch { stroke: #141414; }
+    .edge { stroke: #141414; }
+    .section { stroke: #c8201a; }
+    @media (prefers-color-scheme: dark) {
+      .sheet { fill: #1c1e1d; }
+      .ink { fill: #eaeae4; }
+      .hatch { stroke: #eaeae4; }
+      .edge { stroke: #eaeae4; }
+      .section { stroke: #ff6a5c; }
+    }
+  </style>
+  <defs>
+    <path id="k" d="M7 6H12V14.2L19.5 6H25.5L16.6 15.6L26 26H20L12 17.6V26H7Z" />
+    <pattern id="hatching" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line class="hatch" x1="0" y1="0" x2="0" y2="3" stroke-width="1" />
+    </pattern>
+    <clipPath id="above"><rect width="32" height="16" /></clipPath>
+    <clipPath id="below"><rect y="16" width="32" height="16" /></clipPath>
+  </defs>
+  <rect class="sheet" width="32" height="32" rx="0" />
+  <use href="#k" class="ink" clip-path="url(#above)" />
+  <use href="#k" fill="url(#hatching)" clip-path="url(#below)" />
+  <use href="#k" class="edge" fill="none" stroke-width="1" clip-path="url(#below)" />
+  <line class="section" x1="2" y1="16" x2="30" y2="16" stroke-width="1.6" stroke-dasharray="5 1.5 1.5 1.5" />
+</svg>

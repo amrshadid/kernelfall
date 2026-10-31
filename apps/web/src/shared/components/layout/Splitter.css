@@ -1,0 +1,53 @@
+/* The divider is the 2px rule between two panels; its hit area reaches a few pixels to each side. */
+.kf-splitter {
+  position: relative;
+  z-index: 2;
+  background: var(--ink);
+  touch-action: none;
+}
+
+.kf-splitter--vertical {
+  width: 2px;
+  cursor: col-resize;
+}
+
+.kf-splitter--horizontal {
+  height: 2px;
+  cursor: row-resize;
+}
+
+.kf-splitter::before {
+  content: "";
+  position: absolute;
+}
+
+.kf-splitter--vertical::before {
+  inset: 0 -0.3125rem;
+}
+
+.kf-splitter--horizontal::before {
+  inset: -0.3125rem 0;
+}
+
+.kf-splitter:hover,
+.kf-splitter:focus-visible,
+.kf-resizing .kf-splitter:active {
+  background: var(--red);
+  box-shadow: 0 0 0 1px var(--red);
+  outline: none;
+}
+
+/* While dragging, the cursor stays and no text gets selected, wherever the pointer goes. */
+.kf-resizing {
+  user-select: none;
+}
+
+.kf-resizing--vertical,
+.kf-resizing--vertical * {
+  cursor: col-resize;
+}
+
+.kf-resizing--horizontal,
+.kf-resizing--horizontal * {
+  cursor: row-resize;
+}

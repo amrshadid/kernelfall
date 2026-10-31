@@ -1,0 +1,67 @@
+.xr__predict {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0.875rem 0.875rem 0;
+  padding: 0.75rem 0.875rem 0.875rem;
+  border: 3px solid var(--red);
+}
+
+.xr__predict h3 {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.xr__predict-q {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variation-settings: "wdth" 112;
+  line-height: 1.25;
+}
+
+.xr__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.xr__options button {
+  min-width: 3.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border: var(--rule);
+  background: var(--sheet);
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.xr__options button.xr__option--long {
+  font-family: var(--face);
+  font-size: 0.9375rem;
+}
+
+.xr__options button:hover {
+  background: var(--soft);
+}
+
+.xr__options button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.xr__predict-hint {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.xr__predict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.xr__predict code {
+  font-size: 0.875em;
+  font-weight: 500;
+}

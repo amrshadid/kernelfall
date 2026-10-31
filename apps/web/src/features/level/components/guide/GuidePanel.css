@@ -1,0 +1,193 @@
+.level-guide {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.level-guide:focus {
+  outline: none;
+}
+
+.level-guide__body {
+  flex: 1;
+  padding: 0.875rem 1.125rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: auto;
+}
+
+.level-guide__review {
+  padding: 0.375rem 0.625rem;
+  background: var(--red-wash);
+  border-left: 4px solid var(--red);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.level-guide__code {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--soft);
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+}
+
+.level-guide__hints ol {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.level-guide__hints li {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  padding-left: 0.625rem;
+  border-left: 3px solid var(--blue);
+}
+
+.level-guide__hint-tier {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.level-guide__note {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+/* The checker's word on the last run: open items hang off a red rule, like a drawing's revision marks. */
+.level-guide__check ul {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.level-guide__check li {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  padding-left: 0.625rem;
+  border-left: 3px solid var(--red);
+}
+
+.level-guide__check p {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.level-guide__check-taint {
+  margin-top: 0.5rem;
+}
+
+/* After `.level-guide__check li`, which it overrides by order. */
+.level-guide__check-taint li {
+  font-family: var(--mono, monospace);
+  font-size: 0.75rem;
+  border-left-style: dashed;
+}
+
+/* After `.level-guide__check p`: init speaks here, in ink, not as a muted aside. */
+.level-guide__check-held {
+  margin-top: 0.75rem;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+/* The way on stays in view under the scrolling transcript. */
+.level-guide__actions {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1.125rem;
+  border-top: var(--rule);
+  background: var(--sheet);
+}
+
+.level-guide__see-also p {
+  font-size: 0.875rem;
+}
+
+.level-guide__see-also code {
+  font-size: 0.875rem;
+}
+
+.level-guide__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.level-guide__placement {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  border: var(--rule);
+  border-left: 3px solid var(--red);
+  background: var(--sheet);
+  font-size: 0.875rem;
+}
+
+.level-guide__placement a {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.level-guide__commands ul {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.level-guide__commands li {
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) 1fr;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+
+.level-guide__command {
+  justify-self: start;
+  padding: 0.125rem 0.5rem;
+  border: var(--rule);
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-variant-ligatures: none;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background-color var(--t-instant) var(--ease);
+}
+
+.level-guide__command:hover,
+.level-guide__command:focus-visible {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.level-guide__command--name {
+  cursor: default;
+}
+
+.level-guide__command--name:hover {
+  background: var(--sheet);
+  color: var(--ink);
+}
+
+@media (max-width: 72rem) {
+  .level-guide__body,
+  .level-guide__actions {
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+}
+
+@media (max-height: 52.5rem) {
+  .level-guide__body {
+    gap: 0.625rem;
+    padding-top: 0.625rem;
+  }
+}

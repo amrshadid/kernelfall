@@ -1,0 +1,81 @@
+.kf-node__solid {
+  fill: var(--ink);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.kf-node__open {
+  fill: var(--sheet);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.kf-node__fill {
+  fill: var(--ink);
+}
+
+.kf-node__inner {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.kf-node__clean {
+  fill: var(--green);
+}
+
+.kf-node__here {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.kf-node__here--pulse {
+  animation: kf-node-pulse 2.2s var(--ease) 3;
+}
+
+@keyframes kf-node-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.6;
+  }
+}
+
+.kf-node__locked {
+  fill: var(--sheet);
+  stroke: var(--ink-2);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.kf-node__planned {
+  fill: var(--sheet);
+  stroke: var(--ink-2);
+  stroke-width: 1.25;
+  stroke-dasharray: 2 2.5;
+}
+
+.kf-node__planned-stroke {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.25;
+}
+
+.kf-node__padlock {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.8;
+}
+
+.kf-node-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+}

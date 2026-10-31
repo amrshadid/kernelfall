@@ -1,0 +1,201 @@
+.level-skip {
+  position: absolute;
+  left: 1.25rem;
+  top: 0.25rem;
+  z-index: 10;
+  padding: 0.25rem 0.75rem;
+  background: var(--ink);
+  color: var(--sheet);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+
+.level-skip:focus {
+  transform: none;
+}
+
+.level-work {
+  /* Every panel's header is this tall, so their rules run as one line across the screen. */
+  --panel-head: 2.75rem;
+  /* Defaults per screen width; a size the player dragged to (--guide-w, --xray-w) wins over them. */
+  --guide-default: 21.25rem;
+  --xray-default: 25.625rem;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.level-work > * {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* The 2px tracks are the dividers: the only rules between panels. */
+.level-work--with-xray {
+  grid-template-columns:
+    var(--guide-w, var(--guide-default)) 2px minmax(0, 1fr) 2px
+    var(--xray-w, var(--xray-default));
+}
+
+.level-work--no-xray {
+  grid-template-columns: var(--guide-w, var(--guide-default)) 2px minmax(0, 1fr);
+}
+
+.level-workspace {
+  position: relative;
+  display: grid;
+  /* Never past the cell: an auto track keeps xterm's opening width and paints it over the X-ray dock. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, var(--editor-share, 60%)) 2px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.level-workspace:focus {
+  outline: none;
+}
+
+.level-workspace--terminal-only {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.level-workspace__editor {
+  min-height: 0;
+  display: grid;
+}
+
+.level-terminal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--panel-head) minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--soft);
+  min-height: 0;
+}
+
+.level-terminal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.75rem 0 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--sheet);
+}
+
+.level-terminal__head span {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.level-terminal__slot {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+}
+
+/* xterm paints with its own colours; the slot keeps the terminal paper around them. */
+.level-terminal__slot > div {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: var(--soft);
+  /* The terminal pads its own text; this keeps it on the header's 1rem margin. */
+  padding: 0;
+}
+
+.level-terminal__slot .xterm,
+.level-terminal__slot .xterm .xterm-scrollable-element,
+.level-terminal__slot .xterm .xterm-viewport,
+.level-terminal__slot .xterm .xterm-screen {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides colours set inline by xterm.js */
+  background-color: var(--soft) !important;
+}
+
+.level-terminal__slot .xterm .scrollbar .slider {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides colours set inline by xterm.js */
+  background-color: color-mix(in srgb, var(--hatch) 45%, transparent) !important;
+}
+
+.level-terminal__slot .xterm .xterm-rows {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides colours set inline by xterm.js */
+  color: var(--ink) !important;
+}
+
+.level-terminal__slot .xterm .xterm-rows .xterm-cursor.xterm-cursor-outline {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides colours set inline by xterm.js */
+  outline-color: var(--ink) !important;
+}
+
+.level-terminal__slot .xterm .xterm-rows .xterm-cursor.xterm-cursor-block {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides colours set inline by xterm.js */
+  background-color: var(--ink) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: overrides colours set inline by xterm.js */
+  color: var(--soft) !important;
+}
+
+.level-xray {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.level-xray:focus {
+  outline: none;
+}
+
+.level-xray__slot {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.level-xray__slot > * {
+  flex: 1;
+}
+
+.level-work--see .level-xray {
+  box-shadow: inset 0 0 0 3px var(--red);
+}
+
+.level-taint-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.level-taint-list li {
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--taint);
+}
+
+.level-taint-list b {
+  color: var(--taint);
+}
+
+.level-status__shortcuts {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.level-status__shortcuts:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 85rem) {
+  .level-work {
+    --guide-default: 18.75rem;
+    --xray-default: 22.5rem;
+  }
+}
+
+/* Small laptops: the side columns give way so the editor keeps room for Run. */
+@media (max-width: 72rem) {
+  .level-work {
+    --guide-default: 16.25rem;
+    --xray-default: 18.75rem;
+  }
+}

@@ -1,0 +1,49 @@
+.kf-taint {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 2.25rem;
+  padding: 0 0.625rem;
+  border: var(--rule);
+  background: var(--sheet);
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.kf-taint:hover {
+  background: var(--red-wash);
+}
+
+.kf-taint__segs {
+  display: flex;
+  gap: 3px;
+}
+
+.kf-taint__segs i {
+  width: 0.5625rem;
+  height: 1rem;
+  border: 2px solid var(--taint);
+  transition: background-color var(--t-base) var(--ease);
+}
+
+.kf-taint__segs i.kf-taint__seg--on {
+  background: var(--taint);
+}
+
+.kf-taint small {
+  font-size: 0.8125rem;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.kf-taint small.kf-taint__label--tainted {
+  color: var(--taint);
+}
+
+/* The number and its word carry the state; the segments are the first thing to go when space is short. */
+@media (max-width: 75rem) {
+  .kf-taint__segs {
+    display: none;
+  }
+}

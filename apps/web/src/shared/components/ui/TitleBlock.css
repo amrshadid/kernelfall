@@ -1,0 +1,41 @@
+.kf-title-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: var(--rule);
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+.kf-title-block > div {
+  padding: 0.3125rem 0.625rem;
+  border-bottom: var(--rule-thin);
+  min-width: 0;
+}
+
+.kf-title-block > div:nth-child(odd) {
+  border-right: var(--rule-thin);
+}
+
+.kf-title-block > div:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.kf-title-block dt {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.kf-title-block dd {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kf-title-block--good dd {
+  color: var(--green);
+}
+
+.kf-title-block--taint dd {
+  color: var(--taint);
+}

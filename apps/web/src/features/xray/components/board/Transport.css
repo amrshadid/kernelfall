@@ -1,0 +1,102 @@
+.xr__transport {
+  /* Stays in reach at the bottom of the dock while the drawing and narration scroll. */
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: var(--sheet);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0.5rem 0.875rem;
+  border: 0;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
+  min-width: 0;
+}
+
+.xr__transport .kf-btn {
+  min-height: 2.25rem;
+}
+
+.xr__play {
+  min-width: 4.75rem;
+  justify-content: center;
+}
+
+.xr__step-mode {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.xr__ticks {
+  display: flex;
+  flex: 1 1 100%;
+  gap: 3px;
+  min-width: 0;
+  order: 10;
+}
+
+.xr__ticks button {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 0.25rem 1px 0.1875rem;
+  border: 0;
+  border-bottom: 6px solid var(--ink);
+  background: none;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variation-settings: "wdth" 75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.xr__ticks button.xr__tick--future {
+  border-bottom-color: var(--soft);
+  color: var(--ink-2);
+}
+
+.xr__ticks button[aria-current="step"] {
+  color: var(--red);
+  border-bottom-color: var(--soft);
+}
+
+.xr__ticks button[aria-current="step"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 6px;
+  background: var(--red);
+  transform-origin: left;
+}
+
+.xr--playing .xr__ticks button[aria-current="step"]::after {
+  animation: xr-progress var(--xr-stage) linear both;
+}
+
+@keyframes xr-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.xr__count {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.xr .xr__speed .kf-seg__options button {
+  padding: 0.25rem 0.375rem;
+  font-size: 0.75rem;
+}

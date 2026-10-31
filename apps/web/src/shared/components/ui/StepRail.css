@@ -1,0 +1,95 @@
+.kf-rail {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.kf-rail__step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.kf-rail__step + .kf-rail__step::before {
+  content: "";
+  width: 1.75rem;
+  height: 2px;
+  background: var(--ink);
+  margin: 0 0.625rem 0 0.125rem;
+}
+
+.kf-rail__step--current + .kf-rail__step::before,
+.kf-rail__step--future + .kf-rail__step::before {
+  background: none;
+  border-top: 2px dashed var(--ink-2);
+  height: 0;
+}
+
+.kf-rail__sq {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: var(--rule);
+  flex: none;
+}
+
+.kf-rail__step--done .kf-rail__sq {
+  background: var(--ink);
+}
+
+.kf-rail__step--current {
+  color: var(--red);
+  font-weight: 800;
+}
+
+.kf-rail__step--current .kf-rail__sq {
+  background: var(--red);
+  border-color: var(--red);
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.kf-rail__step--future {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.kf-rail__step button {
+  border: 0;
+  background: none;
+  padding: 0.25rem 0;
+  font-weight: inherit;
+  color: inherit;
+  text-underline-offset: 4px;
+}
+
+/* Done steps read as steps, not links; hover, keyboard focus and a look back mark them in red. */
+.kf-rail__step button:hover,
+.kf-rail__step button:focus-visible,
+.kf-rail__step--reviewing button {
+  outline: none;
+  text-decoration: underline 2px;
+  color: var(--red);
+}
+
+@media (max-width: 85rem) {
+  .kf-rail__step + .kf-rail__step::before {
+    width: 0.875rem;
+    margin: 0 0.5rem 0 0;
+  }
+}
+
+/* On narrow laptops the rail no longer fits beside Taint and Hint: future steps keep only their square (and their names for screen readers). */
+@media (max-width: 75rem) {
+  .kf-rail__step--future > span:not(.kf-rail__sq) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

@@ -1,0 +1,43 @@
+.kf-seg {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+}
+
+.kf-seg__legend {
+  padding: 0;
+  margin-bottom: 0.375rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.kf-seg__options {
+  display: inline-flex;
+  border: var(--rule);
+}
+
+.kf-seg__options button {
+  border: 0;
+  padding: 0.375rem 0.875rem;
+  background: var(--sheet);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.kf-seg__options button + button {
+  border-left: var(--rule);
+}
+
+.kf-seg__options button:hover {
+  background: var(--soft);
+}
+
+.kf-seg__options button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.kf-seg__options button:focus-visible {
+  outline-offset: -4px;
+}

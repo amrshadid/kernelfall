@@ -1,0 +1,109 @@
+.placement {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+  max-width: 72rem;
+  padding: 1.5rem 1.75rem;
+}
+
+.placement__kicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.placement__head h1 {
+  font-size: 1.875rem;
+  font-variation-settings: "wdth" 125;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.placement__offer,
+.placement__result,
+.placement__task {
+  display: grid;
+  gap: 0.875rem;
+  max-width: 60rem;
+}
+
+.placement__line {
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--red);
+  font-size: 1.125rem;
+}
+
+.placement__list {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.placement__level {
+  display: block;
+  font-weight: 700;
+}
+
+.placement__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.placement__tasks {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.placement__steps {
+  display: grid;
+  list-style: none;
+  border-top: var(--rule);
+}
+
+.placement__steps button {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  border-bottom: var(--rule-thin);
+  background: none;
+  text-align: left;
+}
+
+.placement__steps button:hover {
+  background: var(--soft);
+}
+
+.placement__steps button[aria-current="step"] {
+  background: var(--red-wash);
+  box-shadow: inset 4px 0 0 var(--red);
+}
+
+.placement__todo {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.placement__done {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.placement__task h2 {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.placement__workbench {
+  display: grid;
+  grid-template-rows: minmax(14rem, 1fr) minmax(12rem, 1fr);
+  min-height: 28rem;
+  border: var(--rule);
+}

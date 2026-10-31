@@ -1,0 +1,32 @@
+.map-fig__section {
+  stroke: var(--red);
+  stroke-width: 3;
+  stroke-dasharray: 22 5 4 5;
+}
+
+.map-fig__section-mark {
+  fill: var(--sheet);
+  stroke: var(--red);
+  stroke-width: 2.5;
+}
+
+.map-fig__section-arrow {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 2.5;
+}
+
+.map-fig text.map-fig__section-lbl {
+  fill: var(--red);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.map-fig__pier {
+  fill: var(--ink);
+}
+
+.map-fig__leaf {
+  stroke: var(--ink);
+  stroke-width: 4;
+}

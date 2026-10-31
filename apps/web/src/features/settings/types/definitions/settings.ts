@@ -1,4 +1,4 @@
-import type { MotionSetting, ThemeSetting } from '@shared/types'
+import type { ClarityConsent, MotionSetting, ThemeSetting } from '@shared/types'
 
 /** The rest are kept by the screens that use them. */
 export interface SettingsValues {
@@ -6,7 +6,7 @@ export interface SettingsValues {
   readonly motion: MotionSetting
   readonly uiScale: number
   readonly showAllPanels: boolean
-  readonly shareRecordings: boolean
+  readonly clarityConsent: ClarityConsent
 }
 
 export interface ImportPreview {

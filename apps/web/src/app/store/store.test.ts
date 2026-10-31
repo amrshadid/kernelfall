@@ -44,14 +44,24 @@ describe('useAppStore', () => {
     expect(useAppStore.getState()).toMatchObject({ xrayDepth: 'simple', xraySeen: [], xrayGuesses: {} })
   })
 
-  it('remembers a recordings opt-out in the stored settings, and shares again after a reset', () => {
-    expect(useAppStore.getState().shareRecordings).toBe(true)
-    useAppStore.getState().setShareRecordings(false)
+  it('remembers the recording answer in the stored settings, and asks again after a reset', () => {
+    expect(useAppStore.getState().clarityConsent).toBe('unset')
+    useAppStore.getState().setClarityConsent('granted')
     expect(useAppStore.persist.getOptions().partialize?.(useAppStore.getState())).toMatchObject({
-      shareRecordings: false,
+      clarityConsent: 'granted',
     })
     useAppStore.getState().resetSettings()
-    expect(useAppStore.getState().shareRecordings).toBe(true)
+    expect(useAppStore.getState().clarityConsent).toBe('unset')
+  })
+
+  it('asks every player with a save from before consent, whatever their old opt-out said', () => {
+    const migrate = useAppStore.persist.getOptions().migrate
+    expect(useAppStore.persist.getOptions().version).toBe(4)
+    expect(migrate?.({ theme: 'dark', shareRecordings: true }, 3)).toMatchObject({
+      theme: 'dark',
+      clarityConsent: 'unset',
+    })
+    expect(migrate?.({ shareRecordings: false }, 3)).toMatchObject({ clarityConsent: 'unset' })
   })
 
   it('leaves the seen list as it was when a key is already there', () => {

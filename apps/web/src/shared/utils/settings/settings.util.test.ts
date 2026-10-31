@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS, MAX_TOURS_SEEN, MAX_XRAY_KEYS } from './settings.constants'
-import { addKey, parseSettings, readKeys, readPanelSizes, readSettings, settingsOf } from './settings.util'
+import {
+  addKey,
+  migrateSettings,
+  parseSettings,
+  readKeys,
+  readPanelSizes,
+  readSettings,
+  settingsOf,
+} from './settings.util'
 
 describe('parseSettings', () => {
   it('gives the defaults for nothing stored or broken JSON', () => {
@@ -55,15 +63,31 @@ describe('readSettings', () => {
   })
 })
 
-describe('readSettings: usage recordings', () => {
-  it('shares by default, also for a save from before the setting, and keeps an opt-out', () => {
-    expect(readSettings({ shareRecordings: false }).shareRecordings).toBe(false)
-    expect(readSettings({ shareRecordings: 'no' }).shareRecordings).toBe(true)
-    expect(readSettings({ theme: 'dark' }).shareRecordings).toBe(true)
+describe('readSettings: recording consent', () => {
+  it('is unset by default and for anything unknown, and keeps a real answer', () => {
+    expect(DEFAULT_SETTINGS.clarityConsent).toBe('unset')
+    expect(readSettings({ clarityConsent: 'granted' }).clarityConsent).toBe('granted')
+    expect(readSettings({ clarityConsent: 'denied' }).clarityConsent).toBe('denied')
+    expect(readSettings({ clarityConsent: 'yes' }).clarityConsent).toBe('unset')
+    expect(readSettings({ theme: 'dark' }).clarityConsent).toBe('unset')
   })
 
   it('is persisted with the other settings', () => {
-    expect(settingsOf({ ...DEFAULT_SETTINGS, shareRecordings: false }).shareRecordings).toBe(false)
+    expect(settingsOf({ ...DEFAULT_SETTINGS, clarityConsent: 'denied' }).clarityConsent).toBe('denied')
+  })
+})
+
+describe('migrateSettings', () => {
+  it('asks again for every save before version 4, keeping the rest', () => {
+    const old = { theme: 'dark', shareRecordings: true, clarityConsent: 'granted' }
+    expect(migrateSettings(old, 3)).toMatchObject({ theme: 'dark', clarityConsent: 'unset' })
+    expect(migrateSettings({ shareRecordings: false }, 3).clarityConsent).toBe('unset')
+    expect(migrateSettings({ theme: 'dark' }, 0).clarityConsent).toBe('unset')
+    expect(migrateSettings({ clarityConsent: 'denied' }, 4).clarityConsent).toBe('denied')
+  })
+
+  it('drops the old opt-out field', () => {
+    expect(migrateSettings({ shareRecordings: false }, 3)).not.toHaveProperty('shareRecordings')
   })
 })
 

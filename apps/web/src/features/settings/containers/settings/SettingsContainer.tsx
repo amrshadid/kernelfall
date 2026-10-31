@@ -28,7 +28,7 @@ export interface SettingsContainerProps {
 
 export function SettingsContainer({ section }: SettingsContainerProps) {
   const chrome = useScreenChrome()
-  const { settings, setTheme, setMotion, setUiScale, setShowAllPanels, setShareRecordings, resetSettings } =
+  const { settings, setTheme, setMotion, setUiScale, setShowAllPanels, setClarityConsent, resetSettings } =
     useSettings()
   const { storageIssue } = useSaveStatus()
   const { reset } = useSaveActions()
@@ -45,7 +45,7 @@ export function SettingsContainer({ section }: SettingsContainerProps) {
     if (patch.motion !== undefined) setMotion(patch.motion)
     if (patch.uiScale !== undefined) setUiScale(patch.uiScale)
     if (patch.showAllPanels !== undefined) setShowAllPanels(patch.showAllPanels)
-    if (patch.shareRecordings !== undefined) setShareRecordings(patch.shareRecordings)
+    if (patch.clarityConsent !== undefined) setClarityConsent(patch.clarityConsent)
   }
 
   return (

@@ -1,5 +1,6 @@
 import type { PanelId, PanelSizes, Settings, XrayLensSetting } from '@shared/types'
 import {
+  CLARITY_CONSENTS,
   DEFAULT_SETTINGS,
   MAX_TOUR_ID_LENGTH,
   MAX_TOURS_SEEN,
@@ -97,8 +98,14 @@ export function readSettings(stored: unknown): Settings {
     xrayAutoplayed: readKeys(raw.xrayAutoplayed),
     xrayGuesses: readGuesses(raw.xrayGuesses),
     panelSizes: readPanelSizes(raw.panelSizes),
-    shareRecordings: readBoolean(raw.shareRecordings, DEFAULT_SETTINGS.shareRecordings),
+    clarityConsent: pick(raw.clarityConsent, CLARITY_CONSENTS, DEFAULT_SETTINGS.clarityConsent),
   }
+}
+
+/** Saves from before version 4 never answered the consent notice (an opt-out isn't consent), so they are asked. */
+export function migrateSettings(stored: unknown, version: number): Settings {
+  const settings = readSettings(stored)
+  return version < 4 ? { ...settings, clarityConsent: 'unset' } : settings
 }
 
 /** Anything unreadable gives the defaults. */
@@ -116,10 +123,10 @@ export function parseSettings(json: string | null): Settings {
 /** What is persisted: no actions or per-tab state. */
 export function settingsOf(state: Settings): Settings {
   const { theme, motion, uiScale, showAllPanels, xray, toursSeen } = state
-  const { xrayDepth, xrayLens, xrayPredict, xraySeen, xrayAutoplayed, xrayGuesses, panelSizes, shareRecordings } = state
+  const { xrayDepth, xrayLens, xrayPredict, xraySeen, xrayAutoplayed, xrayGuesses, panelSizes, clarityConsent } = state
   return {
     panelSizes,
-    shareRecordings,
+    clarityConsent,
     theme,
     motion,
     uiScale,

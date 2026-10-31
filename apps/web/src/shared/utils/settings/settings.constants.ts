@@ -1,7 +1,15 @@
-import type { MotionSetting, PanelId, Settings, ThemeSetting, XrayDepthSetting, XrayLensSetting } from '@shared/types'
+import type {
+  ClarityConsent,
+  MotionSetting,
+  PanelId,
+  Settings,
+  ThemeSetting,
+  XrayDepthSetting,
+  XrayLensSetting,
+} from '@shared/types'
 
-/** 0: the bare settings object; 2 added the X-ray fields, 3 the recordings opt-out (older saves read defaults). */
-export const SETTINGS_VERSION = 3
+/** 0: the bare settings object; 2 added the X-ray fields, 3 a recordings opt-out, 4 recording consent. */
+export const SETTINGS_VERSION = 4
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
@@ -17,7 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
   xrayAutoplayed: [],
   xrayGuesses: {},
   panelSizes: { guide: null, xray: null, editor: null },
-  shareRecordings: true,
+  clarityConsent: 'unset',
 }
 
 /** How far each divider may go: a panel never gets too small to read or crowds out the rest. */
@@ -44,4 +52,5 @@ export const UI_SCALES = [0.875, 1, 1.125, 1.25, 1.5] as const
 export const THEMES: readonly ThemeSetting[] = ['system', 'light', 'dark']
 export const MOTIONS: readonly MotionSetting[] = ['system', 'reduce']
 export const XRAY_DEPTHS: readonly XrayDepthSetting[] = ['simple', 'deep']
+export const CLARITY_CONSENTS: readonly ClarityConsent[] = ['unset', 'granted', 'denied']
 export const XRAY_LENSES: readonly XrayLensSetting[] = ['syscalls', 'processes', 'cpus', 'route', 'section', 'boot']

@@ -13,7 +13,7 @@ desktop browser; the first visit downloads the Linux machine, about 11 MB).
 >
 > — Linus Torvalds, on the linux-kernel list, 2000
 
-![Kernelfall: commands run on a real Linux kernel in the browser, then X-ray follows write() through the kernel](docs/media/kernelfall.gif)
+![Kernelfall: a command runs on a real Linux kernel in the browser, and X-ray follows its write() through the kernel](docs/media/kernelfall.gif)
 
 Kernelfall is a free, open-source game that teaches Linux kernel development in
 your browser, starting from zero. You start as a tiny process in a machine that
@@ -23,14 +23,19 @@ crashed, learn the shell, write your own C, and go down toward the kernel, while
 The Machine is real: a Linux 6.18 kernel (Alpine Linux, 32-bit x86) running in an
 emulated PC ([v86](https://github.com/copy/v86)) inside your browser. Your C is
 built by gcc inside it, and X-ray reads the kernel's own trace. There is nothing to
-install and no server.
+install and no server: your progress and code stay in your browser. The public site
+asks first, and only if you allow it records how you play with Microsoft Clarity,
+including what you type in the terminal and the editor; Settings → Privacy changes
+your answer.
 
 Kernelfall is in development. The Prologue, the Surface Survey and the first Act I
 levels are being built now ([roadmap](docs/ROADMAP.md)).
 
-| The title page                                                                          | The Kernel Map                                                                            | X-ray                                                                                         |
-| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| ![The title page, in the game's "Section 2" service-manual style](docs/media/title.png) | ![The Kernel Map: every level, from the surface down to the hardware](docs/media/map.png) | ![X-ray showing a write() syscall entering the kernel through int $0x80](docs/media/xray.png) |
+| The title page                                                                                 | The Kernel Map                                                                                      |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| ![The title page, in the game's "Section 2" service-manual style](docs/media/title.png)        | ![The Kernel Map: every level, from the surface down to the hardware](docs/media/map.png)           |
+| **X-ray**                                                                                      | **The Boot Path**                                                                                   |
+| ![X-ray: echo's syscalls grouped by process, write() entering the kernel](docs/media/xray.png) | ![Editing the boot entry in the Machine's real GRUB, beside X-ray's boot view](docs/media/grub.png) |
 
 ## What you'll learn
 

@@ -1,4 +1,3 @@
-import { appConfig } from '@app/config'
 import { useCheatSheet } from '@app/store'
 import { useSaveStatus } from '@features/chrome/hooks/save'
 import { useScreenChrome } from '@features/chrome/hooks/screen'
@@ -73,7 +72,6 @@ export function TitleContainer() {
       }}
       saveText={saveStatusText(saveState, lastSavedAt === null ? null : now - lastSavedAt)}
       onShortcuts={openCheatSheet}
-      recorded={appConfig().clarityId !== null}
       privacyHref={hrefOf({ name: 'settings', section: 'privacy' })}
     />
   )

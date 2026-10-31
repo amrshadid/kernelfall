@@ -76,10 +76,8 @@ export function createVmSession(wasmUrl?: string): VmSession {
   let resetTrace: () => void = () => {}
   let nextPrompt: () => Promise<void> = async () => {}
   let rebooting = false
-  // Still exactly the clean boot: a level's setup can skip restoring it.
   let pristine = false
-  // Keys typed while the clean boot is saved or a level is set up wait: the save would keep them, and
-  // the restore and the shell's restart would lose them.
+  // Held while the boot is saved or a level is set up: the save would keep them, a restart lose them.
   let heldInput: string[] = []
   let holds = 0
   const hold = () => {

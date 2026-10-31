@@ -18,7 +18,6 @@ const DEFAULT_LINES = setupScript({})
 export const isDefaultSetup = (lines: readonly string[]): boolean =>
   lines.length === DEFAULT_LINES.length && lines.every((line, index) => line === DEFAULT_LINES[index])
 
-/** A pristine Machine is already the clean boot, so restoring it again would only cost the player time. */
 export function planSetup({ pristine, lines, reboot }: SetupState): SetupPlan {
   return {
     restore: !pristine,

@@ -3,7 +3,6 @@ import { createVmSession } from '#services/vm/vm-session.service'
 import type { VmPhase, VmSession } from '#types/definitions/vm'
 import { setupScript } from '#utils/vm-setup/setup-script.util'
 
-// A stand-in for v86 that logs what the session does to the guest, in order, and answers like it.
 const fake = vi.hoisted(() => {
   const encoder = new TextEncoder()
   const decoder = new TextDecoder()

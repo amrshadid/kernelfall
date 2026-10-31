@@ -29,7 +29,7 @@ import {
 } from '#types/definitions/vm'
 import { TRACE_PROGRESS_MS, type TracedCommand } from '#types/definitions/vm-trace'
 import { BOOT_REPORT_SCRIPT, parseBootReport } from '#utils/boot/index'
-import { runAsScript, shellQuote } from '#utils/vm-setup/index'
+import { planSetup, runAsScript, shellQuote } from '#utils/vm-setup/index'
 import { mergeProgress } from '#utils/vm-trace/index'
 
 const PROMPT_TAIL = 64
@@ -76,9 +76,22 @@ export function createVmSession(wasmUrl?: string): VmSession {
   let resetTrace: () => void = () => {}
   let nextPrompt: () => Promise<void> = async () => {}
   let rebooting = false
-  // Keys typed while a level is set up wait for its new shell: the restore and the shell's restart
-  // would lose them.
-  let heldInput: string[] | null = null
+  let pristine = false
+  // Held while the boot is saved or a level is set up: the save would keep them, a restart lose them.
+  let heldInput: string[] = []
+  let holds = 0
+  const hold = () => {
+    holds++
+  }
+  const release = () => {
+    holds = Math.max(0, holds - 1)
+    if (holds === 0 && heldInput.length > 0) {
+      const keys = heldInput.join('')
+      heldInput = []
+      pristine = false
+      emulator?.serial0_send(keys)
+    }
+  }
   // A restore under a file write would wipe it and strand its chown: they take turns, after boot.
   let turn: Promise<unknown> = ready
   const exclusive = (work: () => Promise<void>): Promise<void> => {
@@ -139,6 +152,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
           // v86 creates its CPU only once the wasm has loaded.
           bootDiskOnReset(running, () => {
             rebooting = true
+            pristine = false
             control.drop()
             resetTrace()
             status('booting')
@@ -149,6 +163,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
           }
           // v86 applies the saved state just after emulator-ready: a key or a file sent sooner is lost.
           setTimeout(() => {
+            pristine = true
             status('ready')
             markReady()
             // A restored shell is already at its prompt; a newline makes it print one.
@@ -181,13 +196,22 @@ export function createVmSession(wasmUrl?: string): VmSession {
           }
           atPrompt = true
           status('ready')
-          markReady()
+          // Keys, files and setups wait for the save, so the clean boot holds none of them.
+          hold()
           // Saved at an idle prompt: a 9p load still in flight would be lost from the state.
           setTimeout(() => {
-            void running.save_state().then((state) => {
-              clean = state
-              return saveVmState(version, state)
-            })
+            void running
+              .save_state()
+              .then((state) => {
+                clean = state
+                return saveVmState(version, state)
+              })
+              .catch(() => false)
+              .finally(() => {
+                pristine = true
+                markReady()
+                release()
+              })
           }, VM_SAVE_DELAY_MS)
         })
         running.add_listener('serial2-output-byte', (byte) => control.push(byte))
@@ -242,11 +266,14 @@ export function createVmSession(wasmUrl?: string): VmSession {
     },
 
     input(text) {
-      if (heldInput) {
+      if (holds > 0) {
         heldInput.push(text)
         return
       }
-      emulator?.serial0_send(text)
+      if (emulator) {
+        pristine = false
+        emulator.serial0_send(text)
+      }
     },
 
     writeFiles(files) {
@@ -256,6 +283,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
         if (!running || names.length === 0) {
           return
         }
+        pristine = false
         for (const name of names) {
           await running.create_file(`${VM_HOME}/${name}`, encoder.encode(files[name] ?? ''))
         }
@@ -267,17 +295,23 @@ export function createVmSession(wasmUrl?: string): VmSession {
 
     setupLevel(lines, options: VmSetupOptions = {}) {
       // From the request on: keys typed while it waits its turn would reach the shell it replaces.
-      heldInput = heldInput ?? []
+      hold()
       return exclusive(async () => {
         const running = emulator
         if (!running) {
-          heldInput = null
+          release()
           return
         }
-        heldInput = heldInput ?? []
         try {
+          const plan = planSetup({ pristine, lines, reboot: options.reboot === true })
+          // As after a restore: nothing half-parsed carries into the level.
+          resetTrace()
+          if (!plan.apply) {
+            return
+          }
+          pristine = false
           status('restoring')
-          if (clean) {
+          if (plan.restore && clean) {
             control.drop()
             await running.restore_state(clean.slice(0))
             await settle()
@@ -298,11 +332,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
           await settle()
           status('ready')
         } finally {
-          const keys = heldInput.join('')
-          heldInput = null
-          if (keys) {
-            running.serial0_send(keys)
-          }
+          release()
         }
       })
     },
@@ -321,6 +351,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
     async runAs(user, commandLine) {
       let status = CONTROL_LOST
       await exclusive(async () => {
+        pristine = false
         status = (await control.capture(runAsScript(user, commandLine), VM_SETUP_TIMEOUT_MS)).status
       })
       return status
@@ -328,6 +359,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
 
     reboot() {
       return exclusive(async () => {
+        pristine = false
         await control.run(REBOOT)
       })
     },

@@ -42,7 +42,7 @@ export interface VmSession {
   input(text: string): void
   /** Writes files into the player's home, once bash is up, owned by the player; flat names only. */
   writeFiles(files: Readonly<Record<string, string>>): Promise<void>
-  /** Back to the clean boot, then a level's setup commands as root, then a new shell (or a reboot). */
+  /** Back to the clean boot (unless still on it), then a level's setup commands as root, then a new shell (or a reboot). */
   setupLevel(lines: readonly string[], options?: VmSetupOptions): Promise<void>
   /** What the guest reports about itself, once bash is up. */
   facts(): Promise<VmFacts>

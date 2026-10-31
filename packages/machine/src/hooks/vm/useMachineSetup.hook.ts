@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import { setupVmLevel } from '#services/vm/vm-connection.service'
 import { useTraceStore } from '#store/trace.store'
 import { useVmStore } from '#store/vm.store'
@@ -20,7 +20,8 @@ export function useMachineSetup(
 ): void {
   const ready = useVmStore((state) => state.status.phase === 'ready')
 
-  useEffect(() => {
+  // A layout effect: queued before the editor's starter files, which would make the clean boot used.
+  useLayoutEffect(() => {
     if (ready) {
       // Another level's runs don't belong in this one's X-ray.
       void setupVmLevel(key, setupScript(setup ?? {}, binSources), () => useTraceStore.getState().reset(), {

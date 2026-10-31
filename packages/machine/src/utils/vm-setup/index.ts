@@ -1,3 +1,4 @@
+export { isDefaultSetup, planSetup, type SetupPlan, type SetupState } from '#utils/vm-setup/setup-plan.util'
 export {
   binPath,
   binSourcePath,

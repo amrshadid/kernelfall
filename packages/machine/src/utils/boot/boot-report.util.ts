@@ -7,6 +7,7 @@ type Section = (typeof SECTIONS)[number]
 
 // More than the 128 KiB log buffer, so the whole boot comes back whatever BusyBox reads by default.
 const DMESG_BYTES = 1 << 20
+const NS_LAST_PID = '/proc/sys/kernel/ns_last_pid'
 
 const COMMANDS: Readonly<Record<Section, string>> = {
   dmesg: `dmesg -s ${DMESG_BYTES}`,
@@ -19,7 +20,13 @@ const COMMANDS: Readonly<Record<Section, string>> = {
 }
 
 /** One control line that prints every section the report needs, each after its `@kf:<name>` header. */
-export const BOOT_REPORT_SCRIPT = SECTIONS.map((name) => `echo ${SECTION}${name}; ${COMMANDS[name]}`).join('; ')
+export const BOOT_REPORT_SCRIPT = [
+  // Builtins fork nothing: the report gives back the pids it took, so a level's pids match the clean boot's.
+  `read kf_pid < ${NS_LAST_PID}`,
+  ...SECTIONS.map((name) => `echo ${SECTION}${name}; ${COMMANDS[name]}`),
+  `echo "$kf_pid" > ${NS_LAST_PID}`,
+  'unset kf_pid',
+].join('; ')
 
 const LOG_LINE = /^\[\s*(\d+\.\d+)\] ?(.*)$/
 const KERNEL = /^Linux version (\S+)/

@@ -8,8 +8,6 @@ const POLL_MS = 50
 const BOOT_TIMEOUT_MS = 10 * 60_000
 /** gcc takes seconds in the emulator; a line this slow is stuck. */
 const LINE_TIMEOUT_MS = 2 * 60_000
-/** The session saves the clean boot half a second after the first prompt; setting up sooner would race it. */
-const SAVE_SETTLE_MS = 3_000
 const STDIN = 0
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matches the terminal's escape sequences
 const TERMINAL_CODES = /\x1b\[[0-9;?]*[A-Za-z]/g
@@ -17,6 +15,7 @@ const TERMINAL_CODES = /\x1b\[[0-9;?]*[A-Za-z]/g
 /** In the image's grub.cfg: the menu is up. */
 const GRUB_MENU = 'Alpine, with Linux virt'
 const KEYS_SETTLE_MS = 1_000
+const PROMPT_TAIL = 256
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -105,7 +104,6 @@ export async function bootMachine(repo: string, vm = join(repo, 'apps/web/public
   if (phase === 'failed') {
     throw new Error(`the Machine failed to boot: ${detail}`)
   }
-  await wait(SAVE_SETTLE_MS)
 
   const atPrompt = (from: number) => () => VM_PROMPT.test(screen.slice(from))
   const shows = (from: number, text: string) => () => plain(screen.slice(from)).includes(text)
@@ -124,7 +122,8 @@ export async function bootMachine(repo: string, vm = join(repo, 'apps/web/public
       if (options.reboot) {
         await until("GRUB's menu", shows(from, GRUB_MENU), BOOT_TIMEOUT_MS)
       } else {
-        await until('the level shell', atPrompt(from))
+        // A clean Machine with no setup keeps its shell: its prompt is already on the screen.
+        await until('the level shell', () => VM_PROMPT.test(screen.slice(-PROMPT_TAIL)))
       }
     },
 

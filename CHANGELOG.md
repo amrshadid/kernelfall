@@ -2,10 +2,15 @@
 
 All notable changes to Kernelfall are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
-[Semantic Versioning](https://semver.org/). Nothing is released yet: the first release,
-0.1.0, will be The Surface (the Prologue and the Surface Survey), complete and checked.
+[Semantic Versioning](https://semver.org/). 0.1.0 will be The Surface (the Prologue and
+the Surface Survey), complete and checked; until then, releases are alpha pre-releases.
 
 ## [Unreleased]
+
+## [0.1.0-alpha.1] - 2026-10-31
+
+The first public pre-release: the engine, and the levels built so far, playable at
+[kernelfall.shadid.dev](https://kernelfall.shadid.dev).
 
 ### Added
 
@@ -46,4 +51,5 @@ All notable changes to Kernelfall are listed here. The format follows
 - The game doesn't work offline yet: the Machine's files are cached, the app is not.
 - Act I has one level (1.4); Acts II and III aren't built.
 
-[Unreleased]: https://github.com/amrshadid/kernelfall/commits/main
+[Unreleased]: https://github.com/amrshadid/kernelfall/compare/v0.1.0-alpha.1...HEAD
+[0.1.0-alpha.1]: https://github.com/amrshadid/kernelfall/releases/tag/v0.1.0-alpha.1

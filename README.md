@@ -1,9 +1,13 @@
 # Kernelfall
 
+[![Play](https://img.shields.io/badge/play-kernelfall.shadid.dev-d42a1f?logo=vercel&logoColor=white)](https://kernelfall.shadid.dev)
 [![CI](https://github.com/amrshadid/kernelfall/actions/workflows/ci.yml/badge.svg)](https://github.com/amrshadid/kernelfall/actions/workflows/ci.yml)
-[![Deploy](https://github.com/amrshadid/kernelfall/actions/workflows/deploy.yml/badge.svg)](https://github.com/amrshadid/kernelfall/actions/workflows/deploy.yml)
+[![Release](https://img.shields.io/github/v/release/amrshadid/kernelfall?include_prereleases&sort=semver)](https://github.com/amrshadid/kernelfall/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Linux 6.18](https://img.shields.io/badge/Linux-6.18%20i386-black?logo=linux&logoColor=white)](docs/ARCHITECTURE.md#the-machine)
+
+**Play it in your browser: [kernelfall.shadid.dev](https://kernelfall.shadid.dev)** (a
+desktop browser; the first visit downloads the Linux machine, about 11 MB).
 
 > Talk is cheap. Show me the code.
 >

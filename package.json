@@ -15,7 +15,7 @@
     "vm:record": "pnpm --filter @kernelfall/levels vm:record",
     "vm:mirror": "node packages/machine/scripts/vm-image/build.ts --mirror-out node_modules/.cache/kernelfall-vm-mirror",
     "build": "pnpm -r --if-present build",
-    "test": "pnpm -r --if-present test",
+    "test": "pnpm -r --workspace-concurrency=1 --if-present test",
     "type-check": "pnpm -r --if-present type-check",
     "check": "biome check . && pnpm check:c",
     "check:c": "git ls-files '*.c' '*.h' | xargs clang-format --dry-run --Werror",

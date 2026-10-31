@@ -38,7 +38,7 @@ jobs:
         run: pnpm type-check
       - name: Test
         run: pnpm test
-      # Same key as deploy.yml, so a tag on a deployed commit reuses its downloads.
+      # Keyed on what the image is built from, so a release reuses the last one's downloads.
       - name: Cache the VM downloads
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -56,7 +56,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --verify-tag
+        # A tag with a hyphen (v0.1.0-alpha.1) is a pre-release; notes written by hand are kept.
+        run: |
+          prerelease=$([[ "$TAG" == *-* ]] && echo --prerelease || true)
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --verify-tag $prerelease
       # The image build falls back to .../releases/download/vm-mirror/<file> when Alpine has
       # dropped a pinned package, so the files go to one fixed release, by name.
       - name: Update the vm-mirror release

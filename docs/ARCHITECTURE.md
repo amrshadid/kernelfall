@@ -161,9 +161,10 @@ without booting a VM.
 
 - **CI** (`ci.yml`): Biome, clang-format on the C files, type checks, tests and the
   build, on every pull request and on `main`. `pr-title.yml` checks the PR title.
-- **Pages** (`deploy.yml`): on `main`, builds the image (cached by the lock file and the
-  build scripts) and the app with its base path (`KF_BASE`), then deploys to GitHub
-  Pages.
+- **Vercel** (`vercel.json`): every push to `main` deploys the game, and every pull
+  request gets a preview. The build runs `pnpm vm:image`, then builds the app; the
+  image files are served with a year's cache (they're content-addressed), the manifest
+  with none.
 - **Releases** (`release.yml`): on a `v*` tag, verifies, builds and creates the GitHub
   Release, and uploads the pinned downloads to the `vm-mirror` release.
 
@@ -190,5 +191,6 @@ without booting a VM.
 - Progress in localStorage; the booted Machine in IndexedDB; image files in Cache
   Storage.
 - CodeMirror 6 for the editor, xterm.js for the terminal.
-- Hosting on GitHub Pages, deployed by Actions.
+- Hosting on Vercel: `main` is production, pull requests get previews; GitHub Actions
+  runs CI and releases.
 - The "Section 2" brand ([BRAND.md](BRAND.md)).

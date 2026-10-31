@@ -34,8 +34,8 @@ All notable changes to Kernelfall are listed here. The format follows
   autosave with a fallback copy, export and import of saves, and the "Section 2" day
   and night prints.
 - **Tooling:** the reproducible image build (`pnpm vm:image`, pinned packages and
-  checksums, a mirror for packages Alpine drops), CI on every pull request, GitHub
-  Pages deploys and tagged releases.
+  checksums, a mirror for packages Alpine drops), CI on every pull request, Vercel
+  deploys of `main` with previews for pull requests, and tagged releases.
 
 ### Known gaps
 

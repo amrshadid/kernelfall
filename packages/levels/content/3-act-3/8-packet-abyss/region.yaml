@@ -1,0 +1,17 @@
+id: packet-abyss
+name: Packet Abyss
+caption: "a network driver's receive path, NAPI, XDP"
+source: net/core/, drivers/net/
+guide: the Harbormaster
+slots:
+  - {
+      number: "3.18",
+      title: The Light Link,
+      summary: "Turn the Lantern card into a network device that receives packets. You learn a network driver's receive path and NAPI polling.",
+    }
+  - {
+      number: "3.19",
+      title: The First Gate,
+      optional: true,
+      summary: "Drop a packet storm at the driver, before it costs anything, with an XDP program. You learn XDP: eBPF at the very start of the network path.",
+    }

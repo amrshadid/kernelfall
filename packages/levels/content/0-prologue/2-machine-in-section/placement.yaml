@@ -1,0 +1,38 @@
+# The Machine in Section's placement check (docs/levels/prologue.md, "Placement
+# check"). init offers it after P.4; P.10, the capstone, is never skipped.
+#
+# One task per level, each judged by that level's own checker: a task passes when
+# every objective it lists is met. A passed task places the player past its level
+# (skills marked "placed", Codex cards "filed by placement"); a failed one sends the
+# player to that level alone. No Taint, no timer, and it can be retaken any time.
+#
+#   offer     init's line at the edge of the region
+#   minutes   about how long the check takes
+#   tasks     in play order:
+#     level       the level folder the task stands for
+#     task        what init asks, in plain words
+#     files       the level's starter files the task opens in the editor
+#     objectives  ids from the level's level.yaml, all of which must be met
+offer: "You've seen inside a machine before? Show me, and go straight to the stalled one."
+minutes: 8
+tasks:
+  - level: 05-kernel-up-close
+    task: "Complete `myuname.c` so it prints the kernel's name, its release and the CPU type, with the `uname` syscall."
+    files: [myuname.c]
+    objectives: [asks-uname, exits-zero, prints-machine]
+  - level: 06-finding-the-hardware
+    task: "Read the disk's `driver` link in `/sys`, then fix the lighthouse board's `.dts` so its lamp binds in the board panel."
+    files: [lighthouse.dts]
+    objectives: [reads-disk-driver, compiles-dts, lamp-binds]
+  - level: 07-who-runs
+    task: "Complete `whoami.c` so it prints its own PID and its parent's, and run it twice."
+    files: [whoami.c]
+    objectives: [exits-zero, prints-own-pid, prints-parent-pid]
+  - level: 08-pages-and-maps
+    task: "Complete `where.c` so it prints a local variable's address, and point at the `[stack]` line of its map that holds it."
+    files: [where.c]
+    objectives: [exits-zero, prints-maps, local-on-stack]
+  - level: 09-files-doors-wires
+    task: "With `look.c`, read one file each from ext4, procfs and sysfs."
+    files: [look.c]
+    objectives: [reads-ext4, reads-procfs, reads-sysfs]

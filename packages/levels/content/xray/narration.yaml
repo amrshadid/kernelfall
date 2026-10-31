@@ -1,0 +1,539 @@
+# Everything X-ray's storyboards say. The code picks the stages a call or a child
+# needs and fills `{name}` placeholders from the Machine's trace; the words live here.
+# Backticks set a real term in the code face. The Machine: Linux 6.18 on 32-bit x86
+# (i386), with musl as its C library.
+#
+# A stage has tick (the transport's word), title, what, why, deeper, and may have
+# gate (the Gatekeeper's line at Simple), simplified (where X-ray's drawing differs
+# from what the kernel does), sources (left out: the syscall's own), predict and, in
+# the Processes view, now ("In the kernel now").
+#
+# Placeholders, Syscalls view: name, nr, program, pid, text (the call as C reads it),
+# fd, count, address, status, ret, errno, errnoMessage, toProgram, child, path,
+# newProgram, execProgram, printed, firstFn, lastFn, deskLower, callPath, and the
+# fragments below as cloneNote, whyAsk, arguments, bufferNote, rlimit, groupExit,
+# meaning, shortWrite, writeExplain.
+# Processes view: parent, parentPid, forkName, forkNr, child, errno, errnoMessage,
+# execPath, execNr, execErrno, execErrnoMessage, program, work, output, signal,
+# exitCode, exitNr, waitNr, status, and the fragments as via, rlimit, waits,
+# printed, told.
+
+# Fragments are inserted exactly as written: each carries its own leading space.
+parts:
+  unknown-desk: "Runs the kernel's {name}"
+  why-ask-write: "A program can't touch the screen or a file itself."
+  why-ask-exit: "A program can't take itself off the CPU and out of the process table."
+  why-ask-execve: "A program can't load another program over itself."
+  why-ask-fork: "A program can't create a process."
+  why-ask-wait: "A program can't look into another process."
+  why-ask-generic: "A program can't reach the kernel's objects itself."
+  clone-note: " On i386, musl's `fork()` makes the `fork` syscall, so a `clone` comes from a call like `posix_spawn()` or `pthread_create()`."
+  argument: "`{register}` = {arg} {value}"
+  arguments: " The arguments go in order: {list}."
+  no-arguments: " It takes no arguments."
+  buffer-stays: " Only the address of the buffer travels; the bytes stay in your memory."
+  rlimit-nproc: " This user already has as many processes as `RLIMIT_NPROC` allows."
+  group-exit: " through `do_group_exit()`, which ends every thread"
+  return-meaning: ", {returns}"
+  wait-none-meaning: ": no child has changed state yet"
+  short-write: " Only {ret} of {count} bytes went: a short write."
+  write-predict-error: "It returned -1: the kernel answered `-{errno}`, and the C library turned that into -1 and set `errno`."
+  write-predict-full: "It returned {count}, the number of bytes written. {fd} is the file descriptor, and 0 would mean nothing was written."
+  write-predict-short: "It returned {ret}: a short write, fewer bytes than the {count} asked for. Careful programs loop until everything is written."
+  via-clone: " The child comes from the `clone` syscall, number {forkNr}: the general call that `fork`, `vfork` and threads are all built on."
+  via-fork: " It makes the `{forkName}` syscall, number {forkNr}."
+  parent-waits: " The parent goes on to `wait4` and sleeps (state S) until the child is done."
+  prints: " It prints `{output}`."
+  sigchld: " The parent gets `SIGCHLD`."
+  status-killed: "was killed by `{signal}` (`WIFSIGNALED`, `WTERMSIG`)"
+  status-exited: "exited normally with {exitCode} (`WIFEXITED`, `WEXITSTATUS`)"
+
+# "In the kernel now" at Simple, in the Syscalls view. The step where the call does
+# its own work shows its handler and the syscall's desk sentence from syscalls.yaml.
+desks:
+  call: { fn: "—", say: "Nothing yet: still in your program", file: "" }
+  registers: { fn: "—", say: "Nothing yet: the library fills in the request", file: "" }
+  gate: { fn: entry_INT80_32, say: "The Gate opens: ring 3 → ring 0", file: arch/x86/entry/entry_32.S }
+  entry: { fn: entry_INT80_32, say: Saves your registers in pt_regs, file: arch/x86/entry/entry_32.S }
+  dispatch: { fn: ia32_sys_call, say: "Number {nr} in the table: {name}", file: arch/x86/entry/syscall_32.c }
+  fd: { fn: vfs_write, say: "fd {fd} → its struct file", file: fs/read_write.c }
+  fd-console: { fn: vfs_write, say: "fd {fd} → the terminal's struct file", file: fs/read_write.c }
+  fd-ebadf: { fn: ksys_write, say: "fd {fd}: no open file, so -EBADF", file: fs/file.c }
+  copy: { fn: vfs_write, say: "Copies {count} bytes in from your buffer", file: lib/iov_iter.c }
+  copy-console: { fn: tty_write, say: "Copies {count} bytes in from your buffer", file: drivers/tty/tty_io.c }
+  driver: { fn: n_tty_write, say: "The screen draws: {printed}", file: drivers/tty/n_tty.c }
+  noreturn: { fn: do_exit, say: "Never returns: the process is gone", file: kernel/exit.c }
+  answer: { fn: do_syscall_32_irqs_on, say: "The answer, {ret}, goes in eax", file: arch/x86/entry/syscall_32.c }
+  answer-none:
+    { fn: do_syscall_32_irqs_on, say: "No answer: the call has not returned", file: arch/x86/entry/syscall_32.c }
+  sysret: { fn: iret, say: "Back through the Gate: ring 0 → ring 3", file: arch/x86/entry/entry_32.S }
+
+# One syscall's trip through the Gate: the same way in for every call, then what
+# this call does, then the way out.
+syscall-stages:
+  call:
+    tick: "{name}()"
+    title: "{program} calls {name}()"
+    what: "`{program}`, PID {pid}, calls `{text}`.{cloneNote} The C library's `{name}()` is an ordinary function, still in user space: it only prepares the request."
+    why: "{whyAsk} Only the kernel can, so the library's whole job here is to ask."
+    deeper: "If the kernel answers with an error, a number from -4095 to -1, the wrapper stores the positive error code in `errno` and returns -1."
+    sources: []
+
+  registers:
+    tick: registers
+    title: The library loads the registers
+    what: "The syscall number for `{name}`, {nr}, goes in `eax`.{arguments}{bufferNote}"
+    why: "Registers are all that crosses into the kernel with the call, so the whole request has to fit in them."
+    deeper: "The order is the i386 syscall convention: `ebx`, `ecx`, `edx`, `esi`, `edi`, `ebp`. That is every general register except `eax`, which holds the number, and `esp`, the stack pointer, so six arguments is the most a syscall can take."
+    sources:
+      - { path: arch/x86/entry/syscalls/syscall_32.tbl, fn: "{nr} i386 {name}" }
+
+  gate:
+    tick: int $0x80
+    title: "int $0x80: through the Gate"
+    what: "The `int $0x80` instruction raises software interrupt 128. The CPU switches from user mode to kernel mode, ring 3 to ring 0, pushes your stack pointer, flags and return address onto a kernel stack, and jumps to the handler the kernel put at entry 0x80 of its interrupt table, the IDT."
+    why: "There is exactly one door, and the kernel decided where it leads. A program can ask, but it can't choose which kernel code runs."
+    deeper: "At boot, `idt_setup_traps()` puts `entry_INT80_32` at vector 0x80 as a system gate: privilege level 3, so user code may raise it. The faster way in is `__kernel_vsyscall`, code the kernel maps into every process (the vDSO): it pushes `ecx`, `edx` and `ebp`, copies `esp` into `ebp` and runs `sysenter`, which lands in `entry_SYSENTER_32`."
+    simplified: "X-ray draws every call entering through `int $0x80`, as musl's `read()` and `write()` do. Most other musl calls go through `__kernel_vsyscall` and `sysenter`, and meet this path in `do_syscall_32_irqs_on()`."
+    gate: "Number {nr}? That's {name}. Through you go: ring 0 from here."
+    sources:
+      - { path: arch/x86/kernel/idt.c, fn: idt_setup_traps() }
+      - { path: arch/x86/entry/entry_32.S, fn: "entry_INT80_32, entry_SYSENTER_32" }
+      - { path: arch/x86/entry/vdso/vdso32/system_call.S, fn: __kernel_vsyscall }
+
+  entry:
+    tick: entry
+    title: entry_INT80_32 saves your registers
+    what: "The first kernel code, `entry_INT80_32`, pushes the syscall number and every other user register (`SAVE_ALL`) beside what the CPU pushed. Together they make a `struct pt_regs`, which it moves onto this task's own kernel stack."
+    why: "Your program’s registers must come back exactly as they were, so the kernel saves them before it uses the CPU for its own work."
+    deeper: "The number is kept twice: `orig_ax` holds {nr}, and `ax` starts as `-ENOSYS`, the answer if nothing handles the call."
+    sources:
+      - { path: arch/x86/entry/entry_32.S, fn: "entry_INT80_32, SAVE_ALL" }
+      - { path: arch/x86/include/asm/ptrace.h, fn: struct pt_regs }
+
+  dispatch:
+    tick: dispatch
+    title: "do_int80_syscall_32 looks up number {nr}"
+    what: "`do_int80_syscall_32` hands the number to `do_syscall_32_irqs_on()`, which checks it is in range. `ia32_sys_call()` then picks entry {nr}: `{firstFn}`, the kernel's own {name}."
+    why: "A table keeps the door simple: one number in, one function out. An unknown number just gets `-ENOSYS`."
+    deeper: "Before Linux 6.9 the kernel called the handler through an array of function pointers. Now `ia32_sys_call()` is a `switch` generated from `syscall_32.tbl`, so each call is direct, which resists Spectre-style branch attacks. The `__ia32_sys_` wrapper reads the arguments out of `pt_regs` (`bx`, `cx`, `dx`, `si`, `di`, `bp`) and calls the real function."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_int80_syscall_32(), do_syscall_32_irqs_on(), ia32_sys_call()" }
+      - { path: arch/x86/include/asm/syscall_wrapper.h, fn: SYSCALL_PT_ARGS }
+      - { path: arch/x86/entry/syscalls/syscall_32.tbl }
+
+  fd:
+    tick: "fd {fd}"
+    title: "Find the open file behind fd {fd}"
+    what: "`ksys_write` calls `fdget_pos({fd})`, which looks in this process's fd table (`current->files`) and finds the `struct file` for it. `vfs_write` checks it was opened for writing, then calls that file's own write method."
+    why: "A file descriptor is only a small number that indexes your table. The kernel keeps the real object, so a program can't forge one."
+    deeper: "`vfs_write` first checks the file has `FMODE_WRITE` and the size is sane; a file opened read-only fails here with `-EBADF`."
+    sources:
+      - { path: fs/read_write.c, fn: "ksys_write(), vfs_write()" }
+      - { path: fs/file.c, fn: fdget_pos() }
+
+  fd-console:
+    tick: "fd {fd}"
+    title: "Find the open file behind fd {fd}"
+    what: "`ksys_write` calls `fdget_pos({fd})`, which looks in this process's fd table (`current->files`) and finds the `struct file` for your terminal. `vfs_write` checks it was opened for writing, then calls the file's `write_iter`: for a terminal, `tty_write`."
+    why: "A file descriptor is only a small number that indexes your table. The kernel keeps the real object, so a program can't forge one."
+    deeper: "`vfs_write` first checks the file has `FMODE_WRITE` and the size is sane; a file opened read-only fails here with `-EBADF`."
+    sources:
+      - { path: fs/read_write.c, fn: "ksys_write(), vfs_write()" }
+      - { path: fs/file.c, fn: fdget_pos() }
+      - { path: drivers/tty/tty_io.c, fn: tty_write() }
+
+  fd-ebadf:
+    tick: "fd {fd}"
+    title: "No open file at fd {fd}"
+    what: "`ksys_write` calls `fdget_pos({fd})`, which looks in this process's fd table (`current->files`). There is no open file for writing at fd {fd}, so the call stops here with `-EBADF`."
+    why: "A file descriptor is only a small number that indexes your table. The kernel keeps the real object, so a program can't forge one."
+    deeper: "`vfs_write` also returns `-EBADF` for a file opened without `FMODE_WRITE`, before any driver code runs."
+    sources:
+      - { path: fs/read_write.c, fn: "ksys_write(), vfs_write()" }
+      - { path: fs/file.c, fn: fdget_pos() }
+
+  copy:
+    tick: copy
+    title: Copy the bytes in
+    what: "The file's write method copies the {count} bytes in from your buffer at `{address}`, with the `copy_from_user` family. Your buffer stays where it was: this is a copy."
+    why: "The kernel never trusts a user pointer. The copy checks the address belongs to user space and turns a bad one into `-EFAULT` instead of a crash."
+    deeper: "On a CPU with SMAP the copy briefly sets the AC flag (`stac`/`clac`) so the kernel may read user pages. The Machine's emulated CPU has no SMAP, so the kernel patched those instructions out at boot."
+    sources:
+      - { path: lib/iov_iter.c, fn: _copy_from_iter() }
+      - { path: arch/x86/include/asm/smap.h, fn: "stac(), clac()" }
+
+  copy-console:
+    tick: copy
+    title: Copy the bytes in
+    what: "`tty_write` copies the {count} bytes from your buffer at `{address}` into kernel memory with `copy_from_iter`, part of the `copy_from_user` family. Your buffer stays where it was: this is a copy."
+    why: "The kernel never trusts a user pointer. The copy checks the address belongs to user space and turns a bad one into `-EFAULT` instead of a crash."
+    deeper: "On a CPU with SMAP the copy briefly sets the AC flag (`stac`/`clac`) so the kernel may read user pages. The Machine's emulated CPU has no SMAP, so the kernel patched those instructions out at boot."
+    sources:
+      - { path: drivers/tty/tty_io.c, fn: iterate_tty_write() }
+      - { path: lib/iov_iter.c, fn: _copy_from_iter() }
+      - { path: arch/x86/include/asm/smap.h, fn: "stac(), clac()" }
+
+  copy-efault:
+    tick: copy
+    title: The copy fails
+    what: "The copy checks the buffer at `{address}` and finds it is not mapped in your memory, so the call fails with `-EFAULT` instead of crashing the kernel."
+    why: "The kernel never trusts a user pointer: every copy from user space checks the address first."
+    deeper: "The address is checked against the top of user space first (`access_ok`), and a fault inside the copy is caught by an exception table entry that turns it into `-EFAULT`."
+    sources:
+      - { path: lib/iov_iter.c, fn: _copy_from_iter() }
+
+  driver:
+    tick: driver
+    title: The terminal driver draws it
+    what: "The line discipline, `n_tty_write`, processes the bytes (turning `\\n` into `\\r\\n` for the screen) and hands them to the terminal's driver, which puts `{printed}` on your screen."
+    why: "One tty layer serves keyboards, serial lines and terminal windows; the line discipline is the shared middle part."
+    deeper: "In a terminal window on your Linux desktop, fd 1 is a pseudo-terminal (`/dev/pts/N`) whose other end is the terminal emulator. Every terminal's writes pass through `n_tty_write`; X-ray puts a kprobe on it, which is how this drawing knows what reached the screen."
+    sources:
+      - { path: drivers/tty/n_tty.c, fn: n_tty_write() }
+      - { path: drivers/tty/tty_io.c, fn: tty_write() }
+
+  execve:
+    tick: new program
+    title: A new program in the same process
+    what: "`do_execveat_common()` opens `{path}`, and `bprm_execve()` checks it can be run and loads it. `begin_new_exec()` throws away the old memory and closes `O_CLOEXEC` files. The PID stays {pid}, and the process is now `{newProgram}`."
+    why: "Keeping the PID and the open files is the point: the parent can still wait for this PID, and the new program inherits stdout."
+    deeper: "`load_elf_binary()` maps the file's segments; for a dynamically linked program it also maps the dynamic loader, musl's `/lib/ld-musl-i386.so.1`, which runs first. `begin_new_exec()` renames the task: `comm` becomes `{newProgram}`, which is what `ps` shows."
+
+  execve-failed:
+    tick: "{lastFn}"
+    title: "execve fails: {errno}"
+    what: "`do_execveat_common()` can't run `{path}`: {errnoMessage}. Nothing was replaced, so the old program keeps running and gets -1 back."
+    why: "execve only returns when it fails, so the code right after a call to it is always the error path."
+    deeper: 'A shell reports this as "command not found" and exits with 127 in the child it forked for the command.'
+
+  fork:
+    tick: "{lastFn}"
+    title: "copy_process makes PID {child}"
+    what: "`kernel_clone()` calls `copy_process()`, which builds a new `task_struct` and copies this process's open files, signal handlers, working directory and memory map into it. The memory itself is shared copy-on-write: a page is copied only when one side writes to it."
+    why: "The copy starts exactly where the parent is, so the child can run the same code without loading anything."
+    deeper: "The child starts life in `ret_from_fork`; `copy_thread()` set `ax` to 0 in the child's copy of `pt_regs`, so the same call returns 0 there."
+
+  fork-failed:
+    tick: "{lastFn}"
+    title: "fork fails: {errno}"
+    what: "`copy_process()` refuses to make a new process: {errnoMessage}.{rlimit}"
+    why: "Process creation can fail, so a program must check the return value before it uses it as a PID."
+    deeper: "`waitpid(-1, …)` waits for any child, so a shell that uses a failed fork's -1 as a PID waits for the wrong thing."
+
+  wait:
+    tick: "{lastFn}"
+    title: do_wait looks for a finished child
+    what: "`do_wait()` looks through this process's children for one that has exited, sleeping until one does. PID {child} is a zombie, so `wait_task_zombie()` copies its exit status out and `release_task()` frees it."
+    why: "The exit status waits in the zombie until the parent collects it; this is the collecting."
+    deeper: "The status is encoded as `code << 8` for a normal exit, which `WIFEXITED` and `WEXITSTATUS` decode."
+
+  wait-none:
+    tick: "{lastFn}"
+    title: do_wait looks for a finished child
+    what: "`do_wait()` looks through this process's children. None has exited, and `WNOHANG` says not to sleep, so there is nothing to collect."
+    why: "The exit status waits in the zombie until the parent collects it; this is the collecting."
+    deeper: "The status is encoded as `code << 8` for a normal exit, which `WIFEXITED` and `WEXITSTATUS` decode."
+
+  wait-failed:
+    tick: "{lastFn}"
+    title: "wait4 fails: {errno}"
+    what: "`do_wait()` finds nothing to wait for: {errnoMessage}."
+    why: "The exit status waits in the zombie until the parent collects it; this is the collecting."
+    deeper: "The status is encoded as `code << 8` for a normal exit, which `WIFEXITED` and `WEXITSTATUS` decode."
+
+  work:
+    tick: "{lastFn}"
+    title: "{firstFn} does the work"
+    what: "`{firstFn}` runs, in kernel mode with the kernel's own stack: {deskLower}."
+    why: "Only kernel code can touch the objects behind a syscall: files, processes and devices."
+    deeper: "The call path is {callPath}."
+
+  exit:
+    tick: do_exit
+    title: "do_exit(): the process ends"
+    what: "`{name}({status})` goes to `do_exit()`{groupExit}. The kernel frees the process's memory and closes its files, but keeps its `task_struct` with the exit status, {status}. The parent gets `SIGCHLD`. Until it collects the status with `wait4`, the process is a zombie."
+    why: "The exit status has to wait somewhere until the parent asks for it. The zombie is that waiting room."
+    deeper: "If the parent never waits, the zombie stays in the process table. If the parent dies first, init adopts the child and reaps it."
+    sources:
+      - { path: kernel/exit.c, fn: "do_group_exit(), do_exit(), exit_notify()" }
+
+  noreturn:
+    tick: "= ?"
+    title: No way back up
+    what: "There is nothing to return to: the program is gone, so `{name}` never comes back through the Gate. strace prints `= ?` for it."
+    why: "That is why the C library declares `_exit()` `noreturn`: code after it can never run."
+    deeper: "`do_exit()` ends by calling `do_task_dead()`, which schedules away for the last time."
+    sources:
+      - { path: kernel/exit.c, fn: do_exit() }
+    predict:
+      question: "What does `{name}()` return?"
+      options: ["0", "{status}", "-1", It never returns]
+      answer: It never returns
+      explain: "It never returns: the process is gone before there is anywhere to return to. strace prints `= ?` for it."
+
+  answer:
+    tick: return
+    title: The answer goes in eax
+    what: "`{firstFn}` returns {ret}{meaning}. `do_syscall_32_irqs_on()` stores it in `regs->ax`, the saved copy your `eax` will be restored from."
+    why: "Every syscall answers in the same place. Errors come back as small negative numbers, such as -9 for `EBADF`."
+    deeper: "Values from -4095 to -1 are errors (`IS_ERR_VALUE`); anything else is a result."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_syscall_32_irqs_on(), ia32_sys_call()" }
+
+  answer-write:
+    tick: return
+    title: The answer goes in eax
+    what: "`{firstFn}` returns {ret}{meaning}. `do_syscall_32_irqs_on()` stores it in `regs->ax`, the saved copy your `eax` will be restored from.{shortWrite}"
+    why: "Every syscall answers in the same place. Errors come back as small negative numbers, such as -9 for `EBADF`."
+    deeper: "A short write is legal: write may return fewer bytes than asked, which is why careful programs loop."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_syscall_32_irqs_on(), ia32_sys_call()" }
+    predict:
+      question: "What will `write()` return?"
+      explain: "{writeExplain}"
+
+  answer-fork:
+    tick: return
+    title: The answer goes in eax
+    what: "`{firstFn}` returns {ret}{meaning}. `do_syscall_32_irqs_on()` stores it in `regs->ax`, the saved copy your `eax` will be restored from."
+    why: "Every syscall answers in the same place. Errors come back as small negative numbers, such as -9 for `EBADF`."
+    deeper: "Values from -4095 to -1 are errors (`IS_ERR_VALUE`); anything else is a result."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_syscall_32_irqs_on(), ia32_sys_call()" }
+    predict:
+      question: "What does `{name}` return here, in the parent?"
+      explain: "The parent gets the child's PID, {ret}. The child gets 0 from the same call, {pid} is the parent's own PID, and -1 would mean the fork failed."
+
+  answer-error:
+    tick: return
+    title: The answer goes in eax
+    what: "`{firstFn}` returns `-{errno}` ({ret}). `do_syscall_32_irqs_on()` stores it in `regs->ax`; back in user space the C library turns it into -1 and sets `errno` to `{errno}`."
+    why: "Every syscall answers in the same place. Errors come back as small negative numbers, such as -9 for `EBADF`."
+    deeper: "Values from -4095 to -1 are errors (`IS_ERR_VALUE`); anything else is a result."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_syscall_32_irqs_on(), ia32_sys_call()" }
+
+  answer-error-write:
+    tick: return
+    title: The answer goes in eax
+    what: "`{firstFn}` returns `-{errno}` ({ret}). `do_syscall_32_irqs_on()` stores it in `regs->ax`; back in user space the C library turns it into -1 and sets `errno` to `{errno}`."
+    why: "Every syscall answers in the same place. Errors come back as small negative numbers, such as -9 for `EBADF`."
+    deeper: "A short write is legal: write may return fewer bytes than asked, which is why careful programs loop."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_syscall_32_irqs_on(), ia32_sys_call()" }
+    predict:
+      question: "What will `write()` return?"
+      explain: "{writeExplain}"
+
+  answer-pending:
+    tick: return
+    title: Still inside
+    what: "The call hasn't returned yet: the process is still asleep inside the kernel, waiting."
+    why: "A syscall can sleep inside the kernel, for input or for a child, as long as it has to."
+    deeper: "strace shows a call like this as `<unfinished ...>`, or `= ?` when it never returns."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_syscall_32_irqs_on(), ia32_sys_call()" }
+
+  answer-killed:
+    tick: return
+    title: The process ended first
+    what: "The process ended (a signal killed it) before the call could return, so there is no answer."
+    why: "A syscall can sleep inside the kernel, for input or for a child, as long as it has to."
+    deeper: "strace shows a call like this as `<unfinished ...>`, or `= ?` when it never returns."
+    sources:
+      - { path: arch/x86/entry/syscall_32.c, fn: "do_syscall_32_irqs_on(), ia32_sys_call()" }
+
+  sysret:
+    tick: iret
+    title: "iret: back to user mode"
+    what: "The kernel restores your registers from `pt_regs`, with the answer now in `eax`, and `iret` pops the return address, flags and stack pointer the CPU saved, back in ring 3. `{name}()` returns {toProgram} to `{program}`."
+    why: "The way out mirrors the way in: the same saved registers, through the same single door."
+    deeper: "A call that came in through `sysenter` usually leaves through the faster `sysexit`, back into `__kernel_vsyscall`, which pops `ebp`, `edx` and `ecx`. When the return is unusual (a changed return address, the trap flag set), `do_fast_syscall_32()` picks `iret` instead."
+    gate: "Back up you go. Mind the step: ring 3."
+    sources:
+      - { path: arch/x86/entry/entry_32.S, fn: "entry_INT80_32, entry_SYSENTER_32" }
+      - { path: arch/x86/entry/syscall_32.c, fn: do_fast_syscall_32() }
+
+  sysret-exec:
+    tick: new start
+    title: Back to user mode, in a new program
+    what: "The way back leads to `{execProgram}`'s entry point, not to the code that called `execve`: that code is gone. `{execProgram}` starts from its first instruction with a fresh stack holding its argv and environment."
+    why: "A successful execve never returns to its caller, because the caller no longer exists."
+    deeper: "`start_thread()` sets the saved instruction and stack pointers (`regs->ip`, `regs->sp`) for the new program before the return to ring 3. If the call came in through `sysenter`, the return address no longer points into the vDSO, so `do_fast_syscall_32()` leaves through `iret`."
+    gate: "Back up you go. Different face from the one that came down."
+    sources:
+      - { path: arch/x86/kernel/process_32.c, fn: start_thread() }
+      - { path: arch/x86/entry/syscall_32.c, fn: do_fast_syscall_32() }
+      - { path: arch/x86/entry/entry_32.S, fn: entry_INT80_32 }
+
+# One child's life, from fork to reaping. Only the stages its events show are told.
+process-stages:
+  fork:
+    tick: fork()
+    title: "{parent} calls fork()"
+    what: "`{parent}`, PID {parentPid}, calls `fork()`.{via}"
+    why: "Linux has one general tool for making tasks, `clone`. `fork` is clone with “copy everything, share nothing”."
+    deeper: "The `fork` syscall is `kernel_clone()` with nothing shared and only `SIGCHLD` set, the signal the parent gets when the child ends. On i386, musl's `fork()` makes exactly that call."
+    gate: "Number {forkNr}, {forkName}. One more of you coming up."
+    sources:
+      - { path: kernel/fork.c, fn: "{forkName}, kernel_clone()" }
+    now: { fn: kernel_clone(), file: kernel/fork.c }
+
+  forkfail:
+    tick: "-1"
+    title: "fork fails: {errno}"
+    what: "`copy_process()` refuses: {errnoMessage}. No child exists. `fork()` returns -1 in the parent and sets `errno` to `{errno}`.{rlimit}"
+    why: "A shell must check for -1 before it uses the result as a PID: `waitpid(-1, …)` waits for any child, which is a different thing entirely."
+    deeper: "`copy_process()` counts the user's processes, zombies included, against `RLIMIT_NPROC`."
+    sources:
+      - { path: kernel/fork.c, fn: copy_process() }
+    now: { fn: "copy_process() → -{errno}", file: kernel/fork.c }
+
+  copy:
+    tick: copy_process
+    title: "copy_process makes PID {child}"
+    what: "`kernel_clone()` calls `copy_process()`, which builds a new `task_struct` for PID {child} and copies the parent's open files, signal handlers, working directory and address space."
+    why: "The copy starts exactly where the parent is, so the child can run the same code without loading anything."
+    deeper: "The fd table is duplicated with `dup_fd()`, so the child's fd 1 points at the same open file as the parent's. That is how the child can print to your terminal."
+    sources:
+      - { path: kernel/fork.c, fn: copy_process() }
+      - { path: fs/file.c, fn: dup_fd() }
+    now: { fn: copy_process(), file: kernel/fork.c }
+
+  memory:
+    tick: memory
+    title: Copy-on-write
+    what: "Copying all that memory would be slow, so Linux copies the page tables instead. Both processes point at the same physical pages, marked read-only. When one of them writes, only that page is copied."
+    why: "Most children call exec right away and throw that memory out, so copying it up front would be wasted work."
+    deeper: "The write causes a page fault; `do_wp_page()` sees a copy-on-write page, copies it and maps the copy writable."
+    simplified: "X-ray draws a process as four pages and shows them shared only around the fork. Really, each page stays shared until one side writes to it, and pages an exec throws away are never copied."
+    sources:
+      - { path: kernel/fork.c, fn: dup_mm() }
+      - { path: mm/memory.c, fn: do_wp_page() }
+    now: { fn: "dup_mm() · do_wp_page() on a write", file: "kernel/fork.c, mm/memory.c" }
+
+  returns:
+    tick: two returns
+    title: One call, two returns
+    what: "`{forkName}` returns twice. In the parent it returns the child's PID, {child}. In the child it returns 0.{waits}"
+    why: "Same code, same memory: the return value is the only difference, and `if (pid == 0)` branches on it."
+    deeper: "The child starts life in `ret_from_fork`; `copy_thread()` set `ax` to 0 in the child's copy of `pt_regs`."
+    sources:
+      - { path: arch/x86/kernel/process.c, fn: copy_thread() }
+      - { path: arch/x86/entry/entry_32.S, fn: ret_from_fork_asm }
+    predict:
+      question: "What does `fork()` return in the child?"
+      options: ["0", "{child}", "{parentPid}", "-1"]
+      answer: "0"
+      explain: "The child gets 0 and the parent gets {child}, the child's PID. {parentPid} is the parent's own PID, and -1 would mean fork failed."
+    now: { fn: "ret_from_fork · the child’s eax = 0", file: arch/x86/kernel/process.c }
+
+  execve:
+    tick: execve
+    title: The child calls execve
+    what: 'The child, still running `{parent}`''s code, calls `execve("{execPath}", …)`, syscall number {execNr}.'
+    why: "fork made a copy; exec turns the copy into a different program."
+    deeper: "`execvp` is a library function that tries each `PATH` directory; only `execve` is the syscall. If it returns at all, it failed."
+    gate: "{execNr}, execve. Same face, new job."
+    sources:
+      - { path: fs/exec.c, fn: "execve, do_execveat_common()" }
+    now: { fn: execve → do_execveat_common(), file: fs/exec.c }
+
+  execfail:
+    tick: exec fails
+    title: "execve fails: {execErrno}"
+    what: "`execve` returns -1 with `{execErrno}`: {execErrnoMessage}. Nothing was replaced. The child is still a copy of `{parent}`, so it must leave now, with `_exit(127)`."
+    why: "If the child carried on instead, it would fall back into the shell’s main loop, and two shells would read the same terminal."
+    deeper: "127 is the shell convention for “command not found”. `_exit`, not `exit`: the child must not flush stdio buffers it copied from the parent."
+    sources:
+      - { path: fs/exec.c, fn: do_execveat_common() }
+    now: { fn: "do_execveat_common() → -{execErrno}", file: fs/exec.c }
+
+  newprog:
+    tick: new program
+    title: Same PID, new program
+    what: "`bprm_execve()` throws away the child's old memory and loads `{execPath}` in its place. The PID stays {child}, `comm` becomes `{program}`, and the open files stay open."
+    why: "Keeping the PID and the fds is the point: the parent can still wait for {child}, and `{program}` inherits your terminal as stdout."
+    deeper: "File descriptors opened with `O_CLOEXEC` are the exception: they are closed here. `load_elf_binary()` maps the file's segments, plus musl's dynamic loader for a dynamically linked program."
+    sources:
+      - { path: fs/exec.c, fn: "bprm_execve(), begin_new_exec()" }
+      - { path: fs/binfmt_elf.c, fn: load_elf_binary() }
+    predict:
+      question: "After execve, does the child keep PID {child}?"
+      options: ["Yes, still {child}", "No, a new PID"]
+      answer: "Yes, still {child}"
+      explain: "Same process, new program: execve keeps the PID, which is how the parent can still wait for {child}."
+    now: { fn: bprm_execve() → load_elf_binary(), file: "fs/exec.c, fs/binfmt_elf.c" }
+
+  runs:
+    tick: "{program} runs"
+    title: "{program} does its job"
+    what: "`{program}` makes its own syscalls: {work}.{printed}"
+    why: "Every program, yours or `{program}`, talks to the kernel the same way. There is no other door."
+    deeper: The Syscalls view shows each of these calls crossing the Gate, step by step.
+    sources:
+      - { path: fs/read_write.c, fn: ksys_write() }
+    now: { fn: ksys_write() → tty_write(), file: fs/read_write.c }
+
+  exit:
+    tick: zombie
+    title: "Exit: a zombie"
+    what: "`{program}` calls `exit_group({exitCode})`. `do_exit()` frees its memory and closes its files but keeps the `task_struct` with the exit status: PID {child} is a zombie, state Z.{told}"
+    why: "The exit status has to wait somewhere until the parent asks for it. The zombie is that waiting room."
+    deeper: "If the parent never waits, the zombie stays in the process table. If the parent dies first, init (or a subreaper) adopts the child and reaps it."
+    gate: "{exitNr}, exit_group. That one’s not coming back up."
+    sources:
+      - { path: kernel/exit.c, fn: "do_exit(), exit_notify()" }
+    now: { fn: do_exit() → exit_notify(), file: kernel/exit.c }
+
+  exit-killed:
+    tick: zombie
+    title: "Killed: a zombie"
+    what: "`{signal}` killed PID {child}. `do_exit()` frees its memory and closes its files but keeps the `task_struct` with the exit status: PID {child} is a zombie, state Z.{told}"
+    why: "The exit status has to wait somewhere until the parent asks for it. The zombie is that waiting room."
+    deeper: "If the parent never waits, the zombie stays in the process table. If the parent dies first, init (or a subreaper) adopts the child and reaps it."
+    gate: "{exitNr}, exit_group. That one’s not coming back up."
+    sources:
+      - { path: kernel/exit.c, fn: "do_exit(), exit_notify()" }
+    now: { fn: do_exit() → exit_notify(), file: kernel/exit.c }
+
+  wait:
+    tick: wait4
+    title: wait4 collects the status
+    what: "The parent's `waitpid` is the `wait4` syscall, number {waitNr}. It wakes, returns {child}, and the status says the child {status}."
+    why: "This is how a shell learns that `false` failed: the status travels from the child's exit to the parent's `wait4`."
+    deeper: "`do_wait()` scans the children for one in `EXIT_ZOMBIE`. A normal exit is encoded as `code << 8`, which `WEXITSTATUS` undoes."
+    gate: "{waitNr}, wait4. Collecting your child’s last word."
+    sources:
+      - { path: kernel/exit.c, fn: "do_wait(), wait_task_zombie()" }
+    now: { fn: do_wait() → wait_task_zombie(), file: kernel/exit.c }
+
+  reaped:
+    tick: reaped
+    title: Reaped
+    what: "`release_task()` frees PID {child}'s `task_struct`. Nothing of the child is left."
+    why: "No zombies left behind: every child a shell starts must be waited for."
+    deeper: "PID {child} can now be reused by a future process."
+    sources:
+      - { path: kernel/exit.c, fn: release_task() }
+    now: { fn: release_task(), file: kernel/exit.c }
+
+  reaped-by-init:
+    tick: reaped
+    title: Reaped by init
+    what: "The parent never collected PID {child}: it ended first. init adopted the child and reaped it, and `release_task()` freed what was left."
+    why: "No zombies left behind: every child a shell starts must be waited for."
+    deeper: "PID {child} can now be reused by a future process."
+    sources:
+      - { path: kernel/exit.c, fn: release_task() }
+    now: { fn: release_task(), file: kernel/exit.c }
+
+  zombie:
+    tick: still Z
+    title: Still a zombie
+    what: "Nobody has called `wait4` for PID {child}, so it stays in the process table as a zombie (`Z` in `ps`)."
+    why: "A zombie holds a PID and a task_struct until it is reaped. A shell that forgets to wait leaves one behind for every command."
+    deeper: When the parent itself exits, init adopts its zombies and reaps them.
+    sources:
+      - { path: kernel/exit.c, fn: exit_notify() }

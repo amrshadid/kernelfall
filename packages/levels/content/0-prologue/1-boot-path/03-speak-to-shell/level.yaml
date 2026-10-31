@@ -1,0 +1,155 @@
+# Prologue P.3, Speak to the Shell (docs/levels/prologue.md). No C: the player
+# types every command. checker.ts judges what happens inside the shell (Tab
+# completion) and inside one process (env's child); the rest is declared.
+id: prologue-boot-path-03-speak-to-shell
+title: Speak to the Shell
+summary: "Type your own commands: arguments and options, help with man, Tab to finish names, and the environment. You learn how the shell finds a program through PATH and starts it."
+minutes: 20
+tracks: [userland]
+skills: [sys-shell-basics]
+prerequisites: [sys-user-kernel-mode]
+objectives:
+  # Plain echo is the shell's builtin and starts no program; /bin/echo shows its argv.
+  - id: four-arguments
+    text: "`/bin/echo` runs with at least four arguments after its name."
+    check: { kind: ran, program: echo, args: { min: 4 } }
+  - id: joined-options
+    text: "`ls` runs with two options joined in one word, like `-la`."
+    check: { kind: ran, program: ls, args: { match: ["^-[A-Za-z]{2,}$"] } }
+  - id: option-and-file
+    text: "`wc` runs with an option and a file to work on, like `wc -l /etc/motd`."
+    check: { kind: ran, program: wc, args: { match: ["^-[A-Za-z]+$", "^[^-]"] }, status: 0 }
+  - id: man-ls
+    text: "`man ls` shows the manual page of `ls`, and you quit it with `q`."
+    check: { kind: ran, program: man, args: { match: ["^ls$"] }, status: 0 }
+  - id: man-wc
+    text: "`man wc` shows the manual page of `wc`."
+    check: { kind: ran, program: man, args: { match: ["^wc$"] }, status: 0 }
+  - id: man-section
+    text: "`man` shows a page from a section you chose by number, like `man 2 write`."
+    check: { kind: ran, program: man, args: { match: ["^[1-8]$"] }, status: 0 }
+  - id: completes-a-file
+    text: "Tab finishes a file name for you: `cat /etc/mot`, then Tab."
+  - id: completes-a-command
+    text: "Tab finishes a command name for you: `ec`, then Tab."
+  - id: env-adds-a-setting
+    text: "`env` starts a program with one setting added, and that program prints it."
+  # Re-tests P.2: the program the player built still runs.
+  - id: runs-hello
+    text: "`./hello` runs from your home and exits with status 0."
+    check: { kind: exit-status, status: 0 }
+hints:
+  - "The shell found `ls` without you saying where it lives. Where did it look? There's a command that prints the list."
+  - "A name without a `/` is searched in each folder of `PATH`, in order. A name with a `/` is a path: the shell runs exactly that file."
+  - "`hello` is in your home, which isn't in `PATH`. Type `./hello`: `.` is the folder you're in."
+# From here on the player types every command: chips name a command, never its arguments.
+chips:
+  - { command: echo, explain: "print its arguments: plain echo is the shell's builtin, /bin/echo a program" }
+  - { command: ls, explain: "list a folder: -l one long line per file, -a names starting with . too" }
+  - { command: wc, explain: "count lines, words and bytes: -l lines, -w words, -c bytes" }
+  - { command: man, explain: "show a command's manual page; q quits" }
+  - { command: printenv, explain: "print environment variables, or just the one you name" }
+  - { command: env, explain: "print the environment, or run a program with a setting added" }
+xray: [syscalls]
+codex:
+  - id: shell
+    term: the shell
+    deepens: terminal
+    simple: >-
+      A program that prints a prompt, reads the line you type, runs the program you
+      named, waits for it, and prompts again.
+    deep: >-
+      A shell is an ordinary user process (bash, dash, BusyBox ash), not part of the
+      kernel. It reads your line from standard input (fd 0) and runs each command
+      with fork (the clone syscall), execve and wait4. The prompt usually ends in $
+      for an ordinary user and # for root. Tab completion is the shell reading a
+      folder (getdents64) and finishing the name; the kernel only sees the read.
+    sources: [kernel/fork.c, fs/exec.c, fs/readdir.c]
+    docs: https://man7.org/linux/man-pages/man1/dash.1.html
+    tryIt: strace -f -e trace=clone,execve,wait4 sh -c 'ls /'
+  - id: command
+    term: commands
+    simple: >-
+      The first word of a line: the program to run, or a builtin the shell does
+      itself, like cd.
+    deep: >-
+      For a program, the shell calls execve() with the file's path; the kernel opens
+      the file, checks that it may be run, and replaces the process's program with
+      it. cd must be a builtin because a working directory belongs to one process: a
+      child that changed its own would change nothing for the shell.
+    sources: [fs/exec.c]
+    docs: https://man7.org/linux/man-pages/man2/execve.2.html
+    tryIt: type cat cd
+  - id: arguments
+    term: arguments and options
+    simple: >-
+      The words after the command. Options start with - and change how the program
+      works; the rest say what to work on.
+    deep: >-
+      The shell splits the line into words and passes them to execve() as argv, the
+      program's name first. The kernel copies them onto the new program's stack (in
+      copy_strings()), where C's main(int argc, char *argv[]) finds them. Options are
+      only a convention: each program reads its own, usually with getopt(3).
+    sources: [fs/exec.c]
+    docs: https://man7.org/linux/man-pages/man3/getopt.3.html
+    tryIt: strace -e trace=execve ls -l /etc
+  - id: environment
+    term: the environment
+    simple: >-
+      A list of NAME=value settings every process gets from its parent: HOME, USER,
+      PATH. A child's changes never reach its parent.
+    deep: >-
+      execve() takes the environment as a third list, envp, and the kernel copies it
+      onto the new program's stack next to argv; /proc/<pid>/environ shows it (to the
+      same user or root, read by environ_read()).
+    sources: [fs/exec.c, fs/proc/base.c]
+    docs: https://man7.org/linux/man-pages/man7/environ.7.html
+    tryIt: env GREETING=hi printenv GREETING
+  - id: path-search
+    term: PATH
+    simple: >-
+      The list of folders the shell searches for a command name. A name with a / is
+      run as it is, with no search.
+    deep: >-
+      The search happens in user space, in the shell or in the C library's execvp();
+      the kernel's execve() takes only a path and answers -ENOENT when nothing is
+      there. The current folder is not in PATH, so a stray program in a shared folder
+      can't stand in for a real command.
+    sources: [fs/exec.c]
+    docs: https://man7.org/linux/man-pages/man3/exec.3.html
+    tryIt: strace -f -e trace=execve sh -c nosuchcmd
+  - id: man-pages
+    term: the manual
+    simple: >-
+      man ls shows the manual page for ls. A number picks a section: man 2 write is
+      the syscall, man 1 write a command.
+    deep: >-
+      Sections: 1 commands, 2 syscalls, 3 C library functions, 4 devices, 5 file
+      formats, 7 overviews, 8 admin commands. The Linux man-pages project documents
+      the kernel's user-space interface; the kernel's own documentation lives in its
+      Documentation/ folder, published at docs.kernel.org. Every card in this Codex
+      names its man pages this way.
+    sources: [Documentation]
+    docs: https://man7.org/linux/man-pages/man7/man-pages.7.html
+    tryIt: man 2 write
+taint: []
+fidelity:
+  faithful:
+    - argv as passed to execve, the program's name first
+    - splitting a line on runs of spaces
+    - PATH searched in order, and a name with a / not searched (POSIX)
+    - ENOENT from execve for a missing file
+    - . and .. as real entries in every folder
+    - the environment passed to children and never back
+    - Tab completion reading the folder
+    - man page section numbers and the ls -a text
+  simplified:
+    - "the lab's PATH is /bin:/usr/bin; most distributions also list /usr/local/bin (and sbin folders) and make /bin a link to /usr/bin"
+    - "the rescue shell searches by trying execve in each folder, like dash and BusyBox ash; bash checks with stat first"
+    - the rescue shell's "command not found" message follows bash's
+    - the lab's man pages are short excerpts of the real ones
+    - the rescue shell completes only command and file names
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

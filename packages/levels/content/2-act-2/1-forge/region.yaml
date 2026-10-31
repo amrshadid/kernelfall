@@ -1,0 +1,11 @@
+id: forge
+name: The Forge
+caption: "build and boot your own kernel: Kconfig, kbuild"
+source: Kconfig, Makefile, scripts/
+guide: the Compiler Smith
+slots:
+  - {
+      number: "2.1",
+      title: Build Your Own Kernel,
+      summary: "Write a small config, then build and boot a Linux kernel of your own. You learn Kconfig and kbuild, and how to find your way around the kernel's source.",
+    }

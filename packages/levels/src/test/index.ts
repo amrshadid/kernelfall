@@ -1,0 +1,6 @@
+export { LabEventLog } from '#test/lab-event-log'
+export { judges, type LevelUnderTest, levelUnderTest, metBy, verdictOf } from '#test/level-under-test'
+export { loadedContent } from '#test/loaded-content'
+export { recordedCommands, recordedRun, recordedRunNames } from '#test/recorded-runs'
+export { REFERENCE_RUNS, type ReferenceRun, type RunFile, type RunLine } from '#test/reference-runs'
+export { decodeRunFixture, encodeRunFixture, RUN_FIXTURE_EXTENSION, type RunFixture } from '#test/run-fixture'

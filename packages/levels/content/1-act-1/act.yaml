@@ -1,0 +1,14 @@
+id: act1
+name: "Act I: Userland"
+layer:
+  key: userland
+  name: Userland
+  short: Userland
+  kicker: Ring 3 · user mode · Survey and Act I
+  caption: "Where programs live: files, permissions, processes, pipes, signals and sockets, each reached through a syscall."
+  note: >-
+    Code here runs in user mode (ring 3 on x86): it can't touch the hardware or
+    another process's memory, so to do anything real it asks the kernel with a
+    syscall. You build a shell and a chat server here.
+  source: include/uapi/, fs/, kernel/fork.c, kernel/signal.c, net/
+  guides: init, the Compiler Smith, the Harbormaster

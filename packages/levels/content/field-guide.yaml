@@ -1,0 +1,287 @@
+# The Field Guide: the Codex page of commands and folders
+# (docs/levels/surface-survey.md#the-field-guide-codex-page). Each entry appears when
+# the level of its `firstMet` slot starts. `syscalls` are the kernel's names of what it
+# asks in the lab; `syscallNote` says what the list can't. `deepenedIn` names the slots
+# that build it or teach the mechanism underneath.
+opensAt: "P.3"
+entries:
+  - name: echo
+    kind: command
+    what: "print its arguments (built into the shell: no program starts; /bin/echo is the program)"
+    syscalls: [write]
+    syscallNote: "the shell's own write; /bin/echo adds an execve"
+    firstMet: "P.1"
+    deepenedIn: ["P.2"]
+  - name: ls
+    kind: command
+    what: "list a folder (-l long form, -a names starting with . too, -i inode numbers)"
+    syscalls: [openat, getdents64, newfstatat, write]
+    syscallNote: "a newfstatat per entry; -l also reads /etc/passwd and /etc/group for the names"
+    firstMet: "P.1"
+    deepenedIn: ["S.1", "2.7"]
+  - name: cat
+    kind: command
+    what: copy files to standard output
+    syscalls: [openat, read, write, close]
+    firstMet: "P.1"
+    deepenedIn: ["1.6", "2.5"]
+  - name: dmesg
+    kind: command
+    what: "print the kernel's log"
+    syscalls: [openat, read, write]
+    syscallNote: openat of /dev/kmsg
+    firstMet: "P.4"
+    deepenedIn: ["2.2"]
+  - name: uname
+    kind: command
+    what: "print the kernel's name, release and CPU type"
+    syscalls: [uname]
+    firstMet: "P.5"
+    deepenedIn: ["P.5"]
+  - name: lspci
+    kind: command
+    what: "list PCI devices (-k: and their drivers)"
+    syscalls: [openat, getdents64, read, readlinkat]
+    syscallNote: "reads /sys/bus/pci; -k: readlinkat of each device's driver link"
+    firstMet: "P.6"
+    deepenedIn: ["2.4"]
+  - name: dtc
+    kind: command
+    what: compile a device tree from text to binary
+    syscalls: [openat, read, write]
+    firstMet: "P.6"
+    deepenedIn: ["P.6"]
+  - name: ps
+    kind: command
+    what: list processes
+    syscalls: [openat, getdents64, read]
+    syscallNote: reads /proc
+    firstMet: "P.7"
+    deepenedIn: ["S.3", "1.4", "1.5"]
+  - name: nproc
+    kind: command
+    what: print how many CPUs this process may use
+    syscalls: [sched_getaffinity]
+    firstMet: "P.7"
+    deepenedIn: ["P.7"]
+  - name: "yes"
+    kind: command
+    what: print y forever, until stopped
+    syscalls: [write]
+    syscallNote: again and again
+    firstMet: "P.7"
+    deepenedIn: ["1.7"]
+  - name: free
+    kind: command
+    what: show memory use
+    syscalls: [openat, read]
+    syscallNote: reads /proc/meminfo
+    firstMet: "P.8"
+    deepenedIn: ["2.8a"]
+  - name: reboot
+    kind: command
+    what: restart the Machine
+    syscalls: [reboot]
+    firstMet: "P.10"
+    deepenedIn: ["P.10"]
+  - name: pwd
+    kind: command
+    what: print the working directory
+    syscalls: [getcwd]
+    firstMet: "P.3"
+    deepenedIn: ["1.5"]
+  - name: man
+    kind: command
+    what: show a manual page; q quits
+    syscalls: [openat, read, write]
+    firstMet: "P.3"
+    deepenedIn: ["P.3"]
+  - name: printenv
+    kind: command
+    what: "print environment variables (printenv PATH: just one)"
+    syscalls: [write]
+    syscallNote: the environment is already in its memory
+    firstMet: "P.3"
+    deepenedIn: ["1.5"]
+  - name: env
+    kind: command
+    what: print the environment, or run a program with a setting added
+    syscalls: [write, execve]
+    firstMet: "P.3"
+    deepenedIn: ["1.5"]
+  - name: wc
+    kind: command
+    what: "count lines, words and bytes (-l lines, -w words, -c bytes)"
+    syscalls: [openat, read, write]
+    firstMet: "P.3"
+    deepenedIn: ["S.5", "1.6"]
+  - name: cd
+    kind: command
+    what: "change the shell's working directory (part of the shell, not a program)"
+    syscalls: [chdir]
+    firstMet: "S.1"
+    deepenedIn: ["1.5"]
+  - name: mkdir
+    kind: command
+    what: "make a folder (-p: and any missing folders above it)"
+    syscalls: [mkdir]
+    firstMet: "S.1"
+    deepenedIn: ["S.1"]
+  - name: rmdir
+    kind: command
+    what: remove an empty folder
+    syscalls: [rmdir]
+    firstMet: "S.1"
+    deepenedIn: ["S.1"]
+  - name: cp
+    kind: command
+    what: copy a file
+    syscalls: [openat, read, write, close]
+    firstMet: "S.1"
+    deepenedIn: ["1.6"]
+  - name: mv
+    kind: command
+    what: move or rename a file (no bytes are copied on one filesystem)
+    syscalls: [renameat2]
+    firstMet: "S.1"
+    deepenedIn: ["S.1"]
+  - name: rm
+    kind: command
+    what: "remove a file's name; there is no bin to get it back from"
+    syscalls: [unlinkat]
+    firstMet: "S.1"
+    deepenedIn: ["S.1"]
+  - name: id
+    kind: command
+    what: show your user and group IDs
+    syscalls: [getuid, geteuid, getgid, getegid, getgroups]
+    firstMet: "S.2"
+    deepenedIn: ["S.2", "1.B"]
+  - name: chmod
+    kind: command
+    what: "change a file's permission bits"
+    syscalls: [fchmodat]
+    firstMet: "S.2"
+    deepenedIn: ["S.2"]
+  - name: kill
+    kind: command
+    what: "send a signal to a process (-STOP, -CONT, -TERM, -KILL; -l lists them)"
+    syscalls: [kill]
+    firstMet: "S.3"
+    deepenedIn: ["1.8"]
+  - name: sleep
+    kind: command
+    what: wait a number of seconds, then exit
+    syscalls: [clock_nanosleep]
+    firstMet: "S.3"
+    deepenedIn: ["1.4", "1.5"]
+  - name: find
+    kind: command
+    what: search a folder tree for files by name, type, owner
+    syscalls: [openat, getdents64, newfstatat]
+    syscallNote: a stat call per entry
+    firstMet: "S.4"
+    deepenedIn: ["S.4"]
+  - name: grep
+    kind: command
+    what: "print the lines that contain a word (-c count, -n numbers, -v the others, -i any case)"
+    syscalls: [openat, read, write]
+    firstMet: "S.5"
+    deepenedIn: ["1.7"]
+  - name: head
+    kind: command
+    what: "print the first lines (-n 3: three)"
+    syscalls: [openat, read, write]
+    firstMet: "S.5"
+    deepenedIn: ["1.7"]
+  - name: tail
+    kind: command
+    what: print the last lines
+    syscalls: [openat, read, write]
+    firstMet: "S.5"
+    deepenedIn: ["2.2"]
+  - name: sort
+    kind: command
+    what: "print lines in order (-r reversed, -n by number, -o file into a file)"
+    syscalls: [openat, read, write]
+    firstMet: "S.5"
+    deepenedIn: ["1.6"]
+  - name: uniq
+    kind: command
+    what: "drop repeated neighbouring lines (-c: count them)"
+    syscalls: [openat, read, write]
+    firstMet: "S.5"
+    deepenedIn: ["1.7"]
+  - name: true/false
+    kind: command
+    what: do nothing, and exit 0 or 1
+    syscalls: [exit_group]
+    firstMet: "1.7"
+    deepenedIn: ["1.7"]
+  - name: dd
+    kind: command
+    what: "copy data in blocks of a chosen size (bs=1: one byte per read)"
+    syscalls: [openat, read, write]
+    firstMet: "2.5"
+    deepenedIn: ["2.5", "2.8a"]
+  - name: cmd | cmd
+    kind: command
+    what: connect two programs
+    syscalls: [pipe, fork, dup2, execve, wait4]
+    firstMet: "S.5"
+    deepenedIn: ["1.7"]
+  - name: /
+    kind: folder
+    what: the root of the one tree; every path starts here or at the working directory
+    firstMet: "P.1"
+    deepenedIn: ["S.1"]
+  - name: "., .."
+    kind: folder
+    what: this folder, and the one above it; real entries in every folder
+    firstMet: "P.3"
+    deepenedIn: ["S.1"]
+  - name: /bin, /usr
+    kind: folder
+    what: "programs (/bin, /usr/bin) and their shared files; on most current distributions /bin is a link to /usr/bin, on the Machine a folder of its own"
+    firstMet: "P.1"
+    deepenedIn: ["P.3", "1.4"]
+  - name: /boot
+    kind: folder
+    what: the kernels, initramfs files and GRUB
+    firstMet: "P.4"
+    deepenedIn: ["2.1"]
+  - name: /etc
+    kind: folder
+    what: "system settings: motd, passwd, group, shadow, os-release"
+    firstMet: "P.1"
+    deepenedIn: ["S.2"]
+  - name: /home
+    kind: folder
+    what: one home folder per user; yours is /home/you
+    firstMet: "P.1"
+    deepenedIn: ["S.1", "1.5"]
+  - name: /tmp
+    kind: folder
+    what: scratch space anyone may write
+    firstMet: "S.1"
+    deepenedIn: ["1.6"]
+  - name: /dev
+    kind: folder
+    what: "device files: doors into drivers"
+    firstMet: "P.9"
+    deepenedIn: ["2.4"]
+  - name: /proc
+    kind: folder
+    what: files the kernel writes at the moment you read them
+    firstMet: "P.7"
+    deepenedIn: ["S.1", "1.5", "2.7"]
+  - name: /sys
+    kind: folder
+    what: "the kernel's devices and drivers, one value per file"
+    firstMet: "P.6"
+    deepenedIn: ["2.3", "2.7"]
+  - name: /lib/modules
+    kind: folder
+    what: "the kernel's modules, one folder per kernel release"
+    firstMet: "P.5"
+    deepenedIn: ["2.2"]

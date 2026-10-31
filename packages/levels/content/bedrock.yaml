@@ -1,0 +1,13 @@
+# The Kernel Map's bottom layer: the hardware under every act. No level is set
+# here, so it belongs to no act.
+key: bedrock
+name: "Bedrock: Hardware"
+short: Hardware
+kicker: Below the kernel · not software
+caption: The CPU, memory, buses and devices. The kernel is the only software that drives them directly.
+note: >-
+  Hardware is not part of the kernel: it is what the kernel drives. P.6 Finding the
+  Hardware shows how the kernel discovers it (ACPI tables, the PCI bus, a device
+  tree), and the Bus Yards in Act III bind drivers to it.
+source: arch/x86/, drivers/base/, drivers/pci/
+guides: "none: nobody lives here"

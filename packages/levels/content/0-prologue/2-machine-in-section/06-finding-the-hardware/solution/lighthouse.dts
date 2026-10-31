@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Socket Harbor's lighthouse controller: a small ARM board, described by hand
+ * because its devices can't announce themselves.
+ */
+/dts-v1/;
+
+/ {
+	model = "Socket Harbor lighthouse";
+	compatible = "kernelfall,lighthouse";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	gpio: gpio@7e200000 {
+		compatible = "brcm,bcm2835-gpio";
+		reg = <0x7e200000 0xb4>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		lamp {
+			label = "lighthouse:lamp";
+			gpios = <&gpio 4 0>;
+		};
+	};
+};

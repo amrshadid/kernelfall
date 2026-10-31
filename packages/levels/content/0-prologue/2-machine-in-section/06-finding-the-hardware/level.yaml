@@ -1,0 +1,112 @@
+# Prologue P.6, Finding the Hardware (docs/levels/prologue.md). Every objective is
+# judged in checker.ts: none of them is about the player's own program.
+id: prologue-machine-in-section-06-finding-the-hardware
+title: Finding the Hardware
+summary: "Find the Machine's devices and the drivers bound to them, then fix a small board's device tree so its lamp lights. You learn how the kernel discovers hardware and matches each device to a driver."
+minutes: 25
+tracks: [kernel]
+skills: [drv-hardware-discovery]
+prerequisites: [sys-kernel-role]
+objectives:
+  - id: reads-disk-driver
+    text: "Read the disk's `driver` link in `/sys/bus/pci/devices/0000:00:01.0`: it names the disk's driver."
+  - id: compiles-dts
+    text: "`dtc` compiles `lighthouse.dts` into `lighthouse.dtb` without errors."
+  - id: lamp-binds
+    text: "On the lighthouse board's boot, the `leds-gpio` driver takes the lamp, and `/sys/class/leds/lighthouse:lamp` appears."
+hints:
+  - "In `/sys`, a device that has a driver has a link called `driver`. Where does the disk's link point?"
+  - "A device tree node binds when its `compatible` text is one of the texts in a driver's `of_match_table`, whole and letter for letter (only upper and lower case may differ). One letter off and nothing happens."
+  - 'The `leds` node says `"gpio-led"`. The driver''s list says `"gpio-leds"`.'
+xray: [syscalls, files]
+codex:
+  - id: drivers
+    term: drivers
+    simple: >-
+      The part of the kernel that knows how to work one kind of device. Without one,
+      a device is seen but can't be used.
+    deep: >-
+      Most of the kernel's code is drivers, under drivers/. A driver registers with a
+      bus and is offered every matching device; it can be built in or a module.
+    sources: [drivers, include/linux/device/driver.h]
+    docs: https://docs.kernel.org/driver-api/
+    tryIt: ls /sys/bus/pci/drivers
+  - id: acpi-pci
+    term: "finding hardware: ACPI and PCI"
+    simple: >-
+      On PCs the firmware describes the board (ACPI) and the kernel asks each PCI slot
+      what's there: vendor and device IDs.
+    deep: >-
+      ACPI tables (the DSDT and others) come from firmware and are parsed by the
+      kernel's ACPI core. PCI devices are found by reading each slot's configuration
+      space, in pci_scan_device(); each gets a struct pci_dev and a folder in
+      /sys/bus/pci/devices.
+    sources: [drivers/acpi, drivers/pci/probe.c, include/linux/pci.h]
+    docs: https://docs.kernel.org/PCI/pci.html
+    tryIt: lspci -nn
+  - id: device-tree
+    term: the device tree
+    simple: >-
+      A text description of a board's hardware, compiled to a binary and given to the
+      kernel at boot. Used by most ARM and RISC-V boards, not by PCs.
+    deep: >-
+      A .dts is a tree of nodes with properties (compatible, reg, interrupts, links
+      like <&gpio 4 0>); dtc compiles it to a .dtb that the bootloader passes to the
+      kernel. Drivers list the strings they handle in an of_match_table of struct
+      of_device_id; bindings are documented in Documentation/devicetree/bindings/. A
+      running system shows its tree in /sys/firmware/devicetree/base (also
+      /proc/device-tree).
+    sources: [drivers/of, arch/arm64/boot/dts, drivers/leds/leds-gpio.c]
+    docs: https://docs.kernel.org/devicetree/usage-model.html
+    tryIt: "ls /proc/device-tree 2>/dev/null || echo 'no device tree (normal on x86)'"
+  - id: driver-model
+    term: buses, devices and drivers
+    simple: >-
+      A bus matches each device it finds with a driver that can run it; the driver's
+      probe() then takes the device over.
+    deep: >-
+      The driver model has struct bus_type, struct device and struct device_driver.
+      When either side is added, the core calls the bus's match(), then the driver's
+      probe() (driver_attach(), really_probe()); /sys/bus/<bus>/devices and
+      /sys/bus/<bus>/drivers show both sides, /sys/devices the physical tree. udev, in
+      user space, hears each new device as a uevent and loads its module by modalias.
+    sources: [drivers/base/dd.c, drivers/base/bus.c, drivers/pci/pci-driver.c]
+    docs: https://docs.kernel.org/driver-api/driver-model/overview.html
+    tryIt: lspci -k
+  - id: interrupts-mmio
+    term: interrupts and MMIO
+    simple: >-
+      A driver works a device by reading and writing its registers at memory
+      addresses; the device calls for attention with an interrupt.
+    deep: >-
+      A driver maps the device's register range with ioremap() (or pci_iomap()) and
+      uses readl() and writel(). An interrupt (an IRQ line or a PCI MSI message) makes
+      the CPU run the kernel's interrupt entry, which calls the handler the driver
+      registered with request_irq(); slow work is deferred to softirqs or workqueues.
+      /proc/interrupts counts them per CPU.
+    sources: [kernel/irq, kernel/softirq.c, include/linux/io.h]
+    docs: https://docs.kernel.org/core-api/genericirq.html
+    tryIt: cat /proc/interrupts
+# No Taint rules are live in the Prologue.
+taint: []
+fidelity:
+  faithful:
+    - ACPI and PCI on x86, device trees on most ARM and RISC-V boards
+    - "PCI IDs 8086:100e for the 82540EM and 1af4:1001 for virtio block"
+    - "the /sys layout and its driver links"
+    - "the lspci -k format"
+    - "the device tree syntax, the gpio-leds and brcm,bcm2835-gpio compatible strings, and whole-string matching that ignores case (of_compat_cmp())"
+    - "the /proc/interrupts columns"
+  simplified:
+    - "the lighthouse board is made up (real bindings, invented board), and its kernel is simulated only as far as matching drivers: the lab does not run ARM code"
+    - the Machine has three PCI devices and no view of its ACPI tables
+    - IRQ numbers and counts are the lab's own
+    - "the probe message (`leds-gpio leds: probed`) is the lab's; the real driver core logs a binding only at debug level"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world
+lab:
+  files:
+    - { path: /home/you/boards, kind: dir, owner: you }
+  cwd: /home/you/boards

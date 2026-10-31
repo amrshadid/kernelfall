@@ -1,0 +1,16 @@
+id: socket-harbor
+name: Socket Harbor
+caption: sockets, TCP and UDP, many clients with poll
+source: net/socket.c, net/ipv4/
+guide: the Harbormaster
+slots:
+  - {
+      number: "1.9",
+      title: The Lighthouse,
+      summary: "Write a small chat server that one client can connect to over the network. You learn sockets: bind, listen, accept, and reading a stream of bytes.",
+    }
+  - {
+      number: "1.10",
+      title: A Full Harbor,
+      summary: "Grow your chat server to serve many clients at once with poll. You learn how one program waits on many connections without getting stuck on any of them.",
+    }

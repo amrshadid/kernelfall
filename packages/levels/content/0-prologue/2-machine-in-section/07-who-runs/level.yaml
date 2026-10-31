@@ -1,0 +1,79 @@
+# Prologue P.7, Who Runs (docs/levels/prologue.md). Objectives without a `check`
+# are judged in checker.ts.
+id: prologue-machine-in-section-07-who-runs
+title: Who Runs
+summary: "List every process, read one's status in /proc, and write a program that prints its own PID and its parent's. You learn what a process is and how the kernel shares two CPUs between them."
+minutes: 20
+tracks: [userland, kernel]
+skills: [proc-process-basics]
+prerequisites: [sys-kernel-role]
+objectives:
+  - id: reads-proc-status
+    text: "Read what the Kernel keeps about a process, in `/proc/<pid>/status`."
+  - id: exits-zero
+    text: "`./whoami` exits with status 0."
+    check: { kind: exit-status, status: 0, program: whoami }
+  - id: prints-own-pid
+    text: "`./whoami` asks the Kernel for its own PID with `getpid` and prints it."
+  - id: prints-parent-pid
+    text: "`./whoami` asks for its parent's PID with `getppid` and prints it: the rescue shell's PID."
+hints:
+  - "`getpid()` gives your own number. Is there a function for your parent's?"
+  - "`getppid()` returns the parent's PID. `printf` with `%d` prints a whole number."
+  - "After the first `printf`, add `printf(\"My parent is %d\\n\", (int)getppid());`."
+xray: [processes, syscalls]
+codex:
+  - id: process
+    term: process
+    deepens: program-process
+    simple: A program while it runs, with its own memory, a PID, a parent and a state.
+    deep: >-
+      The kernel keeps one struct task_struct per task (a process or a thread): its
+      PID, parent, state, credentials, memory (mm), open files and more. Kernel
+      threads have no mm and descend from kthreadd. /proc/<pid>/status prints part of
+      it, in proc_pid_status().
+    sources: [include/linux/sched.h, kernel/fork.c, kernel/kthread.c, fs/proc/array.c]
+    docs: https://man7.org/linux/man-pages/man5/proc_pid_status.5.html
+    tryIt: "ps -o pid,ppid,stat,comm -p $$"
+  - id: scheduler
+    term: the scheduler
+    simple: >-
+      The part of the kernel that decides which process runs on each CPU, and for how
+      long.
+    deep: >-
+      Ready tasks wait on a per-CPU run queue. Since 6.6 the default policy is EEVDF
+      (it replaced CFS): each task earns a fair share of CPU time, and the one with
+      the earliest virtual deadline runs next. A context switch, in __schedule(),
+      saves one task's registers and loads another's.
+    sources: [kernel/sched/core.c, kernel/sched/fair.c, Documentation/scheduler/sched-eevdf.rst]
+    docs: https://man7.org/linux/man-pages/man7/sched.7.html
+    tryIt: "grep ctxt /proc/$$/status"
+  - id: kernel-threads
+    term: kernel threads
+    simple: >-
+      The kernel's own workers. They show in ps under their own names but run only
+      kernel code.
+    deep: >-
+      Created with kthread_create() or kthread_run() by kthreadd (PID 2). ksoftirqd/N
+      finishes deferred interrupt work on CPU N; kswapd0 frees memory when it runs
+      low; kworker threads run workqueues.
+    sources: [kernel/kthread.c, kernel/softirq.c, mm/vmscan.c]
+    docs: https://man7.org/linux/man-pages/man1/ps.1.html
+    tryIt: ps -e --forest | head -n 30
+# No Taint rules are live in the Prologue.
+taint: []
+fidelity:
+  faithful:
+    - "ps columns, PID 1 and PID 2, and the kernel threads' names"
+    - "the /proc/<pid>/status field names and formats"
+    - "the R and S states"
+    - getpid and getppid
+    - EEVDF as the 6.18 default scheduler
+  simplified:
+    - "the Machine has few processes and kernel threads; a real system has dozens of kernel threads"
+    - "the CPU lanes show the lab's own time slices, not EEVDF's real arithmetic, and no task moves between the two CPUs (real Linux balances load across them)"
+    - "/proc/<pid>/status shows only the fields the levels use"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

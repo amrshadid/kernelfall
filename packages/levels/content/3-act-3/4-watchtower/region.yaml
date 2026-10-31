@@ -1,0 +1,22 @@
+id: watchtower
+name: Watchtower
+caption: ftrace, perf and eBPF
+source: kernel/trace/, kernel/events/, kernel/bpf/
+guide: the Lookout, the Verifier
+slots:
+  - {
+      number: "3.9",
+      title: The Lookout,
+      summary: "Add tracepoints to the Lantern and watch them fire with ftrace. You learn to see inside the running kernel without stopping it.",
+    }
+  - {
+      number: "3.10",
+      title: Where the Time Goes,
+      optional: true,
+      summary: "Count a program's CPU time, context switches and page faults with perf events. You learn where perf's numbers come from.",
+    }
+  - {
+      number: "3.11",
+      title: The Verifier,
+      summary: "Write a small eBPF program that counts the bytes each process writes to the Lantern. You learn eBPF, and why the verifier checks every program first.",
+    }

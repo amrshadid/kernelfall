@@ -1,0 +1,12 @@
+id: machine-in-section
+name: The Machine in Section
+caption: "the kernel's parts: hardware, processes, memory, files, devices"
+source: kernel/, mm/, fs/, drivers/
+guide: init
+slots:
+  - { number: "P.5", title: The Kernel Up Close, level: 05-kernel-up-close }
+  - { number: "P.6", title: Finding the Hardware, level: 06-finding-the-hardware }
+  - { number: "P.7", title: Who Runs, level: 07-who-runs }
+  - { number: "P.8", title: Pages and Maps, level: 08-pages-and-maps }
+  - { number: "P.9", title: "Files, Doors and Wires", level: 09-files-doors-wires }
+  - { number: "P.10", title: Bring the Machine Up, level: 10-bring-it-up }

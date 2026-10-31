@@ -1,0 +1,12 @@
+id: the-stall
+name: The Stall
+boss: true
+caption: "the boss: lockups and stalls"
+source: kernel/watchdog.c, kernel/hung_task.c
+guide: the Watchdog
+slots:
+  - {
+      number: "3.20",
+      title: The Stall,
+      summary: "During a packet storm one CPU stops answering. You gather the evidence with your own tracing tools and find what stalled it.",
+    }

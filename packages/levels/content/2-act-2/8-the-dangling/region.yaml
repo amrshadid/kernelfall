@@ -1,0 +1,12 @@
+id: the-dangling
+name: The Dangling
+boss: true
+caption: "the finale: a use-after-free, read with KASAN"
+source: mm/kasan/
+guide: init, the Watchdog
+slots:
+  - {
+      number: "2.12",
+      title: The Dangling,
+      summary: "A fading message is freed while a timer still uses it. You read KASAN's report and fix the use-after-free with everything Act II taught you.",
+    }

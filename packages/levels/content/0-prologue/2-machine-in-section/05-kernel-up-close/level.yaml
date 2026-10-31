@@ -1,0 +1,142 @@
+# Prologue P.5, The Kernel Up Close (docs/levels/prologue.md). Objectives without
+# a `check` are judged in checker.ts.
+id: prologue-machine-in-section-05-kernel-up-close
+title: The Kernel Up Close
+summary: "Open the drawing of the Machine in section, see a program killed for touching memory it doesn't own, and ask the kernel its name with uname. You learn what the kernel owns and why every program goes through it."
+minutes: 20
+tracks: [kernel]
+skills: [sys-kernel-role]
+prerequisites: [sys-user-kernel-mode]
+objectives:
+  - id: poke-segfaults
+    text: "`./poke` tries to read the Kernel's memory, and the Kernel ends it with `SIGSEGV`."
+  - id: asks-uname
+    text: "`./myuname` asks the Kernel with the `uname` syscall, and the Kernel answers 0."
+    # The kernel's tracepoint is sys_enter_newuname; strace calls it uname.
+    check: { kind: syscall, names: [uname, newuname], ret: 0, program: myuname }
+  - id: exits-zero
+    text: "`./myuname` exits with status 0."
+    check: { kind: exit-status, status: 0, program: myuname }
+  - id: prints-machine
+    text: "`./myuname` prints the kernel name, its release and the CPU type on one line: `Linux`, `6.18.59-0-virt` and `i686`."
+  - id: compares-uname
+    text: "The `uname` command, with `-m`, prints the CPU type too."
+    check: { kind: wrote, fd: 1, program: uname, text: { contains: i686 } }
+hints:
+  - "`u` has more fields than the two the program prints. Which one holds the CPU type?"
+  - "`printf` takes a format with one `%s` per piece of text, then the pieces in the same order."
+  - "Change the format to `\"%s %s %s\\n\"` and add `u.machine` after `u.release`."
+xray: [syscalls, modules]
+codex:
+  - id: kernel-resources
+    term: what the kernel owns
+    deepens: kernel
+    simple: >-
+      CPU time, memory, devices, files and the network. Programs reach them only by
+      asking.
+    deep: >-
+      A program that touches what isn't its own gets a fault, and the kernel answers
+      with a signal: SIGSEGV for memory it may not touch. On x86-64 a user-mode access
+      to a kernel address faults in the CPU, and the kernel's page fault handler,
+      do_user_addr_fault(), sends the signal.
+    sources: [arch/x86/mm/fault.c, kernel/signal.c]
+    docs: https://man7.org/linux/man-pages/man7/signal.7.html
+    tryIt: "sh -c 'kill -SEGV $$'; echo $?"
+  - id: kernel-user-space
+    term: kernel space and user space
+    deepens: user-kernel-mode
+    simple: >-
+      Every process's addresses are split: the lower part is its own, the upper part
+      belongs to the kernel and is locked.
+    deep: >-
+      On x86-64 with 4-level page tables, user space is the 128 TiB from 0 to
+      0x00007fffffffffff; kernel space is the top half. The kernel's pages are marked
+      supervisor-only, and with page-table isolation (PTI) most of them aren't even
+      mapped while user code runs.
+    sources: [Documentation/arch/x86/x86_64/mm.rst, arch/x86/mm/pti.c]
+    docs: https://docs.kernel.org/arch/x86/x86_64/mm.html
+    tryIt: cat /proc/self/maps
+  - id: signals
+    term: signals
+    simple: >-
+      Short notices the kernel delivers to a process. Some end it: SIGSEGV for a bad
+      memory access, SIGINT for Ctrl-C.
+    deep: >-
+      Each signal has a number and a default action (end, end with a core dump,
+      ignore, stop, continue); a process may install a handler for most of them, but
+      never for SIGKILL or SIGSTOP.
+    sources: [kernel/signal.c, include/uapi/asm-generic/signal.h]
+    docs: https://man7.org/linux/man-pages/man7/signal.7.html
+    tryIt: kill -l
+  - id: monolithic-kernel
+    term: monolithic kernel and modules
+    simple: >-
+      Linux is one big program in kernel mode, which can load extra pieces, modules,
+      while it runs.
+    deep: >-
+      Every part of Linux shares one address space and full privilege, so a bad
+      driver can crash the whole machine. Microkernels (seL4, QNX, MINIX 3) run
+      drivers as processes instead. Linux modules are .ko files under
+      /lib/modules/$(uname -r), loaded with finit_module() and listed in
+      /proc/modules.
+    sources: [kernel/module/main.c, kernel/module/procfs.c]
+    docs: https://man7.org/linux/man-pages/man8/lsmod.8.html
+    tryIt: lsmod | head
+  - id: linux-distribution
+    term: Linux and distributions
+    deepens: operating-system
+    simple: >-
+      Linux is the kernel. A distribution adds init, a shell, a C library, tools and a
+      way to install software.
+    deep: >-
+      GNU/Linux distributions combine Linux with GNU tools (coreutils, bash), a C
+      library (glibc or musl), an init system (often systemd) and a package manager.
+      Android uses the Linux kernel with its own user space (bionic, ART). uname asks
+      the kernel who it is; /etc/os-release says which distribution you're on.
+    sources: [kernel/sys.c, init/version.c]
+    docs: https://man7.org/linux/man-pages/man5/os-release.5.html
+    tryIt: uname -srm; cat /etc/os-release
+  - id: kernel-versions
+    term: "kernel versions: mainline, stable, LTS"
+    simple: >-
+      A new kernel comes out about every nine or ten weeks; stable and long-term (LTS)
+      releases keep getting fixes. The game follows 6.18 LTS.
+    deep: >-
+      Each mainline release opens with a two-week merge window, then weekly release
+      candidates (-rc1, -rc2, …). Stable maintainers backport fixes as 6.18.1, 6.18.2
+      and so on. One release a year, usually the last, becomes LTS; kernel.org lists
+      each one's projected end of life.
+    sources: [Documentation/process/2.Process.rst]
+    docs: https://docs.kernel.org/process/2.Process.html
+    tryIt: uname -r
+  - id: kernel-license
+    term: the GPL
+    simple: >-
+      Linux is free software under the GPL, version 2: use, study, change and share
+      it, and share your source when you share a changed kernel.
+    deep: >-
+      The kernel is GPL-2.0-only, with a "syscall note" that keeps ordinary programs
+      which only use syscalls outside the GPL. Every source file states its license in
+      an SPDX-License-Identifier line. Modules declare theirs with MODULE_LICENSE().
+    sources: [COPYING, LICENSES, Documentation/process/license-rules.rst]
+    docs: https://docs.kernel.org/process/license-rules.html
+    tryIt: modinfo -F license e1000
+# No Taint rules are live in the Prologue.
+taint: []
+fidelity:
+  faithful:
+    - uname() and struct utsname
+    - SIGSEGV for a user-mode read of a kernel address
+    - the x86-64 split between user space and kernel space
+    - "/proc/modules columns, and its addresses shown as zeros to anyone but root"
+    - "the /lib/modules/<release> layout"
+    - "the release model: mainline, stable and LTS"
+    - the license facts
+  simplified:
+    - "`poke` is a lab program"
+    - "the lab's /lib/modules holds only the Machine's few modules"
+    - "X-ray's SIGSEGV line is shorter than strace's, which also prints si_code"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

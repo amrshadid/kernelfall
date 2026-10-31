@@ -1,0 +1,147 @@
+# Prologue P.1, Power On (docs/levels/prologue.md). No code and no syscalls yet:
+# the player learns what a computer, an operating system and a kernel are, then
+# walks the file tree from / down to /proc, where the kernel answers itself.
+# echo is the shell's builtin and starts no program, so checker.ts judges its two
+# objectives; the rest are declared checks.
+id: prologue-boot-path-01-power-on
+title: Power On
+summary: "Press the power button and watch the Machine start, then walk its folders from the top down to the kernel. You learn what a computer is made of, what an operating system does, what its kernel is and where Linux keeps everything."
+minutes: 20
+tracks: [userland]
+skills: [sys-computer-basics]
+prerequisites: []
+objectives:
+  - id: echo-hello
+    text: "`echo hello` prints `hello`: the shell answers by itself."
+  - id: echo-own-words
+    text: "`echo` prints words of your own: your name, a greeting."
+  - id: lists-root
+    text: "`ls /` lists the root, the top of the folder tree."
+    check: { kind: read-to-end, program: ls, path: / }
+  - id: lists-bin
+    text: "`ls /bin` lists the programs waiting to run."
+    check: { kind: read-to-end, program: ls, path: /bin }
+  - id: reads-motd
+    text: "`cat /etc/motd` shows init's message, a settings file in `/etc`."
+    check: { kind: read-to-end, program: cat, path: /etc/motd }
+  - id: reads-hostname
+    text: "`cat /etc/hostname` shows the Machine's name."
+    check: { kind: read-to-end, program: cat, path: /etc/hostname }
+  - id: lists-dev
+    text: "`ls /dev` lists the devices, each shown as a file."
+    check: { kind: read-to-end, program: ls, path: /dev }
+  - id: reads-proc-version
+    text: "`cat /proc/version` lets the kernel tell you its version."
+    check: { kind: read-to-end, program: cat, path: /proc/version }
+hints:
+  - "Each chip is a command. Go in order: from the top of the folder tree down to the kernel."
+  - "A command is a program's name, then what it should work on. `ls /dev`: the program `ls`, working on the folder `/dev`."
+  - "The last one is `cat /proc/version`: type it and press Enter."
+chips:
+  - { command: echo hello, explain: "echo prints what you give it; the shell does it itself" }
+  - { command: ls /, explain: "list the root, the top of the tree: every folder starts here" }
+  - { command: ls /bin, explain: "list /bin, the programs the Machine can run" }
+  - { command: cat /etc/motd, explain: "show /etc/motd, init's message to the city" }
+  - { command: cat /etc/hostname, explain: "show /etc/hostname, the Machine's name" }
+  - { command: ls /dev, explain: "list /dev, the devices; ttyS0 is your terminal's line" }
+  - { command: cat /proc/version, explain: "ask the kernel its version; it writes the text as you read" }
+  - { command: pwd, explain: "print the folder you're in, your home /home/you" }
+# X-ray's first view unlocks in P.2.
+xray: []
+codex:
+  - id: computer-parts
+    term: the parts of a computer
+    simple: >-
+      A CPU that runs instructions, memory for what's running now, storage that
+      keeps files, and devices for everything else.
+    deep: >-
+      The CPU reads instructions and data from RAM; storage and other devices sit on
+      buses and are worked through their drivers. RAM is counted in bytes: 1 KiB is
+      1024 bytes, 1 MiB is 1024 KiB, so the Machine's 256 MiB is 268,435,456 bytes.
+    sources: []
+    docs: https://docs.kernel.org/admin-guide/mm/concepts.html
+    tryIt: lscpu; free -h; lsblk
+  - id: operating-system
+    term: operating system
+    simple: >-
+      The software that runs the computer for every other program: starts them,
+      shares the hardware between them, keeps the files.
+    deep: >-
+      An OS is a kernel plus the programs and libraries around it: an init system, a
+      shell, a C library, tools. On Linux systems these come together as a
+      distribution; the Machine runs Alpine Linux.
+    sources: []
+    docs: https://man7.org/linux/man-pages/man7/intro.7.html
+    tryIt: cat /etc/os-release
+  - id: kernel
+    term: the kernel
+    simple: >-
+      The core of the operating system: the only part with full control of the
+      hardware. Every program asks it for what it needs.
+    deep: >-
+      The kernel runs when something enters it: a program's syscall, a device's
+      interrupt, a fault, a timer; it also keeps a few helper threads of its own. The
+      city-works picture stops being true there: it is code that runs on request, not
+      a separate worker always on duty.
+    sources: [arch/x86/entry, init/main.c]
+    docs: https://man7.org/linux/man-pages/man2/intro.2.html
+    tryIt: uname -r
+  - id: program-process
+    term: program and process
+    simple: >-
+      A program is instructions in a file. A process is a program while it runs, with
+      its own memory and a PID.
+    deep: >-
+      The kernel starts a program in a process with execve() and keeps one struct
+      task_struct per running task. One program can run as many processes at once.
+    sources: [fs/exec.c, include/linux/sched.h]
+    docs: https://man7.org/linux/man-pages/man2/execve.2.html
+    tryIt: ps -e
+  - id: files
+    term: the file tree
+    simple: >-
+      One tree of folders from the root, /: programs in /bin, settings in /etc,
+      people's folders in /home, devices in /dev, the kernel's own view in /proc.
+    deep: >-
+      A file's data and details (size, owner) live in an inode; folders map names to
+      inodes. Other filesystems join the tree where they are mounted: /proc and /dev
+      are filled by the kernel itself, not stored on any disk.
+    sources: [fs/namei.c, include/linux/fs.h]
+    docs: https://man7.org/linux/man-pages/man7/hier.7.html
+    tryIt: ls -l /
+  - id: proc
+    term: /proc, the kernel's window
+    simple: >-
+      Files that no disk holds: when a program reads one, the kernel writes the
+      answer on the spot, about itself and every process.
+    deep: >-
+      procfs is a filesystem the kernel generates on each read. /proc/version comes
+      from fs/proc/version.c; each process gets a folder, /proc/<pid>, with its
+      memory map, open files and state.
+    sources: [fs/proc/version.c, fs/proc/base.c]
+    docs: https://man7.org/linux/man-pages/man5/proc.5.html
+    tryIt: cat /proc/version; ls /proc/self
+  - id: terminal
+    term: terminal, shell and command
+    simple: >-
+      The terminal is the window; the shell is the program in it that reads your
+      line; a command is that line: a program's name and what to work on.
+    deep: >-
+      The terminal is a device (a tty). The shell reads your line from it, starts the
+      program you named, and waits for it to finish.
+    sources: [drivers/tty/tty_io.c]
+    docs: https://man7.org/linux/man-pages/man4/tty.4.html
+    tryIt: tty
+# No Taint rule is live in the Prologue.
+taint: []
+fidelity:
+  faithful:
+    - "the four kinds of parts: CPU, memory, storage and devices"
+    - what an operating system and its kernel do
+    - "a real Linux 6.18 kernel, bash and BusyBox: every command prints as on Linux"
+  simplified:
+    - the power-on animation is a drawing; P.4 shows the real boot
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

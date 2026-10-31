@@ -1,0 +1,32 @@
+id: process-district
+name: Process District
+caption: "processes: fork, exec, wait, file descriptors, pipes, signals"
+source: kernel/fork.c, fs/exec.c, fs/pipe.c, kernel/signal.c
+guide: init
+slots:
+  - {
+      number: "1.4",
+      title: Run Anything,
+      level: 04-run-anything,
+      summary: "Teach your shell to run any program: start a child with fork, load the program into it with exec, and wait for it to finish. You learn how Linux starts every process, and how errno tells you what went wrong.",
+    }
+  - {
+      number: "1.5",
+      title: An Address and a Name,
+      summary: "Add cd, pwd, export and $VARIABLES to your shell, and watch it work with strace. You learn what every process carries with it: a working directory and an environment.",
+    }
+  - {
+      number: "1.6",
+      title: Into the Archive,
+      summary: "Add < and > to your shell, so a command can read from a file and write to one. You learn file descriptors: how open, read, write and dup2 point a program at files.",
+    }
+  - {
+      number: "1.7",
+      title: The Aqueducts,
+      summary: "Join commands with | so one program's output feeds the next. You learn pipes, and why every end you don't use must be closed.",
+    }
+  - {
+      number: "1.8",
+      title: Alarm Bells,
+      summary: "Make Ctrl-C stop the program that is running but not your shell. You learn signals: how the kernel interrupts a process, and how a handler answers safely.",
+    }

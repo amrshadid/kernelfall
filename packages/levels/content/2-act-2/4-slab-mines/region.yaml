@@ -1,0 +1,16 @@
+id: slab-mines
+name: Slab Mines
+caption: "kernel memory: kmalloc, kfree, reference counts"
+source: mm/slub.c, include/linux/kref.h
+guide: kswapd
+slots:
+  - {
+      number: "2.8a",
+      title: Messages of Any Size,
+      summary: "Let messages be any size by allocating them inside the kernel with kmalloc. You learn kernel memory, and how kmemleak finds memory nobody freed.",
+    }
+  - {
+      number: "2.8b",
+      title: Who Frees This?,
+      summary: "Count who still uses each message, so it is freed only when the last user is done. You learn reference counts, container_of and KASAN.",
+    }

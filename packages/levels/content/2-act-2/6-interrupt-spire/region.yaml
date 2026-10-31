@@ -1,0 +1,21 @@
+id: interrupt-spire
+name: Interrupt Spire
+caption: timers, interrupts, workqueues, wait queues
+source: kernel/irq/, kernel/time/, kernel/softirq.c
+guide: ksoftirqd
+slots:
+  - {
+      number: "2.10a",
+      title: Blinking,
+      summary: "Make the lamp blink with a kernel timer. You learn timers, and the rules for kernel code that must never sleep.",
+    }
+  - {
+      number: "2.10b",
+      title: The Light Sensor,
+      summary: "Answer the light sensor's interrupt quickly and finish the work later. You learn interrupt handlers, spinlocks and workqueues.",
+    }
+  - {
+      number: "2.10c",
+      title: The Night Watch,
+      summary: "Add a sensor device that programs can wait on until a new reading arrives. You learn wait queues, and how read and poll sleep inside the kernel.",
+    }

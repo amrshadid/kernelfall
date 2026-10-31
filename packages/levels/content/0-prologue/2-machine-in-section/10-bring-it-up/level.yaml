@@ -1,0 +1,77 @@
+# Prologue P.10, Bring the Machine Up (docs/levels/prologue.md): the Prologue's
+# capstone, never skipped. It teaches nothing new; every step is judged by what the
+# Machine does after a boot. Objectives without a `check` are judged in checker.ts.
+id: prologue-machine-in-section-10-bring-it-up
+title: Bring the Machine Up
+summary: "Someone broke the Machine's boot entry. Fix it in GRUB and bring the Machine fully up: its disk, its network card, all its memory and its first processes. You use everything the Prologue taught, together."
+minutes: 30
+tracks: [kernel, userland]
+skills: [sys-command-lifecycle]
+prerequisites: [sys-kernel-subsystems, sys-boot-chain]
+objectives:
+  - id: root-found
+    text: "The Machine boots with `root=/dev/vda2`: the initramfs finds the root and hands PID 1 over to `/sbin/init`."
+  - id: e1000-bound
+    text: "The network card's `driver` link in `/sys/bus/pci/devices/0000:00:02.0` points at `e1000`."
+  - id: full-memory
+    text: "`/proc/meminfo` (or `free`) shows more than 480 MiB in total: no `mem=` limit."
+  - id: processes-listed
+    text: "`ps -e` lists init as PID 1, with the kernel threads beside it."
+  - id: operstate-up
+    text: "`cat /sys/class/net/eth0/operstate` prints `up`."
+    check: { kind: read-to-end, path: /sys/class/net/eth0/operstate, text: { equals: "up\n" }, program: cat }
+hints:
+  - The Machine stopped at a different stage each time. Which stage, and what did the last message name?
+  - "`/proc/cmdline` and `dmesg` show what the Kernel was told and what it did. `root=` picks the root partition, `module_blacklist=` stops a module from loading, `mem=` limits how much RAM the Kernel uses."
+  - "In GRUB, press `e`. On the `linux` line, set `root=/dev/vda2` and delete `module_blacklist=e1000` and `mem=64M`."
+xray: [syscalls, processes, files]
+codex:
+  - id: command-lifecycle
+    term: the life of a command
+    simple: >-
+      A command travels from the shell through the kernel's parts to a driver and
+      back: new process, program loaded, path walked, data read, text written, exit,
+      prompt.
+    deep: >-
+      clone() → kernel_clone(); execve() → do_execveat_common(); the scheduler runs
+      the new task; openat() → path_openat(); read() → vfs_read() → the filesystem
+      (for a disk file on ext4, the page cache, and on a miss the block layer and the
+      disk driver; for sysfs, kernfs_fop_read_iter() and a driver's attribute);
+      write() → tty_write(); exit_group() → do_exit(), SIGCHLD to the parent;
+      wait4() → do_wait().
+    sources:
+      - kernel/fork.c
+      - fs/exec.c
+      - fs/namei.c
+      - fs/read_write.c
+      - fs/kernfs/file.c
+      - net/core/net-sysfs.c
+      - drivers/tty/tty_io.c
+      - kernel/exit.c
+    docs: https://man7.org/linux/man-pages/man2/execve.2.html
+    tryIt: "strace -f -e trace=clone,execve,openat,read,write,wait4 sh -c 'cat /sys/class/net/lo/operstate'"
+# No Taint rules are live in the Prologue.
+taint: []
+fidelity:
+  faithful:
+    - "the initramfs-tools messages and the (initramfs) prompt for a missing root device"
+    - 'module_blacklist= and the "Module … is blacklisted" message'
+    - "mem= limiting usable RAM, and the shape of the Memory: line"
+    - "the operstate values"
+    - "GRUB's names for disks and partitions in its ls"
+    - "an edit made with e in GRUB lasts one boot"
+    - the order of the syscalls in the route
+  simplified:
+    - "in the lab, init loads modules for devices at boot; on real systems udev and modprobe do it from each device's modalias"
+    - "the (initramfs) shell offers only ls, cat and reboot"
+    - "the numbers in Memory: and free are the lab's"
+    - "the route's lower layers for sysfs and the tty are named, not simulated function by function"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world
+lab:
+  # The boot entry someone changed: the Machine starts on it until the player fixes it
+  # in GRUB. /boot/grub/grub.cfg is generated from it; an edit made with `e` is never written back.
+  boot:
+    args: root=/dev/vda3 ro quiet module_blacklist=e1000 mem=64M

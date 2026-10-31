@@ -1,0 +1,14 @@
+id: prologue
+name: Prologue
+layer:
+  key: surface
+  name: The Surface
+  short: Surface
+  kicker: Prologue · power on to a prompt
+  caption: "Where the Machine starts: power on, the boot path, the first syscall and a first look at every part."
+  note: >-
+    Firmware finds a bootloader, the bootloader loads the kernel, the kernel starts
+    init (PID 1). The Prologue walks that path, then draws the whole Machine in
+    section once, so every layer below has a name before you go down.
+  source: arch/x86/boot/, init/
+  guides: init, the Watchdog

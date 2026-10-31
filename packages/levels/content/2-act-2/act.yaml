@@ -1,0 +1,15 @@
+id: act2
+name: "Act II: The Deep"
+layer:
+  key: deep
+  name: The Deep
+  short: Deep
+  kicker: Ring 0 · kernel mode · Act II
+  caption: "Inside the kernel: modules, a character driver, kernel memory, locks, interrupts and netfilter."
+  note: >-
+    Code here runs in kernel mode (ring 0), with every instruction and all memory
+    allowed, so one bad pointer can bring the whole Machine down. You build one
+    driver, the Lantern, from a module that says hello to a device you can read,
+    write and wait on.
+  source: kernel/module/, drivers/, mm/, kernel/locking/, kernel/irq/, net/netfilter/
+  guides: the Dockmaster, udev, kswapd, the Verger, ksoftirqd, the Tollkeeper

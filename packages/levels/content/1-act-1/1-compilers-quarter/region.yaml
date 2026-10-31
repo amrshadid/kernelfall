@@ -1,0 +1,26 @@
+id: compilers-quarter
+name: Compiler's Quarter
+caption: "C for systems: pointers, memory, structs, the build"
+source: include/uapi/
+guide: the Compiler Smith
+slots:
+  - {
+      number: "1.0",
+      title: Letters in a Row,
+      summary: "Fix your first C compile error, then write two small functions that walk a line of text letter by letter. You learn how C keeps text: an array of characters ending in a zero byte.",
+    }
+  - {
+      number: "1.1",
+      title: Words on the Anvil,
+      summary: "Write the code that splits a typed line into words for your shell. You learn pointers, and how a program borrows memory with malloc and gives it back with free.",
+    }
+  - {
+      number: "1.2",
+      title: The Command Table,
+      summary: "Give your shell its built-in commands with a table of names and functions. You learn structs and function pointers, a shape the kernel uses everywhere.",
+    }
+  - {
+      number: "1.3",
+      title: A Proper Build,
+      summary: "Write a Makefile, turn on the compiler's warnings and catch a memory bug with a debugger and sanitizers. You learn to build C the way real projects do.",
+    }

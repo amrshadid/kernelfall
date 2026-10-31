@@ -1,0 +1,11 @@
+id: mainline
+name: Mainline
+caption: "an upstream patch: checkpatch, format-patch, review"
+source: Documentation/process/, MAINTAINERS
+guide: the Maintainer
+slots:
+  - {
+      number: "2.13",
+      title: Mainline,
+      summary: "Turn your fix into a proper patch: kernel coding style, a clear commit message, and review. You learn how a change reaches the real kernel.",
+    }

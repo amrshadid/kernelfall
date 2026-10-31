@@ -1,0 +1,136 @@
+# Prologue P.2, First Words (docs/levels/prologue.md). Every objective is a
+# declared check: the level has no checker.ts.
+id: prologue-boot-path-02-first-words
+title: First Words
+summary: "Watch a program ask the kernel to print, then write your first C program that asks the same way. You learn user mode and kernel mode, and that a syscall is how a program asks for anything."
+minutes: 20
+tracks: [userland, kernel]
+skills: [sys-user-kernel-mode]
+prerequisites: [sys-computer-basics]
+objectives:
+  - id: fixed-an-error
+    text: "A build failed with an error, and a later build of `hello.c` succeeded."
+    check: { kind: build-fixed }
+  - id: compiles
+    text: "`hello.c` compiles."
+    check: { kind: compiles }
+  - id: exits-zero
+    text: "Running `./hello` in the rescue shell exits with status 0."
+    check: { kind: exit-status, status: 0 }
+  # printf() passes too: it ends in write(1, …).
+  - id: writes-stdout
+    text: "A `write` on fd 1 reaches the kernel, and it returns the count you asked for."
+    check: { kind: wrote, fd: 1 }
+  - id: ends-in-newline
+    text: "The bytes that reach the terminal end in a newline."
+    check: { kind: terminal, text: { endsWith: "\n" } }
+hints:
+  - You want your line to reach the terminal. Every program starts with three file descriptors already open. Which one is standard output?
+  - "`write(fd, buf, count)` hands `count` bytes from `buf` to the Kernel. File descriptor 1 is standard output; here, it leads to your terminal. The Kernel answers with how many bytes it took."
+  - "Inside `main`, call `write` with fd 1, your string, and the string's length in bytes. Count the `\\n` too. `sizeof` on a string literal counts the hidden `\\0` at the end, so subtract one."
+chips:
+  - { command: /bin/echo hello, explain: "the program /bin/echo prints what you give it" }
+  - { command: ls /bin, explain: "list the folder /bin, where the Machine's programs live" }
+  - { command: cat /etc/motd, explain: "show the file /etc/motd, init's message to the city" }
+  - { command: "echo hi > note.txt", explain: "in a full shell, > sends the output to the file note.txt instead" }
+xray: [syscalls]
+codex:
+  - id: syscall
+    term: syscall(2)
+    simple: >-
+      A request from a program to the kernel: show text, open a file, start a
+      program. The only way a program gets the kernel to do anything.
+    deep: >-
+      Each syscall has a name, a number and up to six arguments; the kernel answers
+      with a value, or a negative error code that the C library turns into -1 plus
+      errno. On x86-64 the syscall instruction enters the kernel at one assembly entry
+      point, entry_SYSCALL_64: the Syscall Gate. It saves the program's registers and
+      calls do_syscall_64(), which runs the handler from the syscall table.
+    sources: [arch/x86/entry/entry_64.S, arch/x86/entry/syscall_64.c, arch/x86/entry/syscalls/syscall_64.tbl]
+    docs: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    tryIt: strace echo hello
+  - id: user-kernel-mode
+    term: user mode and kernel mode
+    simple: >-
+      The CPU runs programs with limits on (user mode) and the kernel without them
+      (kernel mode), so programs must ask.
+    deep: >-
+      The CPU tracks its privilege level. On x86-64, programs run in ring 3 and the
+      kernel in ring 0; kernel memory is mapped supervisor-only, so a program that
+      touches it faults. The syscall instruction is the one sanctioned way up, and
+      sysret (or iret) the way back.
+    sources: [arch/x86/entry/entry_64.S]
+    docs: https://docs.kernel.org/arch/x86/entry_64.html
+    tryIt: strace -e trace=write echo hello
+  - id: file-descriptors
+    term: file descriptors
+    simple: >-
+      Small numbers a process uses for what it has open: 0 for input, 1 for normal
+      output, 2 for errors.
+    deep: >-
+      Each process has a table of open files; an fd is an index into it. The shell
+      passes its terminal as 0, 1 and 2 to every program it starts.
+    sources: [fs/file.c, include/linux/fdtable.h]
+    docs: https://man7.org/linux/man-pages/man3/stdin.3.html
+    tryIt: ls -l /proc/self/fd
+  - id: write-syscall
+    term: write(2)
+    simple: >-
+      Hands bytes from your program to something it has open. fd 1, standard output,
+      leads to your terminal here.
+    deep: >-
+      ssize_t write(int fd, const void *buf, size_t count) copies up to count bytes
+      from your buffer to the open file fd, and returns how many it took. It can take
+      fewer than asked (a "short write"), so careful code checks the return value. The
+      path: ksys_write() → vfs_write() → the file's own write function; for a
+      terminal, the tty layer's tty_write().
+    sources: [fs/read_write.c, drivers/tty/tty_io.c]
+    docs: https://man7.org/linux/man-pages/man2/write.2.html
+    tryIt: strace -e trace=write echo hello
+  - id: compiler-diagnostics
+    term: compiler diagnostics
+    simple: >-
+      The compiler says where it stopped and why: file:line:column, how bad (error or
+      warning), then the message.
+    deep: >-
+      An error stops the build; a warning doesn't. Under the message, clang shows the
+      source line, a ^ at the spot and sometimes a suggested fix. gcc uses the same
+      file:line:column: error: shape with its own wording. Fix the first error first:
+      later ones are often caused by it. The kernel is built by the same compilers
+      (gcc, or clang with LLVM=1) and its build can treat warnings as errors
+      (CONFIG_WERROR).
+    sources: [Documentation/kbuild/llvm.rst, init/Kconfig]
+    docs: https://clang.llvm.org/docs/UsersManual.html#formatting-of-diagnostics
+    tryIt: cc -Wall -Wextra -o hello hello.c
+  - id: taint-meter
+    term: Taint (the game's meter)
+    simple: >-
+      The Machine's stain meter: hacks add Taint, clean code adds none. It is a game
+      score, not a Linux feature.
+    deep: >-
+      Linux has its own, different "taint": flags the kernel sets when something makes
+      it less trustworthy (a proprietary or out-of-tree module, a previous oops). They
+      are bits set by add_taint(), readable in /proc/sys/kernel/tainted, and shown as
+      letters on an oops's "Tainted:" line. The game's meter borrows the word, not the
+      mechanism.
+    sources: [kernel/panic.c, Documentation/admin-guide/tainted-kernels.rst]
+    docs: https://docs.kernel.org/admin-guide/tainted-kernels.html
+    tryIt: cat /proc/sys/kernel/tainted
+# No Taint rule is live in the Prologue: compiler warnings get init's note, and
+# count as Taint from 1.3, where they are taught.
+taint: []
+fidelity:
+  faithful:
+    - programs in user mode, the kernel in kernel mode, and the syscall instruction as the one way in
+    - write()'s signature and return value
+    - syscall names and arguments in X-ray
+    - exit_group as the syscall behind returning from main
+    - fds 0, 1 and 2
+    - "clang's diagnostic format: file:line:column: error:, the caret line, the fix-it"
+  simplified:
+    - "the lab's C library is small and statically linked, so a traced program shows far fewer syscalls than on real Linux (no dynamic loader, no brk or mmap at start-up)"
+    - the rescue shell is a stand-in, not a real program like BusyBox sh
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

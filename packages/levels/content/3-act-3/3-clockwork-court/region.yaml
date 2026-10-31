@@ -1,0 +1,21 @@
+id: clockwork-court
+name: Clockwork Court
+caption: threads, the EEVDF scheduler, kernel threads
+source: kernel/sched/, kernel/kthread.c
+guide: the Judge, kthreadd
+slots:
+  - {
+      number: "3.6",
+      title: Many Hands,
+      summary: "Add a thread to your chat server that writes its log in the background. You learn threads, mutexes and condition variables.",
+    }
+  - {
+      number: "3.7",
+      title: The Judge,
+      summary: "Run busy programs at different nice values and measure each one's share of the CPU. You learn how the scheduler decides who runs next.",
+    }
+  - {
+      number: "3.8",
+      title: The Pulse,
+      summary: "Give the Lantern a heartbeat: a kernel thread that sleeps between beats. You learn kernel threads, and what a lockup looks like.",
+    }

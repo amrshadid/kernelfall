@@ -1,0 +1,123 @@
+# Prologue P.9, Files, Doors and Wires (docs/levels/prologue.md). Objectives
+# without a `check` are judged in checker.ts.
+id: prologue-machine-in-section-09-files-doors-wires
+title: Files, Doors and Wires
+summary: "Read a file on the disk, a number the kernel works out and a device's setting, all with one small program. You learn filesystems, device files and the network, and why on Linux almost everything is a file."
+minutes: 25
+tracks: [userland, kernel]
+skills: [io-everything-is-a-file, sys-kernel-subsystems]
+prerequisites: [drv-hardware-discovery, mem-virtual-memory-basics]
+objectives:
+  - id: exits-zero
+    text: "`./look` exits with status 0."
+    check: { kind: exit-status, status: 0, program: look }
+  - id: reads-ext4
+    text: "`./look` reads a file on the disk (ext4), like `/etc/motd`, and writes it to standard output."
+  - id: reads-procfs
+    text: "`./look` reads a file in `/proc` (procfs), like `/proc/uptime`, and writes it to standard output."
+  - id: reads-sysfs
+    text: "`./look` reads a file in `/sys` (sysfs), like `/sys/class/net/eth0/address`, and writes it to standard output."
+hints:
+  - "The program reads whatever `path` names. What should it name for the `/proc` run?"
+  - "`/proc` and `/sys` files are opened and read exactly like disk files. Only the path changes."
+  - 'Change the text to `"/proc/uptime"`, run, then to `"/sys/class/net/eth0/address"`, run.'
+xray: [syscalls, files, network]
+codex:
+  - id: vfs
+    term: "the VFS: everything is a file"
+    deepens: write-syscall
+    simple: >-
+      One set of calls (open, read, write, close) works on disk files, /proc, /sys and
+      devices; the VFS hands each to the right code.
+    deep: >-
+      An open file is a struct file pointing at an inode and a table of functions,
+      struct file_operations; vfs_read() calls the file's read_iter (or read). Each
+      filesystem or driver supplies its own table.
+    sources: [fs/read_write.c, include/linux/fs.h, Documentation/filesystems/vfs.rst]
+    docs: https://docs.kernel.org/filesystems/vfs.html
+    tryIt: strace -e trace=openat,read cat /proc/uptime
+  - id: filesystems
+    term: filesystems and mounts
+    deepens: files
+    simple: >-
+      Different filesystems (ext4 on a disk, procfs, sysfs, devtmpfs) are attached
+      into one tree; /proc/mounts lists them.
+    deep: >-
+      Each filesystem registers a struct file_system_type; mounting attaches its root
+      at a directory. ext4 stores files on a block device; procfs, sysfs (built on
+      kernfs) and devtmpfs make their contents in the kernel.
+    sources: [fs/namespace.c, fs/ext4, fs/proc, fs/sysfs, fs/kernfs, drivers/base/devtmpfs.c]
+    docs: https://man7.org/linux/man-pages/man5/proc_mounts.5.html
+    tryIt: cat /proc/mounts
+  - id: device-files
+    term: device files
+    deepens: drivers
+    simple: >-
+      Files in /dev are doors into drivers: c for character devices, b for block
+      devices, with major and minor numbers.
+    deep: >-
+      A device node holds a dev_t (major, minor). Opening it finds the driver
+      registered for that number (a cdev for character devices), whose
+      file_operations then serve every call. devtmpfs creates nodes as drivers
+      register devices; udev sets owners and names.
+    sources: [fs/char_dev.c, drivers/char/mem.c, block]
+    docs: https://man7.org/linux/man-pages/man4/null.4.html
+    tryIt: ls -l /dev/null /dev/tty
+  - id: network-stack
+    term: the network stack
+    simple: >-
+      Programs talk through sockets; the kernel turns data into TCP or UDP segments,
+      IP packets and frames for the network card.
+    deep: >-
+      A socket is a file descriptor; under it, net/ipv4/tcp*.c and
+      net/ipv4/ip_output.c build packets as struct sk_buff, netfilter hooks inspect
+      them, and the driver's ndo_start_xmit() sends them. Interfaces show in
+      /sys/class/net, counters in /proc/net/dev.
+    sources: [net/socket.c, net/ipv4, net/netfilter, drivers/net/ethernet/intel/e1000]
+    docs: https://man7.org/linux/man-pages/man7/socket.7.html
+    tryIt: ls /sys/class/net; cat /proc/net/dev
+  - id: printk-dmesg
+    term: printk and dmesg
+    simple: >-
+      The kernel's own log: messages from boot and from drivers, read with dmesg.
+    deep: >-
+      printk() (and pr_info(), dev_info()…) writes into a ring buffer with a log
+      level; dmesg reads it from /dev/kmsg. Some distributions set
+      kernel.dmesg_restrict so only root may read it.
+    sources: [kernel/printk/printk.c, include/linux/printk.h]
+    docs: https://man7.org/linux/man-pages/man1/dmesg.1.html
+    tryIt: sudo dmesg | tail -n 20
+  - id: kernel-source-tree
+    term: the kernel source tree
+    simple: >-
+      Each part of the kernel has its folder: kernel/, mm/, fs/, net/, drivers/,
+      arch/, include/, init/, ipc/, security/.
+    deep: >-
+      arch/<cpu>/ holds what differs per CPU type (entry code, page tables, boot);
+      kernel/ the core (processes, scheduler, signals, modules, printk, locking); mm/
+      memory; fs/ the VFS and filesystems; net/ networking; drivers/ most of the code;
+      include/linux internal headers and include/uapi the user-space interface; init/
+      start-up; ipc/ System V and POSIX IPC; security/ LSMs and capabilities;
+      Documentation/ the docs.
+    sources: [kernel, mm, fs, net, drivers, arch, include, init, ipc, security, Documentation]
+    docs: https://elixir.bootlin.com/linux/v6.18/source
+    tryIt: ls /lib/modules/$(uname -r)/kernel
+# No Taint rules are live in the Prologue.
+taint: []
+fidelity:
+  faithful:
+    - "the /proc/mounts format and the filesystems' names"
+    - "the VFS function names for ext4, procfs and sysfs reads"
+    - "the /dev modes, c and b, major 1 minor 3 for /dev/null and 5, 0 for /dev/tty"
+    - "/sys/class/net, and /sys/class/net/lo/mtu (65536)"
+    - "the path printk → /dev/kmsg → dmesg"
+    - the source tree's layout
+  simplified:
+    - "the lab keeps ext4's files in memory (no on-disk format, no block I/O); X-ray names the ext4 functions a real read would run"
+    - "the virtio disk's major number is the lab's: real Linux assigns it when the driver loads"
+    - "the network trip is a drawing; packets are built later, in Socket Harbor"
+    - "dmesg is readable by uid 1000 in the lab"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

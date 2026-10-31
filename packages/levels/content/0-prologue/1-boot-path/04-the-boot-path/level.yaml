@@ -1,0 +1,156 @@
+# Prologue P.4, The Boot Path (docs/levels/prologue.md). No code: the player boots
+# the Machine their own way from GRUB, then reads what the kernel was told and what
+# it did. Every objective is a declared check on what the programs showed.
+id: prologue-boot-path-04-the-boot-path
+title: The Boot Path
+summary: "Reboot the Machine slowly, edit the kernel's command line in GRUB and read the boot log. You learn how firmware, the bootloader and the kernel hand the Machine on until init starts."
+minutes: 20
+tracks: [kernel]
+skills: [sys-boot-chain]
+prerequisites: [sys-shell-basics]
+objectives:
+  # /proc/cmdline is what this boot's kernel was told, whatever the menu said.
+  - id: booted-your-way
+    text: "The Machine booted with `initcall_debug` and without `quiet`, and `cat /proc/cmdline` shows it."
+    check:
+      kind: read-to-end
+      program: cat
+      path: /proc/cmdline
+      text: { contains: initcall_debug, notContains: quiet }
+  - id: initcalls-logged
+    text: "`dmesg` shows each initcall the kernel called, with its time."
+    check: { kind: terminal, program: dmesg, text: { contains: "calling  " } }
+  # GRUB's BOOT_IMAGE= always comes first and is always unknown: the player's word must follow it.
+  - id: passed-to-init
+    text: "The kernel logged that it passed a word of yours it didn't know on to init."
+    check:
+      kind: terminal
+      program: dmesg
+      text: { contains: ", will be passed to user space.", notContains: '6.18.0", will be passed' }
+hints:
+  - "The text after `linux` in the entry is the kernel command line. What do you want to take away, and what do you want to add?"
+  - "Words on the command line are separated by spaces. `quiet` hides most messages; `initcall_debug` prints each initcall; a word the kernel doesn't know is passed on to init."
+  - "Press `e`, move to the end of the `linux` line, delete `quiet`, type ` initcall_debug greeting=hello`, then press Ctrl-X."
+chips:
+  - { command: cat, explain: "show a file: /proc/cmdline holds the command line this boot used" }
+  - { command: dmesg, explain: "print the kernel's own messages, from this boot" }
+  - { command: ls, explain: "list a folder: /sys/firmware/efi is there only after a UEFI boot" }
+xray: [boot, syscalls]
+codex:
+  - id: boot-sequence
+    term: the boot sequence
+    simple: >-
+      The Machine wakes in steps: firmware, bootloader, kernel, its start-up calls,
+      initramfs, the root disk, then init.
+    deep: >-
+      The kernel initializes itself in start_kernel(), then rest_init() starts
+      kernel_init(), which becomes PID 1, and kthreadd (PID 2), the parent of kernel
+      threads. kernel_init() runs the initcalls, then tries the initramfs /init, then
+      the init= boot parameter, then /sbin/init, /etc/init, /bin/init and /bin/sh. If
+      none works, it panics with "No working init found."
+    sources: [init/main.c, init/initramfs.c, Documentation/admin-guide/init.rst]
+    docs: https://man7.org/linux/man-pages/man7/boot.7.html
+    tryIt: sudo dmesg | head -n 30
+  - id: pid-1
+    term: PID 1 (init)
+    simple: The first program the kernel starts. Every other process descends from it.
+    deep: >-
+      PID 1 starts the rest of the system, adopts processes whose parent died and
+      cleans up after them when they exit (find_child_reaper(), find_new_reaper()). If
+      it exits, the kernel panics with "Attempted to kill init!"
+    sources: [init/main.c, kernel/exit.c]
+    docs: https://man7.org/linux/man-pages/man2/getpid.2.html
+    tryIt: ps -p 1 -o pid,comm
+  - id: firmware
+    term: "firmware: BIOS and UEFI"
+    simple: >-
+      The first code to run, stored on the board. It checks the hardware and starts a
+      bootloader. UEFI is today's standard; BIOS is the old one.
+    deep: >-
+      BIOS runs the 446 bytes of boot code in a disk's first sector (the MBR). UEFI
+      reads a FAT-formatted EFI system partition, runs an EFI program from it, and
+      keeps its boot entries in NVRAM (efibootmgr lists them). With Secure Boot, UEFI
+      runs only signed programs; distributions boot through a signed shim. Linux sees
+      UEFI's services under /sys/firmware/efi.
+    sources: [drivers/firmware/efi, arch/x86/boot]
+    docs: https://docs.kernel.org/admin-guide/efi-stub.html
+    tryIt: ls /sys/firmware/efi && echo UEFI
+  - id: bootloader
+    term: the bootloader and its menu
+    simple: >-
+      GRUB lists the kernels (and other systems) on the disk, loads the one you
+      choose, and hands it a command line.
+    deep: >-
+      Each menu entry has a linux line (the image and its command line) and an initrd
+      line. Distributions keep the previous kernel as a fallback and add a recovery
+      entry; dual-boot machines list other systems too. The menu is generated into
+      /boot/grub/grub.cfg by update-grub from /etc/default/grub and /etc/grub.d/. e
+      edits an entry for one boot only. The kernel can also be started by UEFI
+      directly (the EFI stub).
+    sources: [arch/x86/boot]
+    docs: https://www.gnu.org/software/grub/manual/grub/
+    tryIt: ls /boot
+  - id: kernel-command-line
+    term: the kernel command line
+    simple: >-
+      Settings passed to the kernel at boot, like root=/dev/vda2 or quiet.
+      /proc/cmdline shows them.
+    deep: >-
+      The kernel parses each name=value against its known parameters (early_param(),
+      __setup(), and module parameters written module.name=). Unknown ones without a
+      dot are passed to init: name=value in its environment, plain words as arguments
+      (unknown_bootoption(), print_unknown_bootoptions()).
+    sources: [init/main.c, kernel/params.c, Documentation/admin-guide/kernel-parameters.txt]
+    docs: https://docs.kernel.org/admin-guide/kernel-parameters.html
+    tryIt: cat /proc/cmdline
+  - id: initcalls
+    term: initcalls
+    simple: >-
+      The kernel's start-up list: hundreds of functions, run in order, that wake its
+      parts and set up its built-in drivers.
+    deep: >-
+      Built-in code marks its start function with core_initcall(), subsys_initcall(),
+      fs_initcall(), device_initcall() (what module_init() becomes in built-in code)
+      and others; the linker collects them into sections that do_initcalls() walks
+      level by level. initcall_debug prints each call and its time
+      (do_one_initcall()).
+    sources: [include/linux/init.h, init/main.c]
+    docs: https://docs.kernel.org/admin-guide/kernel-parameters.html
+    tryIt: sudo dmesg | grep -m 5 initcall
+  - id: initramfs
+    term: initramfs and the root filesystem
+    simple: >-
+      A small set of files in memory whose /init finds the real disk, attaches it as
+      /, and hands over to the real init.
+    deep: >-
+      The bootloader loads the initramfs (a cpio archive) next to the kernel; the
+      kernel unpacks it into a RAM-backed root and runs /init. That program loads what
+      is needed to reach root= (disk drivers, decryption), mounts it and calls
+      switch_root. Without an initramfs, the kernel mounts root= itself and panics
+      with "VFS: Unable to mount root fs" if it can't.
+    sources: [init/initramfs.c, init/do_mounts.c, Documentation/filesystems/ramfs-rootfs-initramfs.rst]
+    docs: https://man7.org/linux/man-pages/man8/switch_root.8.html
+    tryIt: ls /boot
+taint: []
+fidelity:
+  faithful:
+    - BIOS and UEFI as described
+    - "GRUB's menu layout and keys: e, Ctrl-X, F10, Esc"
+    - the linux and initrd lines of a menu entry
+    - edits made with e last one boot
+    - initcall levels and the initcall_debug message format
+    - the "Unknown kernel command line parameters" message, printed early by start_kernel() and listing GRUB's BOOT_IMAGE
+    - unknown parameters passed to init
+    - /sys/firmware/efi existing only after a UEFI boot
+  simplified:
+    - the boot view skips most of start_kernel(), ACPI table parsing and device probing details
+    - the lab boots only 6.18.0; the 6.12.0 entry is shown but not run
+    - the lab's firmware and GRUB are drawings with the real keys and text, not real firmware or GRUB code
+    - real distributions use root=UUID=...; the lab uses root=/dev/vda2 so it is easy to read
+    - times in dmesg are the lab's own
+    - the kernel's version line is abbreviated
+    - the kernel loads the e1000 module itself before /init runs; on a real system udev loads it later, from the root disk
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

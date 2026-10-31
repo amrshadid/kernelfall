@@ -1,0 +1,575 @@
+# What X-ray knows about each syscall beyond the lab's trace. A syscall that isn't
+# here still shows, with its raw arguments and its entry point; add it here to
+# explain it. Names, numbers and functions follow the Machine: Linux 6.18 on 32-bit
+# x86, whose table is arch/x86/entry/syscalls/syscall_32.tbl.
+#
+#   family    which storyboard it gets: write, exit, execve, fork or wait. Left out: the
+#             shared one for every other call.
+#   args      argument names as in the kernel's SYSCALL_DEFINE, in register order
+#   pointers  arguments that are user-space addresses, printed in hex
+#   pathArg   the argument that is a path, shown with the call
+#   path      the kernel functions after ia32_sys_call, outermost first: the 32-bit
+#             wrapper, `__ia32_` + the table's entry point (arch/x86/include/asm/syscall_wrapper.h)
+#   sources   the files (and functions) the handler is checked against
+#   desk      one plain sentence for "In the kernel now" at Simple
+#   returns   what a successful return value is, for the narration
+
+write:
+  family: write
+  args: [fd, buf, count]
+  pointers: [1]
+  path: [__ia32_sys_write, ksys_write, vfs_write]
+  sources:
+    - { path: fs/read_write.c, fn: "ksys_write(), vfs_write()" }
+  desk: Writes your bytes to an open file
+  returns: the number of bytes written
+
+read:
+  args: [fd, buf, count]
+  pointers: [1]
+  path: [__ia32_sys_read, ksys_read, vfs_read]
+  sources:
+    - { path: fs/read_write.c, fn: "ksys_read(), vfs_read()" }
+  desk: Reads bytes from an open file into your buffer
+
+exit_group:
+  family: exit
+  args: [error_code]
+  path: [__ia32_sys_exit_group, do_group_exit, do_exit]
+  sources:
+    - { path: kernel/exit.c, fn: "do_group_exit(), do_exit()" }
+  desk: Ends the process
+
+exit:
+  family: exit
+  args: [error_code]
+  path: [__ia32_sys_exit, do_exit]
+  sources:
+    - { path: kernel/exit.c, fn: do_exit() }
+  desk: Ends the calling thread
+
+execve:
+  family: execve
+  args: [filename, argv, envp]
+  pointers: [0, 1, 2]
+  pathArg: 0
+  path: [__ia32_sys_execve, do_execveat_common, bprm_execve, load_elf_binary]
+  sources:
+    - { path: fs/exec.c, fn: "do_execveat_common(), bprm_execve(), begin_new_exec()" }
+    - { path: fs/binfmt_elf.c, fn: load_elf_binary() }
+  desk: Replaces the program in this process
+
+clone:
+  family: fork
+  # 32-bit x86 selects CLONE_BACKWARDS: tls comes before child_tidptr.
+  args: [clone_flags, newsp, parent_tidptr, tls, child_tidptr]
+  pointers: [1, 2, 4]
+  path: [__ia32_sys_clone, kernel_clone, copy_process]
+  sources:
+    - { path: kernel/fork.c, fn: "kernel_clone(), copy_process()" }
+  desk: Makes a copy of this process
+  returns: the new child's PID
+
+fork:
+  family: fork
+  args: []
+  path: [__ia32_sys_fork, kernel_clone, copy_process]
+  sources:
+    - { path: kernel/fork.c, fn: "kernel_clone(), copy_process()" }
+  desk: Makes a copy of this process
+  returns: the new child's PID
+
+vfork:
+  family: fork
+  args: []
+  path: [__ia32_sys_vfork, kernel_clone, copy_process]
+  sources:
+    - { path: kernel/fork.c, fn: "kernel_clone(), copy_process()" }
+  desk: Makes a child that borrows this process's memory until it execs or exits
+  returns: the new child's PID
+
+wait4:
+  family: wait
+  args: [upid, stat_addr, options, ru]
+  pointers: [1, 3]
+  path: [__ia32_sys_wait4, kernel_wait4, do_wait, wait_task_zombie]
+  sources:
+    - { path: kernel/exit.c, fn: "kernel_wait4(), do_wait(), wait_task_zombie()" }
+  desk: Waits for a child to change state and collects it
+  returns: the PID of the child it collected
+
+getpid:
+  args: []
+  path: [__ia32_sys_getpid, task_tgid_vnr]
+  sources:
+    - { path: kernel/sys.c, fn: getpid }
+  desk: Looks up this process's ID
+  returns: this process's PID
+
+getppid:
+  args: []
+  path: [__ia32_sys_getppid, task_tgid_vnr]
+  sources:
+    - { path: kernel/sys.c, fn: getppid }
+  desk: Looks up the parent's process ID
+
+openat:
+  args: [dfd, filename, flags, mode]
+  pointers: [1]
+  pathArg: 1
+  path: [__ia32_sys_openat, do_sys_open, do_sys_openat2, do_filp_open]
+  sources:
+    - { path: fs/open.c, fn: do_sys_openat2() }
+    - { path: fs/namei.c, fn: do_filp_open() }
+  desk: Finds a file by path and opens it
+
+close:
+  args: [fd]
+  path: [__ia32_sys_close, file_close_fd, filp_flush]
+  sources:
+    - { path: fs/open.c, fn: close }
+  desk: Closes a file descriptor
+
+pipe2:
+  args: [fildes, flags]
+  pointers: [0]
+  path: [__ia32_sys_pipe2, do_pipe2, create_pipe_files]
+  sources:
+    - { path: fs/pipe.c, fn: do_pipe2() }
+  desk: "Makes a pipe: two connected file descriptors"
+
+dup2:
+  args: [oldfd, newfd]
+  path: [__ia32_sys_dup2, do_dup2]
+  sources:
+    - { path: fs/file.c, fn: do_dup2() }
+  desk: Makes newfd point at the same open file as oldfd
+
+getdents64:
+  args: [fd, dirent, count]
+  pointers: [1]
+  path: [__ia32_sys_getdents64, iterate_dir]
+  sources:
+    - { path: fs/readdir.c, fn: "getdents64, iterate_dir()" }
+  desk: Reads directory entries
+
+kill:
+  args: [pid, sig]
+  path: [__ia32_sys_kill, kill_something_info]
+  sources:
+    - { path: kernel/signal.c, fn: kill_something_info() }
+  desk: Sends a signal
+
+ioctl:
+  args: [fd, cmd, arg]
+  path: [__ia32_sys_ioctl, do_vfs_ioctl, vfs_ioctl]
+  sources:
+    - { path: fs/ioctl.c, fn: "do_vfs_ioctl(), vfs_ioctl()" }
+  desk: Sends a request only this kind of file understands, like a terminal's size
+
+lseek:
+  args: [fd, offset, whence]
+  path: [__ia32_sys_lseek, ksys_lseek, vfs_llseek]
+  sources:
+    - { path: fs/read_write.c, fn: "ksys_lseek(), vfs_llseek()" }
+  desk: Moves the place in an open file where the next read or write starts
+  returns: the new offset from the start of the file
+
+fstatat64:
+  args: [dfd, filename, statbuf, flag]
+  pointers: [1, 2]
+  pathArg: 1
+  path: [__ia32_sys_fstatat64, vfs_fstatat, vfs_statx]
+  sources:
+    - { path: fs/stat.c, fn: "fstatat64, vfs_fstatat(), vfs_statx()" }
+  desk: "Reads a file's details: type, size, owner, permissions, times"
+
+statx:
+  args: [dfd, filename, flags, mask, buffer]
+  pointers: [1, 4]
+  pathArg: 1
+  path: [__ia32_sys_statx, do_statx, vfs_statx]
+  sources:
+    - { path: fs/stat.c, fn: "do_statx(), vfs_statx()" }
+  desk: "Reads the file details you ask for: type, size, owner, permissions, times"
+
+mkdirat:
+  args: [dfd, pathname, mode]
+  pointers: [1]
+  pathArg: 1
+  path: [__ia32_sys_mkdirat, do_mkdirat, vfs_mkdir]
+  sources:
+    - { path: fs/namei.c, fn: "do_mkdirat(), vfs_mkdir()" }
+  desk: Makes a new folder
+
+unlinkat:
+  args: [dfd, pathname, flag]
+  pointers: [1]
+  pathArg: 1
+  path: [__ia32_sys_unlinkat, do_unlinkat, vfs_unlink]
+  sources:
+    - { path: fs/namei.c, fn: "do_unlinkat(), do_rmdir(), vfs_unlink()" }
+  desk: Removes a name from its folder; AT_REMOVEDIR removes an empty folder instead
+
+renameat2:
+  args: [olddfd, oldname, newdfd, newname, flags]
+  pointers: [1, 3]
+  pathArg: 1
+  path: [__ia32_sys_renameat2, do_renameat2, vfs_rename]
+  sources:
+    - { path: fs/namei.c, fn: "do_renameat2(), vfs_rename()" }
+  desk: Moves a name to another folder or another name; no bytes are copied
+
+fchmodat:
+  args: [dfd, filename, mode]
+  pointers: [1]
+  pathArg: 1
+  path: [__ia32_sys_fchmodat, do_fchmodat, chmod_common]
+  sources:
+    - { path: fs/open.c, fn: "do_fchmodat(), chmod_common()" }
+  desk: Changes a file's permission bits
+
+getcwd:
+  args: [buf, size]
+  pointers: [0]
+  path: [__ia32_sys_getcwd]
+  sources:
+    - { path: fs/d_path.c, fn: getcwd }
+  desk: Copies the path of your working directory into your buffer
+  returns: the length of the path, with its NUL
+
+chdir:
+  args: [filename]
+  pointers: [0]
+  pathArg: 0
+  path: [__ia32_sys_chdir, set_fs_pwd]
+  sources:
+    - { path: fs/open.c, fn: chdir }
+    - { path: fs/fs_struct.c, fn: set_fs_pwd() }
+  desk: Changes this process's working directory
+
+uname:
+  args: [name]
+  pointers: [0]
+  path: [__ia32_sys_newuname]
+  sources:
+    - { path: kernel/sys.c, fn: newuname }
+  desk: "Copies the kernel's name, release and machine type to you"
+
+getuid:
+  args: []
+  path: [__ia32_sys_getuid16]
+  sources:
+    - { path: kernel/uid16.c, fn: getuid16 }
+  desk: Tells you the user ID the kernel knows you by
+  returns: your user ID
+
+getgid:
+  args: []
+  path: [__ia32_sys_getgid16]
+  sources:
+    - { path: kernel/uid16.c, fn: getgid16 }
+  desk: Tells you your group ID
+  returns: your group ID
+
+clock_nanosleep:
+  args: [which_clock, flags, rqtp, rmtp]
+  pointers: [2, 3]
+  path: [__ia32_sys_clock_nanosleep_time32, common_nsleep, hrtimer_nanosleep]
+  sources:
+    - { path: kernel/time/posix-timers.c, fn: "clock_nanosleep_time32, common_nsleep()" }
+    - { path: kernel/time/hrtimer.c, fn: hrtimer_nanosleep() }
+  desk: Puts this process to sleep until a time has passed
+
+sched_getaffinity:
+  args: [pid, len, user_mask_ptr]
+  pointers: [2]
+  path: [__ia32_sys_sched_getaffinity, sched_getaffinity]
+  sources:
+    - { path: kernel/sched/syscalls.c, fn: sched_getaffinity() }
+  desk: Tells you which CPUs this process may run on
+  returns: the size of the CPU mask copied, in bytes
+
+reboot:
+  args: [magic1, magic2, cmd, arg]
+  pointers: [3]
+  path: [__ia32_sys_reboot, kernel_restart]
+  sources:
+    - { path: kernel/reboot.c, fn: "reboot, kernel_restart()" }
+  desk: Restarts the Machine (only root may ask)
+
+sync:
+  args: []
+  path: [__ia32_sys_sync, ksys_sync]
+  sources:
+    - { path: fs/sync.c, fn: "sync, ksys_sync()" }
+  desk: Writes every changed file back to the disk
+
+# The older calls musl makes when the architecture still has them, as i386 does:
+# open(), mkdir(), rmdir(), unlink(), rename(), chmod() and access().
+open:
+  args: [filename, flags, mode]
+  pointers: [0]
+  pathArg: 0
+  path: [__ia32_sys_open, do_sys_open, do_sys_openat2, do_filp_open]
+  sources:
+    - { path: fs/open.c, fn: "open, do_sys_openat2()" }
+    - { path: fs/namei.c, fn: do_filp_open() }
+  desk: Finds a file by path and opens it
+
+mkdir:
+  args: [pathname, mode]
+  pointers: [0]
+  pathArg: 0
+  path: [__ia32_sys_mkdir, do_mkdirat, vfs_mkdir]
+  sources:
+    - { path: fs/namei.c, fn: "mkdir, do_mkdirat(), vfs_mkdir()" }
+  desk: Makes a new folder
+
+rmdir:
+  args: [pathname]
+  pointers: [0]
+  pathArg: 0
+  path: [__ia32_sys_rmdir, do_rmdir, vfs_rmdir]
+  sources:
+    - { path: fs/namei.c, fn: "rmdir, do_rmdir(), vfs_rmdir()" }
+  desk: Removes an empty folder
+
+unlink:
+  args: [pathname]
+  pointers: [0]
+  pathArg: 0
+  path: [__ia32_sys_unlink, do_unlinkat, vfs_unlink]
+  sources:
+    - { path: fs/namei.c, fn: "unlink, do_unlinkat(), vfs_unlink()" }
+  desk: Removes a name from its folder; the file goes once no name or open file is left
+
+rename:
+  args: [oldname, newname]
+  pointers: [0, 1]
+  pathArg: 0
+  path: [__ia32_sys_rename, do_renameat2, vfs_rename]
+  sources:
+    - { path: fs/namei.c, fn: "rename, do_renameat2(), vfs_rename()" }
+  desk: Moves a name to another folder or another name; no bytes are copied
+
+renameat:
+  args: [olddfd, oldname, newdfd, newname]
+  pointers: [1, 3]
+  pathArg: 1
+  path: [__ia32_sys_renameat, do_renameat2, vfs_rename]
+  sources:
+    - { path: fs/namei.c, fn: "renameat, do_renameat2(), vfs_rename()" }
+  desk: Moves a name to another folder or another name; no bytes are copied
+
+chmod:
+  args: [filename, mode]
+  pointers: [0]
+  pathArg: 0
+  path: [__ia32_sys_chmod, do_fchmodat, chmod_common]
+  sources:
+    - { path: fs/open.c, fn: "chmod, do_fchmodat(), chmod_common()" }
+  desk: Changes a file's permission bits; only its owner (or root) may
+
+fchmod:
+  args: [fd, mode]
+  path: [__ia32_sys_fchmod, vfs_fchmod, chmod_common]
+  sources:
+    - { path: fs/open.c, fn: "fchmod, vfs_fchmod(), chmod_common()" }
+  desk: Changes an open file's permission bits; only its owner (or root) may
+
+fchmodat2:
+  args: [dfd, filename, mode, flags]
+  pointers: [1]
+  pathArg: 1
+  path: [__ia32_sys_fchmodat2, do_fchmodat, chmod_common]
+  sources:
+    - { path: fs/open.c, fn: "fchmodat2, do_fchmodat(), chmod_common()" }
+  desk: Changes a file's permission bits
+
+access:
+  args: [filename, mode]
+  pointers: [0]
+  pathArg: 0
+  path: [__ia32_sys_access, do_faccessat]
+  sources:
+    - { path: fs/open.c, fn: "access, do_faccessat()" }
+  desk: Asks whether you could read, write or run a file, without opening it
+
+faccessat:
+  args: [dfd, filename, mode]
+  pointers: [1]
+  pathArg: 1
+  path: [__ia32_sys_faccessat, do_faccessat]
+  sources:
+    - { path: fs/open.c, fn: "faccessat, do_faccessat()" }
+  desk: Asks whether you could read, write or run a file, without opening it
+
+faccessat2:
+  args: [dfd, filename, mode, flags]
+  pointers: [1]
+  pathArg: 1
+  path: [__ia32_sys_faccessat2, do_faccessat]
+  sources:
+    - { path: fs/open.c, fn: "faccessat2, do_faccessat()" }
+  desk: Asks whether you could read, write or run a file, without opening it
+
+umask:
+  args: [mask]
+  path: [__ia32_sys_umask]
+  sources:
+    - { path: kernel/sys.c, fn: umask }
+  desk: Sets which permission bits new files start without
+  returns: the mask it replaced
+
+readlinkat:
+  args: [dfd, pathname, buf, bufsiz]
+  pointers: [1, 2]
+  pathArg: 1
+  path: [__ia32_sys_readlinkat, do_readlinkat, vfs_readlink]
+  sources:
+    - { path: fs/stat.c, fn: "readlinkat, do_readlinkat()" }
+    - { path: fs/namei.c, fn: vfs_readlink() }
+  desk: Reads where a symbolic link points, without following it
+  returns: the number of bytes of the target copied, with no NUL
+
+nanosleep:
+  args: [rqtp, rmtp]
+  pointers: [0, 1]
+  path: [__ia32_sys_nanosleep_time32, hrtimer_nanosleep]
+  sources:
+    - { path: kernel/time/hrtimer.c, fn: "nanosleep_time32, hrtimer_nanosleep()" }
+  desk: Puts this process to sleep until a time has passed
+
+clock_gettime:
+  args: [which_clock, tp]
+  pointers: [1]
+  path: [__ia32_sys_clock_gettime32]
+  sources:
+    - { path: kernel/time/posix-timers.c, fn: clock_gettime32 }
+  desk: Reads one of the kernel's clocks into your buffer
+
+sysinfo:
+  args: [info]
+  pointers: [0]
+  path: [__ia32_sys_sysinfo, do_sysinfo]
+  sources:
+    - { path: kernel/sys.c, fn: "sysinfo, do_sysinfo()" }
+  desk: "Copies the Machine's totals to you: uptime, memory, number of processes"
+
+geteuid:
+  args: []
+  path: [__ia32_sys_geteuid16]
+  sources:
+    - { path: kernel/uid16.c, fn: geteuid16 }
+  desk: Tells you the user ID your permissions are checked as
+  returns: your effective user ID
+
+getegid:
+  args: []
+  path: [__ia32_sys_getegid16]
+  sources:
+    - { path: kernel/uid16.c, fn: getegid16 }
+  desk: Tells you the group ID your permissions are checked as
+  returns: your effective group ID
+
+getgroups:
+  args: [gidsetsize, grouplist]
+  pointers: [1]
+  path: [__ia32_sys_getgroups16]
+  sources:
+    - { path: kernel/uid16.c, fn: getgroups16 }
+  desk: Copies the list of extra groups you belong to into your buffer
+  returns: the number of groups
+
+fstat:
+  args: [fd, statbuf]
+  pointers: [1]
+  path: [__ia32_sys_newfstat, vfs_fstat]
+  sources:
+    - { path: fs/stat.c, fn: "newfstat, vfs_fstat()" }
+  desk: Reads an open file's details into your buffer
+
+dup:
+  args: [fildes]
+  path: [__ia32_sys_dup]
+  sources:
+    - { path: fs/file.c, fn: dup }
+  desk: Gives a second file descriptor for the same open file
+  returns: the new file descriptor, the lowest one free
+
+dup3:
+  args: [oldfd, newfd, flags]
+  path: [__ia32_sys_dup3, ksys_dup3, do_dup2]
+  sources:
+    - { path: fs/file.c, fn: "ksys_dup3(), do_dup2()" }
+  desk: Makes newfd point at the same open file as oldfd
+
+pipe:
+  args: [fildes]
+  pointers: [0]
+  path: [__ia32_sys_pipe, do_pipe2, create_pipe_files]
+  sources:
+    - { path: fs/pipe.c, fn: "pipe, do_pipe2()" }
+  desk: "Makes a pipe: two connected file descriptors"
+
+# i386 kept the old 16-bit ID calls (getuid…) and 32-bit time calls under their first
+# names. Below are the full-width ones: musl always asks for IDs with these, and for a
+# time with a _time64 call when the time doesn't fit in 32 bits.
+getuid32:
+  args: []
+  path: [__ia32_sys_getuid]
+  sources:
+    - { path: kernel/sys.c, fn: getuid }
+  desk: Tells you the user ID the kernel knows you by
+  returns: your user ID
+
+getgid32:
+  args: []
+  path: [__ia32_sys_getgid]
+  sources:
+    - { path: kernel/sys.c, fn: getgid }
+  desk: Tells you your group ID
+  returns: your group ID
+
+geteuid32:
+  args: []
+  path: [__ia32_sys_geteuid]
+  sources:
+    - { path: kernel/sys.c, fn: geteuid }
+  desk: Tells you the user ID your permissions are checked as
+  returns: your effective user ID
+
+getegid32:
+  args: []
+  path: [__ia32_sys_getegid]
+  sources:
+    - { path: kernel/sys.c, fn: getegid }
+  desk: Tells you the group ID your permissions are checked as
+  returns: your effective group ID
+
+getgroups32:
+  args: [gidsetsize, grouplist]
+  pointers: [1]
+  path: [__ia32_sys_getgroups]
+  sources:
+    - { path: kernel/groups.c, fn: getgroups }
+  desk: Copies the list of extra groups you belong to into your buffer
+  returns: the number of groups
+
+clock_nanosleep_time64:
+  args: [which_clock, flags, rqtp, rmtp]
+  pointers: [2, 3]
+  path: [__ia32_sys_clock_nanosleep, common_nsleep, hrtimer_nanosleep]
+  sources:
+    - { path: kernel/time/posix-timers.c, fn: "clock_nanosleep, common_nsleep()" }
+    - { path: kernel/time/hrtimer.c, fn: hrtimer_nanosleep() }
+  desk: Puts this process to sleep until a time has passed
+
+clock_gettime64:
+  args: [which_clock, tp]
+  pointers: [1]
+  path: [__ia32_sys_clock_gettime]
+  sources:
+    - { path: kernel/time/posix-timers.c, fn: clock_gettime }
+  desk: Reads one of the kernel's clocks into your buffer

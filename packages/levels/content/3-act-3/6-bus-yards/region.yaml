@@ -1,0 +1,16 @@
+id: bus-yards
+name: Bus Yards
+caption: platform and PCI drivers, the device tree
+source: drivers/base/, drivers/pci/, drivers/of/
+guide: the Matchmaker
+slots:
+  - {
+      number: "3.14",
+      title: The Lighthouse Board,
+      summary: "Describe a new board in the device tree and write a driver for its beacon. You learn how the kernel matches drivers to hardware.",
+    }
+  - {
+      number: "3.15",
+      title: The Lantern Card,
+      summary: "Write a PCI driver for the Lantern card: find it, map its registers, take its interrupt. You learn the PCI bus and memory-mapped I/O.",
+    }

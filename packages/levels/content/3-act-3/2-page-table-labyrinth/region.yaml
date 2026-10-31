@@ -1,0 +1,21 @@
+id: page-table-labyrinth
+name: Page-Table Labyrinth
+caption: page tables, page faults, mmap
+source: mm/memory.c, arch/x86/mm/
+guide: the Walker
+slots:
+  - {
+      number: "3.3",
+      title: The Walk,
+      summary: "Write a tool that follows a running program's page tables for one address. You learn how the addresses a program sees map to real memory.",
+    }
+  - {
+      number: "3.4",
+      title: Fault Lines,
+      summary: "Count the page faults a program takes, and watch copy-on-write after fork. You learn how the kernel hands out memory only when it is first touched.",
+    }
+  - {
+      number: "3.5",
+      title: The Light Map,
+      summary: "Let programs map a page of the Lantern's state straight into their memory with mmap. You learn how a driver shares memory with programs.",
+    }

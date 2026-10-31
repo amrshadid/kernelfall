@@ -1,0 +1,26 @@
+# The Gate is the one door between user mode and kernel mode, so the map draws it
+# as a layer of its own, between Userland and the Deep.
+id: syscall-gate
+name: The Syscall Gate
+boss: true
+caption: the syscall entry path
+source: arch/x86/entry/
+guide: the Gatekeeper
+layer:
+  key: gate
+  name: The Syscall Gate
+  short: Gate A–A
+  kicker: Section A–A · the only way down
+  caption: "The syscall entry path: the one door between user mode and kernel mode."
+  note: >-
+    Every syscall comes in here: the syscall instruction switches the CPU to kernel
+    mode and jumps to the kernel's entry code, which runs the handler for the call's
+    number. Pass 1.B and you get root, and the way into the Deep.
+  source: arch/x86/entry/
+  guides: the Gatekeeper
+slots:
+  - {
+      number: "1.B",
+      title: The Syscall Gate,
+      summary: "The Gatekeeper traces your shell and your server with strace and checks every call they make. You show you can read what a program asks of the kernel, and learn how a syscall gets in.",
+    }

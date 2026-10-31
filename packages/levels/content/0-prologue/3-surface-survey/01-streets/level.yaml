@@ -1,0 +1,111 @@
+# Surface Survey S.1, The Streets of Userland (docs/levels/surface-survey.md).
+# Objectives without a `check` are judged in checker.ts.
+id: prologue-surface-survey-01-streets
+title: The Streets of Userland
+summary: "Walk the folder tree with cd and pwd, then set up a survey office in /tmp: make folders, copy, rename and remove. You learn absolute and relative paths, and that a rename moves a name, not the file's bytes."
+minutes: 25
+tracks: [userland]
+skills: [io-fs-hierarchy]
+prerequisites: [sys-shell-basics, sys-command-lifecycle]
+objectives:
+  - id: cd-absolute
+    text: '`cd /etc`: the shell''s own `chdir("/etc")`, no program started.'
+  - id: cd-up
+    text: "`cd ..` from `/etc` climbs to the root, `/`."
+  - id: cd-relative
+    text: "`cd home/you` from `/` walks back to `/home/you`, a relative path."
+  - id: mkdir-parents
+    text: "`mkdir -p` makes two folders in one run."
+  - id: copy-new-inode
+    text: "`ls -i` on a file and your copy prints two different inode numbers: a copy is a new file."
+  - id: rename-no-bytes
+    text: "`mv` renames a file with one `renameat2`: not one byte is read or written."
+  - id: rmdir-not-empty
+    text: "`rmdir` refuses a folder that isn't empty: `Directory not empty`."
+    check: { kind: syscall, program: rmdir, names: [rmdir, unlinkat], errno: ENOTEMPTY }
+  - id: rmdir-empty
+    text: "`rmdir` removes an empty folder."
+    check: { kind: syscall, program: rmdir, names: [rmdir, unlinkat], ret: 0 }
+  - id: survey-tree
+    text: "`ls -R /tmp/survey` shows exactly `maps/os-release` and an empty `notes/`."
+  - id: stands-in-survey
+    text: "`pwd` prints `/tmp/survey`: the shell stands in your survey office."
+hints:
+  - Where are you standing right now? There's a command that just tells you.
+  - "A path that starts with `/` is absolute: from the root. Any other path is relative: from your working directory. `..` is one step up. `mkdir -p` makes every missing folder on the way."
+  - "From `/tmp/survey`, `ls -R /tmp/survey` shows what's left. Remove what doesn't belong with `rm` (files) and `rmdir` (empty folders), then check where you stand with `pwd`."
+xray: [syscalls, files]
+codex:
+  - id: filesystem-hierarchy
+    term: the filesystem hierarchy
+    deepens: files
+    simple: >-
+      One tree of folders, starting at /. A path starting with / is walked from the
+      root; any other from your working directory.
+    deep: >-
+      The kernel resolves a path one name at a time, starting at the root or at the
+      process's working directory; both are kept in its struct fs_struct, so cd in one
+      process changes nothing for another. path_lookupat() walks the names, and ..
+      steps to the parent. The layout (/bin, /etc, /home, /tmp, /usr) follows the
+      Filesystem Hierarchy Standard; the kernel itself doesn't care what the folders
+      are called.
+    sources: [fs/namei.c, include/linux/fs_struct.h]
+    docs: https://man7.org/linux/man-pages/man7/hier.7.html
+    tryIt: cd /etc && pwd && cat os-release
+  - id: reading-a-directory
+    term: reading a folder (getdents64)
+    simple: A folder is a file that lists names. `ls` opens it and reads the names with getdents64.
+    deep: >-
+      A folder is opened like a file (O_DIRECTORY) and read with getdents64, which
+      fills a buffer with entries (inode number, type, name), . and .. among them,
+      and returns 0 at the end. iterate_dir() asks the folder's filesystem for its
+      entries. readdir(3) and ls sit on top of it; ls sorts the names itself.
+    sources: [fs/readdir.c]
+    docs: https://man7.org/linux/man-pages/man2/getdents.2.html
+    tryIt: strace -e trace=openat,getdents64 ls /
+  - id: directory-entries
+    term: names and files (inodes)
+    simple: >-
+      A folder maps names to files. mv changes a name, rm removes one, cp makes a new
+      file; ls -i shows which file a name points to.
+    deep: >-
+      The kernel's record of a file is its inode: its data, size, owner and mode. A
+      folder entry only points a name at an inode, so one inode can have several names
+      (i_nlink counts them). rename moves a name within one filesystem without touching
+      the data; across filesystems mv has to copy and delete. unlink removes a name;
+      the kernel frees the file only when no names and no open file descriptors are
+      left. rmdir refuses a folder that isn't empty (ENOTEMPTY). In the kernel:
+      do_mkdirat(), do_renameat2(), do_unlinkat() and do_rmdir().
+    sources: [fs/namei.c, include/linux/fs.h]
+    docs: https://man7.org/linux/man-pages/man2/rename.2.html
+    tryIt: "cp /etc/os-release /tmp/x && ls -i /etc/os-release /tmp/x && mv /tmp/x /tmp/y && ls -i /tmp/y"
+  - id: procfs
+    term: procfs (/proc)
+    deepens: filesystems
+    simple: /proc holds no stored files. Each read runs kernel code that prints the current state.
+    deep: >-
+      procfs is the filesystem mounted at /proc, with one numbered folder per process.
+      Its files show size 0 in ls -l because their text is made at read time, by
+      kernel functions like proc_pid_status(). Nothing of it is on a disk.
+    sources: [fs/proc/root.c, fs/proc/base.c, fs/proc/array.c]
+    docs: https://man7.org/linux/man-pages/man5/proc.5.html
+    tryIt: ls -l /proc/uptime && cat /proc/uptime
+taint: []
+fidelity:
+  faithful:
+    - "the names and order of the syscalls shown for ls, cd, cat, mkdir, mv, rm and rmdir"
+    - getdents64 returning 0 at the end of a folder
+    - chdir changing only the calling process's working directory
+    - "cd as the shell's own chdir() to the absolute path it worked out, as bash does"
+    - rename moving no data and keeping the inode; cp making a new inode; unlink removing a name
+    - "ENOTEMPTY (39, Directory not empty) from rmdir"
+    - /proc contents made on read, with size 0 in ls -l
+    - the standard folder names
+  simplified:
+    - "the lab's ls, cat, cp and mkdir are small programs: real GNU tools make extra calls (locale files, fstat), read with bigger buffers, GNU ls writes a whole line at once, and GNU cp first tries to clone or copy_file_range instead of read and write"
+    - "the lab's tree holds only the folders and files the levels use (no /var or /opt); /bin is a real folder, not the merged-/usr link most distributions use"
+    - "bash's pwd is a builtin that prints $PWD without a syscall, so the checker reads what the shell itself wrote, which any echo of the same text would match"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

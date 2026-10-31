@@ -1,0 +1,34 @@
+{
+  "name": "@kernelfall/levels",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The game's content: every level's story, starter, solution, objectives and checker, and the order of play.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts",
+    "./utils": "./src/utils/index.ts"
+  },
+  "imports": {
+    "#content/*": "./content/*",
+    "#recorder/*": "./scripts/recorder/*.ts",
+    "#test/*": "./src/test/*.ts",
+    "#types/*": "./src/types/*.ts",
+    "#utils/*": "./src/utils/*.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "vm:record": "node scripts/record-runs.ts"
+  },
+  "dependencies": {
+    "@kernelfall/game": "workspace:*",
+    "@kernelfall/machine": "workspace:*",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.5"
+  }
+}

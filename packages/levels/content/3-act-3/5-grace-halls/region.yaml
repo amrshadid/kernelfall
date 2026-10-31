@@ -1,0 +1,16 @@
+id: grace-halls
+name: Grace Halls
+caption: memory ordering and RCU
+source: kernel/rcu/
+guide: the Grace Keeper
+slots:
+  - {
+      number: "3.12",
+      title: Hall of Mirrors,
+      summary: "Replace a lock with a ring buffer shared by an interrupt and its readers. You learn memory ordering, and how KCSAN catches data races.",
+    }
+  - {
+      number: "3.13",
+      title: Grace,
+      summary: "Let readers walk the Lantern's history without taking any lock. You learn RCU and its grace periods.",
+    }

@@ -1,0 +1,10 @@
+id: boot-path
+name: First Boot
+caption: power on, the boot chain, your first syscall, the shell
+source: arch/x86/boot/, init/main.c
+guide: init, the Watchdog
+slots:
+  - { number: "P.1", title: Power On, level: 01-power-on }
+  - { number: "P.2", title: First Words, level: 02-first-words }
+  - { number: "P.3", title: Speak to the Shell, level: 03-speak-to-shell }
+  - { number: "P.4", title: The Boot Path, level: 04-the-boot-path }

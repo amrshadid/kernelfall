@@ -1,0 +1,17 @@
+id: archive-stacks
+name: Archive Stacks
+caption: the VFS, the page cache, the block layer
+source: fs/, mm/filemap.c, block/
+guide: the Librarian
+slots:
+  - {
+      number: "3.16",
+      title: A Filesystem of Light,
+      summary: "Write a tiny filesystem that shows the Lantern's messages as files. You learn the VFS: superblocks, inodes and directory entries.",
+    }
+  - {
+      number: "3.17",
+      title: Down to the Disk,
+      optional: true,
+      summary: "Write a RAM disk driver and put a real filesystem on it. You learn the page cache and the block layer.",
+    }

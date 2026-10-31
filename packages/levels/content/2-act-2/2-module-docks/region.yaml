@@ -1,0 +1,16 @@
+id: module-docks
+name: Module Docks
+caption: loadable modules, printk and dmesg, parameters
+source: kernel/module/, kernel/printk/
+guide: the Dockmaster
+slots:
+  - {
+      number: "2.2",
+      title: Hello from the Deep,
+      summary: "Write your first kernel module, load it into the running kernel and read its greeting in dmesg. You learn how code gets into the kernel, and how to read an oops.",
+    }
+  - {
+      number: "2.3",
+      title: Settings,
+      summary: "Give your module settings you pick when you load it, and refuse values that make no sense. You learn module parameters, and how a module says it failed to start.",
+    }

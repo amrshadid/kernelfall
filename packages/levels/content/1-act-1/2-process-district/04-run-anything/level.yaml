@@ -1,0 +1,152 @@
+# Act I 1.4, Run Anything (docs/levels/act-1-userland.md). Objectives and Taint
+# rules without a `check` are judged in checker.ts.
+id: act1-process-district-04-run-anything
+title: Run Anything
+tracks: [userland]
+skills: [proc-lifecycle, sys-errno]
+# The spec needs c-build-warnings (1.3) and sys-shell-basics (P.3). Until those
+# levels ship nothing grants them, so P.2's skill gates 1.4 instead.
+prerequisites: [sys-user-kernel-mode]
+objectives:
+  - id: runs-ls
+    text: "`ls /` prints the listing before the next prompt."
+  - id: runs-path
+    text: "`/bin/echo a b` prints `a b`."
+  - id: not-found
+    text: "`nosuch` prints “command not found” on stderr, and only one shell is left."
+  - id: exit-status
+    text: "`false` then `exit` ends the shell with status 1."
+  - id: exit-127
+    text: "`nosuch` then `exit` ends the shell with status 127."
+  - id: no-zombies
+    text: No zombie children after 10 commands.
+    check: { kind: no-zombies-after, commands: 10 }
+  - id: fork-fails
+    text: "The shell survives `fork()` failing with `EAGAIN`."
+hints:
+  - "After `fork()`, the same code runs in two processes. How does each one know which one it is?"
+  - "`fork()` returns the child's PID to the parent and 0 to the child. The child calls `execvp`; if `execvp` returns at all, it failed. The parent calls `waitpid` on the child's PID and reads the status with `WIFEXITED` and `WEXITSTATUS`."
+  - "Look at what your child does when `execvp` fails. If it doesn't call `_exit`, it falls back into your shell's main loop, and now there are two shells reading the same terminal."
+xray: [processes, syscalls]
+codex:
+  - id: fork
+    term: fork(2)
+    deepens: shell
+    simple: >-
+      A process makes a copy of itself; the copy is its child. Every command a shell
+      runs starts this way.
+    deep: >-
+      The child gets a copy of the caller's memory, open files and signal handlers.
+      The memory is a copy, shared copy-on-write until written: parent and child
+      point at the same pages until one side writes, and only then does the kernel
+      copy that page. fork() returns the
+      child's PID in the parent and 0 in the child, or -1 with errno (EAGAIN,
+      ENOMEM). The Machine's C library, musl, calls the fork syscall on i386; glibc,
+      and every C library on x86-64 and arm64, calls clone instead, so traces there show
+      clone. Both end in kernel_clone() and copy_process().
+    sources: [kernel/fork.c]
+    docs: https://man7.org/linux/man-pages/man2/fork.2.html
+    tryIt: strace -f ./a.out
+  - id: execve
+    term: execve(2)
+    deepens: arguments
+    simple: >-
+      A process swaps its program for another one: same PID, new program, with the
+      arguments you pass.
+    deep: >-
+      execve(path, argv, envp) copies argv and envp onto the new program's stack;
+      memory, code and stack are replaced; open file descriptors stay open (unless
+      marked close-on-exec). It only returns on error. execvp is a library wrapper
+      that searches PATH. In the kernel: do_execveat_common() and bprm_execve(); real
+      Linux loads ELF files with load_elf_binary().
+    sources: [fs/exec.c, fs/binfmt_elf.c]
+    docs: https://man7.org/linux/man-pages/man2/execve.2.html
+    tryIt: strace -e trace=execve ls
+  - id: wait
+    term: wait(2) and zombies
+    simple: A parent collects its finished child; until it does, the child is a zombie.
+    deep: >-
+      A process that exits keeps its process-table entry, state Z, until its parent
+      collects the exit status with wait or waitpid (the wait4 syscall). If the
+      parent dies first, the child is re-parented to init (or a subreaper), which
+      reaps it. In the kernel: do_exit() and do_wait().
+    sources: [kernel/exit.c]
+    docs: https://man7.org/linux/man-pages/man2/wait.2.html
+    tryIt: ps -e -o pid,ppid,stat,comm
+  - id: exit-status
+    term: exit status
+    simple: A number from 0 to 255 a program leaves behind; 0 means success.
+    deep: >-
+      exit(n), _exit(n) or returning n from main ends the process with n & 0xff. The
+      parent's waitpid gets a packed int status: WIFEXITED(status) is true for a
+      normal exit and WEXITSTATUS(status) gives n; WIFSIGNALED and WTERMSIG say a
+      signal killed it (1.8). Shells store it in $? and add conventions of their own:
+      127 "command not found", 126 "found but not executable", 128 + n "killed by
+      signal n". _exit ends the process at once; exit first runs atexit handlers and
+      flushes stdio buffers, which a forked child must not do twice. In the kernel:
+      do_group_exit() and wait_task_zombie().
+    sources: [kernel/exit.c]
+    docs: https://man7.org/linux/man-pages/man2/waitpid.2.html
+    tryIt: "nosuch; echo $?"
+  - id: errno
+    term: errno(3)
+    simple: When a syscall fails, errno says why.
+    deep: >-
+      Inside the kernel a failing syscall returns a negative error number (-ENOENT).
+      The C library wrapper returns -1 and stores the positive number in errno. Check
+      the return value first; errno is only meaningful after a failure. strerror()
+      gives the message.
+    sources: [include/uapi/asm-generic/errno-base.h]
+    docs: https://man7.org/linux/man-pages/man3/errno.3.html
+    # Not `ls /nosuch; echo $?`: ls exits 2 there, which is its "serious trouble"
+    # status (man 1 ls), not errno, and happens to equal ENOENT.
+    tryIt: strace -e trace=openat cat /nosuch
+  - id: address-space
+    term: virtual address space
+    simple: Every process has its own private memory, even at the same addresses.
+    deep: >-
+      Each process sees its own range of addresses; the kernel maps them to real
+      memory through page tables (Act III), so the same address in two processes can
+      hold different data. /proc/<pid>/maps lists a process's regions. 2.5 puts the
+      idea to work.
+    sources: [include/linux/mm_types.h]
+    docs: https://man7.org/linux/man-pages/man5/proc_pid_maps.5.html
+    tryIt: cat /proc/self/maps
+taint:
+  - id: zombies-left
+    kind: missing_cleanup
+    points: 2
+    description: A child was never waited for and is still a zombie at the end of the level.
+    check: { kind: unreaped-children }
+  # Judged in checker.ts: the child prints the shell's buffered prompt again.
+  - id: exit-in-child
+    kind: missing_cleanup
+    points: 1
+    description: >-
+      The child called exit() instead of _exit() after execvp failed, so stdio buffers
+      copied from the parent were flushed twice.
+  - id: ignored-fork-error
+    kind: ignored_error
+    points: 2
+    description: >-
+      fork() returned -1 and the shell used it as a PID; waitpid(-1, ...) waits for any
+      child, which is a different thing entirely.
+  - id: shell-out
+    kind: style_error
+    points: 3
+    description: Commands ran through system() or /bin/sh -c. It works, but you didn't build it.
+    check: { kind: ran-program, programs: [sh, bash, dash] }
+fidelity:
+  faithful:
+    - fork, execve and wait4 semantics and return values
+    - errno values (ENOENT 2, EACCES 13, EAGAIN 11)
+    - zombie and reparenting behavior
+    - exit status encoding (WIFEXITED, WEXITSTATUS)
+    - shell conventions 127 and 128 + n
+    - copy-on-write fork, ELF loading and musl's buffered stdio, on the real kernel
+  simplified:
+    - "exit() in the child is caught only when it prints buffered text a second time; with an empty buffer its events are the same as _exit()'s"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world

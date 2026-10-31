@@ -1,0 +1,114 @@
+# Surface Survey S.4, Finding Things (docs/levels/surface-survey.md).
+# Objectives without a `check` are judged in checker.ts.
+id: prologue-surface-survey-04-finding-things
+title: Finding Things
+summary: "Search init's attic with find by name, type and owner, and see one search write its results and its complaints on two different streams. You learn how find walks a tree and what standard output and standard error are."
+minutes: 15
+tracks: [userland]
+skills: [io-find-files]
+prerequisites: [io-fs-hierarchy]
+objectives:
+  - id: found-plan
+    text: "`find` with `-name` prints the one path of `lantern-plan.txt`."
+  - id: read-plan
+    text: "`cat` shows the plan."
+    check: { kind: wrote, fd: 1, program: cat, text: { contains: "Someday." } }
+  - id: attic-folders
+    text: "`find attic -type d` lists every folder in the attic, and nothing else."
+  - id: guest-files
+    text: "`find /tmp -user guest` lists exactly the files in `/tmp` that belong to `guest`."
+  - id: two-streams
+    text: "`find / -name passwd` prints its result on standard output and its complaint on standard error."
+hints:
+  - You know the file's name but not its folder. Which command walks a whole tree?
+  - "`find` takes a starting folder, then tests: `-name` for the name, `-type d` for folders, `-user` for the owner."
+  - "`find attic -name lantern-plan.txt`."
+xray: [syscalls, files]
+codex:
+  - id: finding-files
+    term: finding files (find)
+    deepens: reading-a-directory
+    simple: >-
+      find walks a folder tree and prints every path that matches its tests: name,
+      type, owner and more.
+    deep: >-
+      find opens each folder, reads it with getdents64, checks each entry (often
+      with a stat call for its type, size and owner) and goes down into each
+      subfolder. The kernel just answers the reads; the walking is all user space.
+      GNU find walks with gnulib's fts. A folder it may not read is reported on
+      standard error, and the walk goes on.
+    sources: [fs/readdir.c, fs/stat.c]
+    docs: https://man7.org/linux/man-pages/man1/find.1.html
+    tryIt: find /etc -name hostname
+  - id: standard-error
+    term: standard error
+    deepens: file-descriptors
+    simple: fd 2, where programs write error messages, so they stay apart from normal output (fd 1).
+    deep: >-
+      Both usually lead to the same terminal, so they look mixed; a shell can send
+      them to different places (2> in bash). The C library's stderr is unbuffered,
+      so errors appear at once, while stdout to a file or pipe is buffered. To the
+      kernel both are just write() on a file descriptor.
+    sources: [fs/read_write.c]
+    docs: https://man7.org/linux/man-pages/man3/stderr.3.html
+    tryIt: find / -name passwd 2>/dev/null
+taint: []
+fidelity:
+  faithful:
+    - "find's -name, -type, -user and -maxdepth tests and its output format"
+    - "the Permission denied error format: find: '/root': Permission denied"
+    - results on fd 1 and errors on fd 2
+  simplified:
+    - "the lab's find supports only -name, -iname, -type, -user, -maxdepth, -mindepth and !: no -o and no parentheses"
+    - "find lists a folder's entries in the order the lab's filesystem keeps them; ext4 returns them in hash order"
+    - "on the Machine, find / is refused only /root and the fd folders of root's processes; on real Linux it is also refused other parts of /proc (fdinfo, ns, map_files, each thread's fd) and folders such as /etc/ssl/private"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world
+lab:
+  users:
+    - { name: guest, uid: 1001 }
+  files:
+    - { path: /home/you/attic, kind: dir, owner: you }
+    - { path: /home/you/attic/boxes, kind: dir, owner: you }
+    - { path: /home/you/attic/boxes/old, kind: dir, owner: you }
+    - { path: /home/you/attic/shelf, kind: dir, owner: you }
+    - { path: /home/you/attic/dust.txt, owner: you }
+    - { path: /home/you/attic/map-sketch.txt, owner: you, content: "Userland on top. The Gate below. Then the Deep.\n" }
+    - { path: /home/you/attic/lamp-list.txt, owner: you, content: "Userland: lit\nEverything else: dark\n" }
+    - { path: /home/you/attic/todo.txt, owner: you, content: "Sweep the attic.\n" }
+    - { path: /home/you/attic/receipt-01.txt, owner: you }
+    - { path: /home/you/attic/receipt-02.txt, owner: you }
+    - { path: /home/you/attic/boxes/letter-01.txt, owner: you }
+    - { path: /home/you/attic/boxes/letter-02.txt, owner: you }
+    - { path: /home/you/attic/boxes/letter-03.txt, owner: you }
+    - { path: /home/you/attic/boxes/letter-04.txt, owner: you }
+    - { path: /home/you/attic/boxes/letter-05.txt, owner: you }
+    - { path: /home/you/attic/boxes/letter-06.txt, owner: you }
+    - { path: /home/you/attic/boxes/inventory.txt, owner: you, content: "letters, string, photos, an old box\n" }
+    - { path: /home/you/attic/boxes/string.txt, owner: you }
+    - { path: /home/you/attic/boxes/photos.txt, owner: you }
+    - path: /home/you/attic/boxes/old/lantern-plan.txt
+      owner: you
+      content: |
+        The Lantern: a driver of our own.
+        One door in /dev. Write to it, and a lamp lights.
+        Someday.
+    - { path: /home/you/attic/boxes/old/gear-notes.txt, owner: you }
+    - { path: /home/you/attic/boxes/old/fuse-chart.txt, owner: you }
+    - { path: /home/you/attic/boxes/old/wiring.txt, owner: you }
+    - { path: /home/you/attic/boxes/old/old-motd.txt, owner: you, content: "Welcome to the Machine. All lamps lit.\n" }
+    - { path: /home/you/attic/boxes/old/kernel-notes.txt, owner: you }
+    - { path: /home/you/attic/shelf/book-01.txt, owner: you }
+    - { path: /home/you/attic/shelf/book-02.txt, owner: you }
+    - { path: /home/you/attic/shelf/book-03.txt, owner: you }
+    - { path: /home/you/attic/shelf/book-04.txt, owner: you }
+    - { path: /home/you/attic/shelf/book-05.txt, owner: you }
+    - { path: /home/you/attic/shelf/jar-labels.txt, owner: you }
+    - { path: /home/you/attic/shelf/recipes.txt, owner: you }
+    - { path: /home/you/attic/shelf/candles.txt, owner: you }
+    - { path: /home/you/attic/shelf/postcard.txt, owner: you, content: "Greetings from the Socket Harbor.\n" }
+    - { path: /tmp/guest-note.txt, owner: guest, content: "Back at six. guest\n" }
+    - { path: /tmp/lamp-oil.txt, owner: guest, content: "Two cans left.\n" }
+    - { path: /tmp/you-were-here.txt, owner: you }

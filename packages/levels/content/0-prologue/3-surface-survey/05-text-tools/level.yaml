@@ -1,0 +1,115 @@
+# Surface Survey S.5, Counting and Sorting (docs/levels/surface-survey.md).
+# Objectives without a `check` are judged in checker.ts.
+id: prologue-surface-survey-05-text-tools
+title: Counting and Sorting
+summary: "Count, search and sort init's census of the city with wc, grep, sort and uniq. You learn the small text tools every Linux user reaches for, and why uniq only sees neighbouring lines."
+minutes: 20
+tracks: [userland]
+skills: [sys-text-tools]
+prerequisites: [sys-shell-basics]
+objectives:
+  - id: counted-lines
+    text: "`wc -l census.txt` counts the census: 40 lines."
+  - id: counted-dark
+    text: "`grep -c dark census.txt` counts the dark houses."
+    check: { kind: wrote, fd: 1, program: grep, text: { equals: "31\n" } }
+  - id: own-passwd-line
+    text: "`grep` finds your own line in `/etc/passwd`."
+    check: { kind: wrote, fd: 1, program: grep, text: { contains: "you:x:1000:1000:" } }
+  - id: sorted-file
+    text: "`sort -o sorted.txt census.txt` writes the census, sorted, into `sorted.txt`."
+  - id: counted-kinds
+    text: "`uniq -c sorted.txt` counts the houses of each kind."
+hints:
+  - "`uniq` only squashes repeats that sit next to each other. How do you put all the same lines next to each other?"
+  - "`sort -o out in` writes the sorted lines into the file `out`. Then `uniq -c out` counts each run of equal lines."
+  - "`sort -o sorted.txt census.txt`, then `uniq -c sorted.txt`."
+xray: [syscalls, files]
+codex:
+  - id: text-tools
+    term: lines and text tools
+    simple: >-
+      Text tools read files line by line (text up to a newline) and count, pick, sort
+      or squash those lines.
+    deep: >-
+      The kernel knows nothing of lines: read() returns bytes. Each tool splits at \n
+      itself. wc, head, tail, sort and uniq (GNU coreutils) and grep (GNU grep) are
+      separate programs, each doing one job, made to be joined with pipes. uniq
+      merges only neighbouring lines, so its input is sorted first.
+    sources: [fs/read_write.c]
+    docs: https://man7.org/linux/man-pages/man1/uniq.1.html
+    tryIt: "cut -d: -f7 /etc/passwd | sort | uniq -c"
+  - id: passwd-file
+    term: the user list (/etc/passwd)
+    deepens: users-and-ids
+    simple: >-
+      /etc/passwd has one line per user: name, uid, group, home folder and shell,
+      separated by colons.
+    deep: >-
+      The kernel never reads it; it only knows numbers. The C library's getpwnam()
+      reads it (through NSS) to turn names into numbers for programs like id and ls.
+      The x in the second field says the password lives in /etc/shadow.
+    sources: [include/linux/cred.h]
+    docs: https://man7.org/linux/man-pages/man5/passwd.5.html
+    tryIt: grep "$USER" /etc/passwd
+taint: []
+fidelity:
+  faithful:
+    - "the output formats of wc, head, tail, grep (-c, -n, -v, -i), sort (-r, -o) and uniq (-c)"
+    - uniq merging only adjacent lines
+    - sort -o safe on its own input
+    - the /etc/passwd format
+  simplified:
+    - "the lab's tools support only the options the levels use, and sort bytes in the C locale (real sort follows the locale's order)"
+    - the pipe recording is replayed, not run
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world
+lab:
+  users:
+    - { name: guest, uid: 1001 }
+  files:
+    - path: /home/you/census.txt
+      owner: you
+      content: |
+        userland lit
+        process-district dark
+        socket-harbor dark
+        userland lit
+        compilers-quarter dark
+        process-district dark
+        process-district dark
+        userland dark
+        compilers-quarter dark
+        socket-harbor dark
+        userland lit
+        syscall-gate dark
+        compilers-quarter dark
+        compilers-quarter dark
+        process-district dark
+        userland lit
+        socket-harbor dark
+        userland dark
+        process-district dark
+        compilers-quarter dark
+        socket-harbor dark
+        syscall-gate dark
+        userland lit
+        process-district dark
+        socket-harbor dark
+        socket-harbor dark
+        compilers-quarter dark
+        userland lit
+        syscall-gate dark
+        process-district dark
+        userland dark
+        compilers-quarter dark
+        userland lit
+        process-district dark
+        socket-harbor dark
+        compilers-quarter dark
+        syscall-gate dark
+        userland lit
+        syscall-gate dark
+        userland lit

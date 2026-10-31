@@ -1,0 +1,17 @@
+# 2.9b, the Deadlock Twins, is the act's mid-boss inside the Cathedral.
+id: lock-cathedral
+name: Lock Cathedral
+caption: races, mutexes, a deadlock read with lockdep
+source: kernel/locking/
+guide: the Verger
+slots:
+  - {
+      number: "2.9",
+      title: Many Users at Once,
+      summary: "Many programs write to the Lantern at once and its data gets mixed up. You find the race and fix it with a mutex, checked by lockdep.",
+    }
+  - {
+      number: "2.9b",
+      title: The Deadlock Twins,
+      summary: "Two locks taken in opposite orders freeze the Machine. You read lockdep's report and pick one lock order for good.",
+    }

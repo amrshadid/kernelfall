@@ -1,0 +1,79 @@
+# Surface Survey S.3, Processes from Outside (docs/levels/surface-survey.md).
+# Every objective is judged in checker.ts.
+id: prologue-surface-survey-03-processes
+title: Processes from Outside
+summary: "Watch two running programs with ps and /proc, pause and resume one with signals, then end both, and find out why you may not signal init. You learn process states and how kill decides who may signal whom."
+minutes: 20
+tracks: [userland]
+skills: [proc-observe]
+prerequisites: [io-permissions, proc-process-basics]
+objectives:
+  - id: paused-yes
+    text: "`kill -STOP 402` pauses `yes`."
+  - id: saw-stopped
+    text: "`ps` or `/proc/402/status` shows `yes` in state `T`: stopped."
+  - id: read-status
+    text: "You read `/proc/<pid>/status` of a process you didn't start."
+  - id: yes-ended
+    text: "`yes` ends by a signal: `SIGTERM` (acted on once it's continued), or `SIGKILL`."
+  - id: sleep-ended
+    text: "`kill 401` ends `sleep` with `SIGTERM`."
+  - id: kill-init-denied
+    text: "`kill 1` fails with `Operation not permitted`: you may signal only your own processes."
+hints:
+  - Which column of `ps` says whether a process is paused?
+  - "`kill -STOP PID` pauses, `kill -CONT PID` resumes, `kill PID` asks it to end. A paused process acts on signals only once it's resumed, except `SIGKILL`."
+  - "`yes` is PID 402. `kill -STOP 402`, check, then `kill 402` and `kill -CONT 402`."
+xray: [processes, syscalls]
+codex:
+  - id: process-states
+    term: process states
+    deepens: process
+    simple: >-
+      A process is running or ready (R), sleeping (S), stopped (T) or a zombie (Z).
+      ps and /proc/<pid>/status show it.
+    deep: >-
+      The state lives in task_struct->__state; /proc prints it from a fixed table of
+      letters, task_state_array. D is an uninterruptible sleep (waiting on I/O),
+      which even SIGKILL can't end until it wakes. ps adds detail letters after the
+      state: s for a session leader, + for the terminal's foreground.
+    sources: [fs/proc/array.c, include/linux/sched.h]
+    docs: https://man7.org/linux/man-pages/man5/proc_pid_status.5.html
+    tryIt: ps -e -o pid,ppid,user,stat,time,comm
+  - id: sending-signals
+    term: sending signals (kill)
+    deepens: signals
+    simple: >-
+      kill sends a signal to a process: SIGTERM asks it to end, SIGKILL ends it,
+      SIGSTOP and SIGCONT pause and resume it.
+    deep: >-
+      kill(2) checks that the sender may signal the target, check_kill_permission():
+      the same user, or the CAP_KILL capability; otherwise EPERM. SIGKILL and
+      SIGSTOP can't be caught or ignored. A stopped task keeps other signals pending
+      until SIGCONT; SIGKILL wakes it. On x86-64: SIGKILL 9, SIGTERM 15, SIGCONT 18,
+      SIGSTOP 19.
+    sources: [kernel/signal.c, arch/x86/include/uapi/asm/signal.h]
+    docs: https://man7.org/linux/man-pages/man7/signal.7.html
+    tryIt: "sleep 600 & kill -STOP $!; ps -o pid,stat,comm; kill -CONT $!; kill $!"
+taint: []
+fidelity:
+  faithful:
+    - ps columns and state letters
+    - signal numbers on x86-64 and their default actions
+    - SIGKILL and SIGSTOP can't be caught
+    - pending signals on a stopped task, acted on after SIGCONT; SIGKILL waking it
+    - EPERM when signalling another user's process
+    - the kill syscall
+    - "/proc/<pid>/status's State and PPid lines"
+  simplified:
+    - the lab's ps accepts only the options the levels use
+    - "the killed by SIGTERM line is the lab's wording"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world
+lab:
+  # init starts both as you before the scene; the story names them by these pids.
+  processes:
+    - { argv: [sleep, "600"], pid: 401 }
+    - { argv: ["yes"], pid: 402, stdout: /dev/null }

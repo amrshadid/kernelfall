@@ -1,0 +1,13 @@
+id: act3
+name: "Act III: The Core"
+layer:
+  key: core
+  name: The Core
+  short: Core
+  kicker: "Ring 0 · the kernel's own machinery · Act III"
+  caption: "The machinery under the drivers: boot, page tables, the scheduler, tracing, RCU, buses, the VFS and the packet path."
+  note: >-
+    Act III. Still kernel mode, but deeper: how the kernel keeps memory, time and
+    order for everything above it, and how to read a Machine that has stopped.
+  source: init/, mm/, kernel/sched/, kernel/trace/, kernel/rcu/, drivers/pci/, fs/, net/core/
+  guides: the Loader, the Walker, the Judge, the Lookout, the Grace Keeper, the Librarian

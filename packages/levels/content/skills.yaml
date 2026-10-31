@@ -1,0 +1,85 @@
+# The skill tree: the nodes the levels unlock and need. Ids, titles, regions and
+# prerequisites follow the level specs in docs/levels/.
+# Nodes are added as their levels ship, and for the Surface Survey, which is on the
+# map ahead of its levels.
+- id: sys-computer-basics
+  title: What a computer and its kernel are
+  region: boot-path
+  # Earned in P.1, Power On.
+  prerequisites: []
+- id: sys-boot-chain
+  title: Boot the Machine
+  region: boot-path
+  # Earned in P.4, The Boot Path.
+  prerequisites: [sys-shell-basics]
+- id: sys-user-kernel-mode
+  title: "Two worlds: user and kernel mode"
+  region: boot-path
+  prerequisites: [sys-computer-basics]
+- id: sys-shell-basics
+  title: Find your way in the shell
+  # Earned in P.3, Speak to the Shell.
+  region: boot-path
+  prerequisites: [sys-user-kernel-mode]
+- id: sys-kernel-role
+  title: What the kernel owns
+  region: machine-in-section
+  prerequisites: [sys-user-kernel-mode]
+- id: drv-hardware-discovery
+  title: How Linux finds its hardware
+  region: machine-in-section
+  prerequisites: [sys-kernel-role]
+- id: proc-process-basics
+  title: Who runs, and on which CPU
+  region: machine-in-section
+  prerequisites: [sys-kernel-role]
+- id: mem-virtual-memory-basics
+  title: Pages and maps
+  region: machine-in-section
+  prerequisites: [proc-process-basics]
+- id: io-everything-is-a-file
+  title: One interface for every file
+  region: machine-in-section
+  prerequisites: [drv-hardware-discovery, mem-virtual-memory-basics]
+- id: sys-kernel-subsystems
+  title: The kernel's parts, named
+  region: machine-in-section
+  prerequisites: [io-everything-is-a-file]
+- id: sys-command-lifecycle
+  title: One command through the whole Machine
+  region: machine-in-section
+  prerequisites: [sys-kernel-subsystems, sys-boot-chain]
+- id: io-fs-hierarchy
+  title: The streets of Userland
+  region: surface-survey
+  prerequisites: [sys-shell-basics, sys-command-lifecycle]
+- id: io-permissions
+  title: Who may enter
+  region: surface-survey
+  prerequisites: [io-fs-hierarchy]
+- id: proc-observe
+  title: Processes from outside
+  region: surface-survey
+  prerequisites: [io-permissions, proc-process-basics]
+- id: io-find-files
+  title: Finding things
+  region: surface-survey
+  prerequisites: [io-fs-hierarchy]
+- id: sys-text-tools
+  title: Counting and sorting
+  region: surface-survey
+  prerequisites: [sys-shell-basics]
+- id: proc-lifecycle
+  title: fork, exec, wait
+  region: process-district
+  # The curriculum also needs c-pointers-memory (1.1); it joins when 1.1 ships.
+  prerequisites: [sys-user-kernel-mode]
+- id: sys-errno
+  title: Errors and errno
+  region: process-district
+  prerequisites: [proc-lifecycle]
+- id: dbg-strace
+  title: Watch the syscalls
+  region: process-district
+  # Earned in 1.5, An Address and a Name.
+  prerequisites: [proc-lifecycle]

@@ -1,0 +1,11 @@
+id: crash-archives
+name: Crash Archives
+caption: "kdump and crash: reading a dead Machine"
+source: kernel/crash_core.c, kernel/kexec_core.c
+guide: the Second Kernel
+slots:
+  - {
+      number: "3.21",
+      title: The Second Kernel,
+      summary: "Open the dump the crash left behind and find out why the Machine died. You learn kdump and the crash tool, and fix a lost wakeup.",
+    }

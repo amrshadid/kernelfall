@@ -1,0 +1,16 @@
+id: first-light
+name: First Light
+caption: the bootloader, the command line, start_kernel() to PID 1
+source: arch/x86/boot/, init/main.c
+guide: the Loader, swapper
+slots:
+  - {
+      number: "3.1",
+      title: The Loader,
+      summary: "Change the kernel's command line for good, install the Lantern and load a spare kernel for crashes. You learn what the bootloader hands to Linux.",
+    }
+  - {
+      number: "3.2",
+      title: Before PID 1,
+      summary: "Build the Lantern into the kernel itself and write your own /init. You learn what the kernel does from its first instruction until the first process runs.",
+    }

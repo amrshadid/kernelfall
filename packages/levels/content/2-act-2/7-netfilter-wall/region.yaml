@@ -1,0 +1,11 @@
+id: netfilter-wall
+name: Netfilter Wall
+caption: netfilter hooks and atomic counters
+source: net/netfilter/
+guide: the Tollkeeper
+slots:
+  - {
+      number: "2.11",
+      title: A Gate That Counts Packets,
+      summary: "Hook into the network stack and count the packets that reach your chat server. You learn netfilter hooks and atomic counters.",
+    }

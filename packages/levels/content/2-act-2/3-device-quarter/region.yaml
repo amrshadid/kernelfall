@@ -1,0 +1,26 @@
+id: device-quarter
+name: Device Quarter
+caption: "a character device: /dev/lantern, file_operations, ioctl, sysfs"
+source: fs/char_dev.c, drivers/base/
+guide: udev
+slots:
+  - {
+      number: "2.4",
+      title: /dev/lantern,
+      summary: "Register a character device so /dev/lantern appears, and undo each step in order when one fails. You learn device numbers and the kernel's goto cleanup pattern.",
+    }
+  - {
+      number: "2.5",
+      title: Read and Write,
+      summary: "Make /dev/lantern keep a message you write and hand it back when read. You learn why the kernel must copy to and from a program's memory with care.",
+    }
+  - {
+      number: "2.6",
+      title: Brightness Control,
+      summary: "Add an ioctl that sets the lamp's brightness, and a small program that calls it. You learn ioctl commands, shared between kernel code and user code.",
+    }
+  - {
+      number: "2.7",
+      title: Status Pages,
+      summary: "Show the Lantern's state in /proc and sysfs files anyone can read. You learn seq_file and device attributes.",
+    }

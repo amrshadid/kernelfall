@@ -1,0 +1,103 @@
+# Surface Survey S.2, Who May Enter (docs/levels/surface-survey.md).
+# Objectives without a `check` are judged in checker.ts.
+id: prologue-surface-survey-02-who-may-enter
+title: Who May Enter
+summary: "Read the owner, group and mode in ls -l, lock and unlock files and folders with chmod, and watch the kernel refuse a neighbour. You learn how the kernel checks permissions, and the difference between EACCES and EPERM."
+minutes: 20
+tracks: [userland]
+skills: [io-permissions]
+prerequisites: [io-fs-hierarchy]
+objectives:
+  - id: exec-denied
+    text: "`./hi` without its `x` bit: the Kernel refuses to run it, and `execve` returns `EACCES`."
+  - id: exec-allowed
+    text: "`./hi` runs again once its owner has `x` back."
+  - id: dir-denied
+    text: "`cat box/notes.txt` fails while `box` has no `x`: nothing inside it can be reached."
+  - id: dir-allowed
+    text: "`cat box/notes.txt` works once `box` has its `x` back."
+  - id: note-private
+    text: "`ls -l notes.txt` shows read for you and for no one else. (No `r` even for you? You locked yourself out: give the owner `r` back.)"
+  - id: neighbour-denied
+    text: "The neighbour, `guest` (uid 1001), gets `Permission denied` on your note."
+  - id: chmod-eperm
+    text: "`chmod 666 /etc/motd` fails with `Operation not permitted`: only a file's owner, or root, may change its mode."
+    check: { kind: syscall, program: chmod, names: [chmod, fchmodat, fchmodat2], errno: EPERM }
+hints:
+  - Read the `ls -l` line from left to right. Who owns the note, and which letters are on for everyone else?
+  - "The nine letters after the first are three groups of `rwx`: owner, group, other. The kernel uses only one of the three: the owner bits if you own the file, else the group bits if you're in its group, else the other bits. `chmod` with numbers adds r=4, w=2, x=1 for each group."
+  - "You want owner `rw-`, group `---`, other `---`: that's 6, 0, 0."
+xray: [syscalls, files]
+codex:
+  - id: users-and-ids
+    term: users and IDs
+    simple: >-
+      Every process runs as a user, named by a number: you are 1000, root is 0.
+      Groups let several users share files.
+    deep: >-
+      Every process has user and group IDs (real, effective, saved and filesystem
+      ones) and a list of supplementary groups; the kernel keeps them in its
+      credentials, struct cred, and checks those numbers, never names. /etc/passwd
+      and /etc/group only map numbers to names for programs like id and ls. User ID 0,
+      root, is the administrator.
+    sources: [include/linux/cred.h, kernel/cred.c]
+    docs: https://man7.org/linux/man-pages/man7/credentials.7.html
+    tryIt: id
+  - id: permission-bits
+    term: permission bits
+    simple: >-
+      Nine switches on every file: read, write, execute, for the owner, the group and
+      everyone else. On a folder, x means "may pass through".
+    deep: >-
+      Each inode has an owner, a group and a mode (i_mode). ls -l shows the file type
+      letter (- a file, d a folder, c a character device), then rwx for owner, group
+      and other. chmod's numbers add r=4, w=2, x=1 for each class: 644 is rw-r--r--,
+      600 is rw-------, 755 is rwxr-xr-x. On a folder, r lists the names, w changes
+      them, and x lets a path pass through.
+    sources: [include/uapi/linux/stat.h, include/linux/fs.h]
+    docs: https://man7.org/linux/man-pages/man1/chmod.1.html
+    tryIt: ls -l /etc/passwd /etc/shadow
+  - id: permission-check
+    term: the permission check
+    simple: >-
+      On every open, run and path step, the kernel picks one class (owner, group or
+      other) and checks its bits. A "no" is EACCES.
+    deep: >-
+      may_open() → inode_permission() → generic_permission(): the owner bits if the
+      process's filesystem uid owns the file, else the group bits if it is in the
+      file's group, else the other bits. When the bits say no, root still passes
+      most checks through capabilities: CAP_DAC_READ_SEARCH (read and search) and
+      CAP_DAC_OVERRIDE (write, and execute if any x bit is set). Operations reserved
+      to an owner or a privilege, like chmod on someone else's file, fail with EPERM
+      (1) instead of EACCES (13).
+    sources: [fs/namei.c, fs/attr.c, security/commoncap.c]
+    docs: https://man7.org/linux/man-pages/man7/path_resolution.7.html
+    tryIt: strace -e trace=openat cat /etc/shadow
+taint: []
+fidelity:
+  faithful:
+    - the ls -l mode string
+    - the owner, then group, then other selection rule
+    - "EACCES (13) from openat and execve, and EPERM (1) from chmod by a non-owner"
+    - a folder's x as search permission
+    - root passing the read check
+    - the id and chmod message formats
+    - "/etc/shadow's mode and group (root:shadow, 0640) as on Debian-family systems"
+  simplified:
+    - no ACLs, no SELinux or AppArmor, no setuid programs, no sudo
+    - "root is modeled as uid 0 holding every capability; the lab models only the capability checks the levels use (CAP_DAC_READ_SEARCH and CAP_DAC_OVERRIDE here)"
+    - home folders are 0755; many distributions now use 0750
+    - /etc/shadow holds no real password hashes
+    - "the rescue shell's Permission denied message follows bash's"
+story:
+  scene: story.md#scene
+  debrief: story.md#debrief
+  realWorld: story.md#real-world
+lab:
+  users:
+    - { name: guest, uid: 1001 }
+  files:
+    - path: /home/you/notes.txt
+      owner: you
+      content: |
+        Lamps to check: Userland, the Harbor, the Gate. Not yet.

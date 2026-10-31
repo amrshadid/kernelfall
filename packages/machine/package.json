@@ -1,0 +1,46 @@
+{
+  "name": "@kernelfall/machine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The real Linux machine: a v86 VM in a Web Worker running the image `pnpm vm:image` builds, the kernel's event model, and the hooks the app reaches it through.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts",
+    "./hooks": "./src/hooks/index.ts",
+    "./services": "./src/services/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./events": "./src/events/index.ts"
+  },
+  "imports": {
+    "#config": "./src/config.ts",
+    "#events/*": "./src/events/*.ts",
+    "#hooks/*": "./src/hooks/*.ts",
+    "#services/*": "./src/services/*.ts",
+    "#store/*": "./src/store/*.ts",
+    "#test/*": "./src/test/*.ts",
+    "#types/*": "./src/types/*.ts",
+    "#utils/*": "./src/utils/*.ts",
+    "#vm-image/*": "./scripts/vm-image/*.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@kernelfall/core": "workspace:*",
+    "comlink": "^4.4.2",
+    "v86": "0.5.471",
+    "zustand": "^5.0.16"
+  },
+  "peerDependencies": {
+    "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "react": "^19.3.1",
+    "vite": "^8.3.5"
+  }
+}

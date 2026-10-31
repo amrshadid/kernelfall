@@ -1,0 +1,237 @@
+{
+  "minirootfs": "a73bd9ed20a5ed1503a0688957add539e10340c7ca1d9e8c06c34a76ddc5f715",
+  "bios": {
+    "seabios.bin": "73e3f359102e3a9982c35fce98eb7cd08f18303ac7f1ba6ebfbe6cdc1c244d98",
+    "vgabios.bin": "a4bc0d80cc3ca028c73dafa8fee396b8d054ce87ebd8abfbd31b06b437607880"
+  },
+  "packages": {
+    "file": {
+      "version": "5.47-r2",
+      "sha256": "7bb5c6bc5b1be0a9d677314f70f8576c38fd00c67cce29d68dc19702538d7c2c"
+    },
+    "libmagic": {
+      "version": "5.47-r2",
+      "sha256": "bc2f1db78a6f2c2959ecdc84bb2b36f7e841347ef67a050f311983d5357009ac"
+    },
+    "busybox-static": {
+      "version": "1.37.0-r31",
+      "sha256": "26d45cc895b3fa99ba7500d0860c3934a363e74e464eeb5fc623f08147c33cfd"
+    },
+    "tcc-dev": {
+      "version": "0.9.27_git20250619-r1",
+      "sha256": "398215d205b226600758b4c9bdbcef1c5f7a71d466cc57845fff5f9a4db7cc4b"
+    },
+    "pkgconf": {
+      "version": "2.5.1-r0",
+      "sha256": "43681ffe8284e82d690bd02f982b6019f3731aa4af4de7e2c8e636b78a993de8"
+    },
+    "tcc-libs": {
+      "version": "0.9.27_git20250619-r1",
+      "sha256": "52805357487de00cbaab02fb0c2db40bef6bc9b2e0335e7c189a2eddc0a12278"
+    },
+    "tcc-libs-static": {
+      "version": "0.9.27_git20250619-r1",
+      "sha256": "3676269075207df0edcd6ac5b22a404a700b5e93de20dd1c83b64045000c3642"
+    },
+    "tcc": {
+      "version": "0.9.27_git20250619-r1",
+      "sha256": "f4c92fcc456f5d5f005989d6c6991db536d7c2dc0e53f3edaf8cb0fa88c8f8b2"
+    },
+    "strace": {
+      "version": "6.19-r1",
+      "sha256": "587acff19a40dd4cfd995ccbc465c59161a0b5705260e4354259227867fc6b1c"
+    },
+    "libdw": {
+      "version": "0.195-r0",
+      "sha256": "f3db52a8bf3c2dd2c74cfc190e02953ba3cae705e05a667474f5f8182e256092"
+    },
+    "zstd-libs": {
+      "version": "1.5.7-r2",
+      "sha256": "3808b97766907956179fe94ce61ead63220e957dc7789f81eb961a6e94dd8f61"
+    },
+    "xz-libs": {
+      "version": "5.8.4-r0",
+      "sha256": "180d250c97ef95f7fec5d7190d64d39ebfbd8f6247c8b4d45a6295aa087372d2"
+    },
+    "musl-fts": {
+      "version": "1.2.7-r7",
+      "sha256": "1c441ade96656547cec1f6117b3beed183e9de3a7f1cc4a8a6df5ed2eff3ce11"
+    },
+    "libelf": {
+      "version": "0.195-r0",
+      "sha256": "1c33af51635927f3890aa8edd4fe996b35a9fc999800923d4526c788b6c571da"
+    },
+    "libbz2": {
+      "version": "1.0.8-r6",
+      "sha256": "636ace113aaf002da7b28dfb9e99e0d04df466cc177ffa27f68c4e6ebbb4ce2c"
+    },
+    "musl-dev": {
+      "version": "1.2.6-r3",
+      "sha256": "3193c0a415b7664773981c4e56225fabb05e4cf6efc911c11218703448b562d9"
+    },
+    "gcc": {
+      "version": "15.2.0-r5",
+      "sha256": "d331cd57863f8325bb3328d3da1d64edbf909a5d2b17809309f3e8991911df94"
+    },
+    "libstdc++": {
+      "version": "15.2.0-r5",
+      "sha256": "84bcdc89b255412fdf4ea3284be1953560ba5567e6ca972f356452c583f10de8"
+    },
+    "libgcc": {
+      "version": "15.2.0-r5",
+      "sha256": "8c7854c5671b7bec32768d47cb4086b3e78b9ff347a24cad5cf42e8c6e9b9551"
+    },
+    "mpfr4": {
+      "version": "4.2.2-r0",
+      "sha256": "ae5d923d5c10c1bf8715625890846e0c675cdde9cea442bf28f51d329e99aa67"
+    },
+    "gmp": {
+      "version": "6.3.0-r4",
+      "sha256": "dd648f11e9063e1ada8c6d779cc394efa7f920311c9aa538d42ee5dca681de5d"
+    },
+    "mpc1": {
+      "version": "1.3.1-r1",
+      "sha256": "580be4fe50895fdf7a374501a0230ff20058b4f1e88a2647caf2ef3747102256"
+    },
+    "isl25": {
+      "version": "0.25-r2",
+      "sha256": "87e775bd135749e537a41e6e7f52e16632801ada8e646239ce89f7110d28de90"
+    },
+    "libgomp": {
+      "version": "15.2.0-r5",
+      "sha256": "c21622223af8aed3ee6c7fe94e245fd01c2d7587e23cf171a7d0fd1d08dd7698"
+    },
+    "libatomic": {
+      "version": "15.2.0-r5",
+      "sha256": "b258bf8d456778556efb8ac19baee15307cf7e38d1523bc4a04a43a72329fdb8"
+    },
+    "libgcc-static": {
+      "version": "15.2.0-r5",
+      "sha256": "590614ea7be2541dba0e8f72597de9b1f6e651ac3e4b936e045a967ecfaa72b2"
+    },
+    "binutils": {
+      "version": "2.45.1-r1",
+      "sha256": "56069c91f99a50b5ad98a0656fe9774ff0f26837c0bb6889c0011a93350cd50f"
+    },
+    "jansson": {
+      "version": "2.15.0-r0",
+      "sha256": "a3578fb2f1f059f6359d3f95154fbe11b6b002bf3b789f666dd378d9d37d1904"
+    },
+    "bash": {
+      "version": "5.3.9-r1",
+      "sha256": "f5f0956b8464729577b1021bb6301f23d9e7b010bf11aac3678409827484ee52"
+    },
+    "readline": {
+      "version": "8.3.3-r1",
+      "sha256": "1d2a80bdfc66bfef11a9ed9715fa0189d646e562d2bddda6a1fec6ea815b9285"
+    },
+    "libncursesw": {
+      "version": "6.6_p20260516-r0",
+      "sha256": "49a048c29a93046b3fc5e72a21bb55ef537558d026f1064a42d25f42f19a90e9"
+    },
+    "ncurses-terminfo-base": {
+      "version": "6.6_p20260516-r0",
+      "sha256": "dbb8268b7a8c9e98b109dc6bd1a989f846bd49b71a186308a2224f3195620501"
+    },
+    "linux-virt": {
+      "version": "6.18.59-r0",
+      "sha256": "afbf8dc33703d3a1d9beccb1ce58db6c8d50dd4d8ae2ce3b36dbb7ba5f1fd768"
+    },
+    "e2fsprogs": {
+      "version": "1.47.4-r0",
+      "sha256": "9d127f09c179e9d9923850de425ff6940bb0d039df0d983db6be908e95c0b5b7"
+    },
+    "libuuid": {
+      "version": "2.42.3-r1",
+      "sha256": "20a7d5789558c6c9864efef1b575ce1789bb514c5b82d98ce7ec2e5e454e3a6b"
+    },
+    "e2fsprogs-libs": {
+      "version": "1.47.4-r0",
+      "sha256": "5101ebc0df7c6a5e53ba40b250d5184906b1e51b3817dd8ab625b6c935875319"
+    },
+    "libcom_err": {
+      "version": "1.47.4-r0",
+      "sha256": "01d19eca3a4fff1cec92214c6254279dcaed4a9e6538ede6f41386057d7becb6"
+    },
+    "libblkid": {
+      "version": "2.42.3-r1",
+      "sha256": "f20a934f1b94e8477b9ecd333ab4ffe7a8fa8184e281257103b26190110f8c1b"
+    },
+    "libeconf": {
+      "version": "0.8.3-r0",
+      "sha256": "bb358db18f9caf33cac36e03f17371ead7bd420a3e39594e594ecb94a585cf1d"
+    },
+    "lsblk": {
+      "version": "2.42.3-r1",
+      "sha256": "67cc588e51585918c6a82f7e5bd8a8a2b862f3024409d0cf4ca6bb0b52c8ac48"
+    },
+    "libsmartcols": {
+      "version": "2.42.3-r1",
+      "sha256": "abed4a7567fe6af3419e27fe36007a1273da89411f3c8eed5b43a11af4817f59"
+    },
+    "libmount": {
+      "version": "2.42.3-r1",
+      "sha256": "84b8249c2bb9c83c21dcb3b5b004dfbaf69f97fc349962129f3fc9f32d018b4a"
+    },
+    "lscpu": {
+      "version": "2.42.3-r1",
+      "sha256": "adffc5bd190e59e272c64a7bee3a087b9e70782a253657804f265e16133097c2"
+    },
+    "runuser": {
+      "version": "2.42.3-r1",
+      "sha256": "603be716c62d96f6906258390aebefe47c0ad433f71efcb1a107cbd2b8889f79"
+    },
+    "utmps-libs": {
+      "version": "0.1.3.3-r0",
+      "sha256": "8b75262151ebd102ecb1d89430e50ba93986fff4ecd61b57f14ba997f5816c76"
+    },
+    "skalibs-libs": {
+      "version": "2.15.0.0-r0",
+      "sha256": "fc48c928a0e1fc83447cde4e3d5afb2494a9f3cdb238bc21ef1f0cec1825af69"
+    },
+    "linux-pam": {
+      "version": "1.7.1-r2",
+      "sha256": "c6b5711e5be62446fc1f5d3479cc4134c3160f765a6fcfe1c0bdb8a95c6958f2"
+    },
+    "dtc": {
+      "version": "1.7.2-r1",
+      "sha256": "1118f010af7ba97e64594cf3827f2ceff94fa75b5aeb66056efbff9248d9d60b"
+    },
+    "libfdt": {
+      "version": "1.7.2-r1",
+      "sha256": "9e6f2d3ca2dea843a9d9123b0949a4a3b04a9a0d5e4f8a654a88ced01b8973ee"
+    },
+    "pciutils": {
+      "version": "3.15.0-r0",
+      "sha256": "264fb433f97a5880b323e56758cd6cc0a390c0f6257c429b39604dcaa8d8cb37"
+    },
+    "pciutils-libs": {
+      "version": "3.15.0-r0",
+      "sha256": "f0ab1c1dfd3356d8275a9bb8feb49e3eebc2bb5b2adbe5236063c7d3e60fd776"
+    },
+    "hwdata-pci": {
+      "version": "0.408-r0",
+      "sha256": "acb24de3999a93065d8bd8118d12f02974164473d8880e5b5385d18d2e95649b"
+    },
+    "coreutils-doc": {
+      "version": "9.11-r0",
+      "sha256": "a9dd6c7384cf9b082038a05ed08ec1422706fed9e5064c9676fbb59bf24a3254"
+    },
+    "man-pages": {
+      "version": "6.18-r0",
+      "sha256": "57e4a924d402b9e8550a179f1a7b1bd5c9afaa4fd6b1758e0a4a91a9c24bcfe8"
+    },
+    "mandoc": {
+      "version": "1.14.6-r15",
+      "sha256": "64a0a617ff36332a43d4b574cf82408bdb787fc9c320ceee94c711343b27aa0e"
+    },
+    "setpriv": {
+      "version": "2.42.3-r1",
+      "sha256": "96c8e1a7427c500930900918ab281e2fd551beb19cb41a7b6e847704160b8f8b"
+    },
+    "libcap-ng": {
+      "version": "0.8.5-r2",
+      "sha256": "cd6579d81e394a88d269bae9b4f6868825c14316cfc56541b116d6d9077a36a9"
+    }
+  }
+}

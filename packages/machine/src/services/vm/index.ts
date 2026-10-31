@@ -1,0 +1,15 @@
+// vm.worker.ts is the worker's entry point, not a module to import: it starts a VM when loaded.
+export {
+  connectVm,
+  disconnectVm,
+  onVmOutput,
+  runVmCommandAs,
+  sendToVm,
+  setupVmLevel,
+  writeVmFiles,
+} from '#services/vm/vm-connection.service'
+export { createVmControl } from '#services/vm/vm-control.service'
+export { installVmFileCache, loadVmFile, resetVmFiles } from '#services/vm/vm-files.service'
+export { createVmSession } from '#services/vm/vm-session.service'
+export { loadVmState, saveVmState } from '#services/vm/vm-state.service'
+export { createVmTrace, type VmTraceCallbacks } from '#services/vm/vm-trace.service'

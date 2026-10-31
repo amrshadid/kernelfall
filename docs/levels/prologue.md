@@ -87,29 +87,58 @@ the stalled one."
 | `sys-kernel-subsystems`      | name the kernel's major parts, the source folder of each, a command that shows it, and the map region that teaches it                                | `io-everything-is-a-file`                 |
 | `sys-command-lifecycle`      | trace one command from the shell through the kernel's parts to the hardware and back, and troubleshoot a boot from its messages                      | `sys-kernel-subsystems`, `sys-boot-chain` |
 
-**Where it leads:** init lends the player a tiny rescue shell. It can run programs
-and `cd`, but nothing more. P.3 teaches the player to speak to it, the Surface
-Survey walks the city with it, and Act I replaces it with a shell the player writes:
-`ksh-lite`. The whole path is in [LEVELS.md](../LEVELS.md#4-the-journey).
+**Where it leads:** init's shell is the Machine's real bash. P.3 teaches the player
+to speak to it, the Surface Survey walks the city with it and teaches its tools
+(redirection, pipes) with their real traces, and Act I has the player write a shell
+of their own: `ksh-lite`. The whole path is in [LEVELS.md](../LEVELS.md#4-the-journey).
 
-**Kept for later:** how a syscall travels inside the CPU (the number in `rax`, the
-arguments in `rdi`, `rsi`, `rdx`, the syscall table, `-errno` turned into `errno`)
-is taught at the Syscall Gate (1.B), after the player has used `errno` (1.4).
+**Kept for later:** how a syscall travels inside the CPU (on this 32-bit Machine the
+number in `eax`, the arguments in `ebx`, `ecx`, `edx`, `esi`, `edi`, `ebp`, the
+syscall table, `-errno` turned into `errno`) is taught at the Syscall Gate (1.B),
+after the player has used `errno` (1.4).
 Compiler warnings are taught, and count as Taint, from 1.3. Page tables, the
 scheduler's internals and the networking data path stay overviews here; Acts II
 and III go deep.
 
-**The Machine (the lab's board).** Every level uses one machine, described the same
-way everywhere: x86-64, **2 CPUs, 512 MiB of RAM**, UEFI firmware, ACPI, and one PCI
-bus with three devices: a host bridge (`00:00.0`), a virtio disk (`00:01.0`,
-`1af4:1001`, driver `virtio-pci`, then `virtio_blk` as `/dev/vda`) and an Intel
-network card (`00:02.0`, `8086:100e`, the 82540EM, driver `e1000`, as `eth0`).
-GRUB 2.12 boots `/boot/vmlinuz-6.18.0` with `/boot/initrd.img-6.18.0`; the root
-filesystem is ext4 on `/dev/vda2`, and `/dev/vda1` is the EFI system partition.
+**The Machine.** Every level runs on one real machine: v86 emulating a 32-bit PC in
+the player's browser. Level text quotes what it prints, never another Linux's output;
+`packages/levels/src/test/machine-facts.json` holds its outputs (`pnpm vm:facts`).
 
-Kernel source paths below follow Linux 6.18 (LTS), and were checked against its
-source on 2026-10-29. Anything marked "(verify)" must be checked before the level
-ships.
+- **CPU and memory:** one CPU (`nproc` is 1, a "Pentium III (Katmai)", i686, with
+  PAE), 256 MiB of RAM, of which Linux sees about 218 MiB (`MemTotal: 223620 kB`).
+  3 GiB of each process's addresses are its own (up to `0xbfffffff`), the top 1 GiB
+  the kernel's; page tables have 3 levels (PAE); ASLR is on.
+- **Firmware and boot:** SeaBIOS (a legacy BIOS, no UEFI). v86 loads the kernel
+  itself; the command line is `console=ttyS0 rw tsc=reliable mitigations=off
+  random.trust_cpu=on log_buf_len=128K quiet`. Levels usually start from a saved
+  boot. GRUB on the data disk is planned for P.4 and P.10.
+- **Linux:** Alpine Linux v3.24 (musl and BusyBox, so not "GNU/Linux"), kernel
+  `6.18.59-0-virt`, `#1-Alpine SMP PREEMPT_DYNAMIC`, hostname `kernelfall`. `/boot`
+  holds `vmlinuz-virt`, `config-6.18.59-0-virt` and `System.map-6.18.59-0-virt`.
+- **PCI:** `00:00.0` 440FX host bridge (`8086:1237`), `00:01.0` PIIX3 ISA bridge
+  (`8086:7000`), `00:06.0` virtio 9P transport (`1af4:1049`, the root filesystem),
+  `00:0a.0` virtio network card (`1af4:1041`, `virtio_net`, as `eth0`, down, no
+  cable behind it), `00:12.0` VGA (`1234:1111`), `00:1e.0` PIIX3 IDE (`8086:7010`,
+  `ata_piix`). Interrupts go through the old XT-PIC.
+- **Storage:** the root filesystem `/` is 9p from the host (`host9p`), not a disk.
+  The one disk is an 8 MiB IDE disk, `/dev/sda` (major 8) with an ext4 partition
+  `/dev/sda1`, not mounted at boot. No udev or mdev: device files are made by
+  devtmpfs, owned by root.
+- **Modules loaded:** `9p`, `9pnet_virtio`, `9pnet`, `netfs`, `ext4`, `jbd2`,
+  `mbcache`, `crc16`, `sd_mod`, `virtio_net`, `net_failover`, `failover`; the rest
+  ship as `.ko.gz` files.
+- **The player:** `you` (uid 1000, home `/home/you`), in bash 5.3 on `/dev/ttyS0`,
+  as PID ~474 with PPid 1. `PATH` is
+  `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`. `/bin/ls`, `cat`,
+  `sh` and most tools are BusyBox (symlinks to `/bin/busybox`) and print its
+  messages (`cat: can't open '/etc/shadow': Permission denied`). A missing command
+  prints `-bash: x: command not found`, status 127.
+- **Syscalls (musl, i386):** `int $0x80` or `sysenter` through the vDSO; `open`
+  (never `openat`), `fork`, `pipe`, `statx`, `writev` for stdio, `sendfile64` for
+  `cat`, `clock_nanosleep_time64` for `sleep`.
+
+Kernel source paths below follow Linux 6.18 (LTS). Anything marked "(verify)" must
+be checked before the level ships.
 
 ## Glossary (first-meeting words)
 
@@ -119,9 +148,9 @@ to its card. Levels use a word only after this line has been shown.
 
 | Word                   | In plain words                                                                                             | Examples on screen                                                         | First met |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------- |
-| CPU                    | the chip that carries out instructions: add, compare, copy, jump, billions of them a second                | a laptop's processor; a phone's; the Machine's two CPUs                    | P.1       |
+| CPU                    | the chip that carries out instructions: add, compare, copy, jump, billions of them a second                | a laptop's processor; a phone's; the Machine's one CPU                     | P.1       |
 | memory (RAM)           | fast storage for what is running right now; emptied when the power goes off                                | an open document; a running game's level; the Machine's 256 MiB            | P.1       |
-| storage (disk)         | slower storage that keeps files when the power is off                                                      | an SSD; a USB stick; the Machine's disk `vda`                              | P.1       |
+| storage (disk)         | slower storage that keeps files when the power is off                                                      | an SSD; a USB stick; the Machine's disk `sda`                              | P.1       |
 | device                 | any piece of hardware besides the CPU and memory                                                           | keyboard, screen, network card, disk                                       | P.1       |
 | byte                   | the unit memory is counted in: room for one number from 0 to 255; text is stored as such numbers           | in UTF-8 `h` is 104, one byte; `é` takes two; 256 MiB is about 268 million | P.1       |
 | operating system (OS)  | the software that runs the computer for every other program: starts them, shares the hardware, keeps files | Windows, macOS, Android, Ubuntu                                            | P.1       |
@@ -134,30 +163,30 @@ to its card. Levels use a word only after this line has been shown.
 | shell                  | the program in the terminal that reads your command and runs it                                            | bash, the Machine's shell; zsh                                             | P.1       |
 | command                | one line you type: a program's name and what it should work on                                             | `echo hello`; `ls /bin`; `cat /etc/motd`                                   | P.1       |
 | boot                   | starting a computer, from power on until programs run                                                      | switching on a laptop; a phone restart; the Machine's reboot               | P.1       |
-| syscall (system call)  | a request a program makes to the kernel, with a special CPU instruction                                    | `write` (show text), `openat` (open a file), `execve` (start a program)    | P.2       |
+| syscall (system call)  | a request a program makes to the kernel, with a special CPU instruction                                    | `write` (show text), `open` (open a file), `execve` (start a program)      | P.2       |
 | user mode, kernel mode | the CPU's two levels of permission; programs run limited, the kernel unlimited                             | `echo` runs in user mode; the kernel's `write` code in kernel mode         | P.2       |
 | file descriptor (fd)   | a small number a process uses for something it has open                                                    | 0 your typing, 1 normal output, 2 error messages                           | P.2       |
 | standard output        | fd 1, where a program's normal output goes; here, your terminal                                            | what `echo` prints; what `ls` lists                                        | P.2       |
-| prompt                 | the text the shell prints when it's your turn to type                                                      | `$ ` (an ordinary user); `# ` (root); `(initramfs)`                        | P.3       |
+| prompt                 | the text the shell prints when it's your turn to type                                                      | `$ ` (an ordinary user); `# ` (root)                                       | P.3       |
 | argument               | each word after the command's name, telling the program what to work on                                    | `/etc` in `ls /etc`; `hello` in `echo hello`                               | P.3       |
 | option                 | an argument starting with `-` that changes how the program works                                           | `-l` in `ls -l`; `-a`; `-n 3` in `head -n 3`                               | P.3       |
-| environment, variable  | a list of `NAME=value` settings every process gets from its parent; each entry is a variable               | `HOME=/home/you`; `USER=you`; `PATH=/bin:/usr/bin`                         | P.3       |
-| `PATH`                 | the variable listing the folders the shell searches for a command                                          | `/bin`, then `/usr/bin`                                                    | P.3       |
-| source code, compiler  | the text of a program as a person writes it; the tool that turns it into a program file the CPU can run    | `hello.c`; clang; gcc                                                      | P.2       |
-| firmware               | software stored on the computer's board that runs first at power on                                        | UEFI; an old PC's BIOS; a router's firmware                                | P.4       |
+| environment, variable  | a list of `NAME=value` settings every process gets from its parent; each entry is a variable               | `HOME=/home/you`; `USER=you`; `SHELL=/bin/bash`                            | P.3       |
+| `PATH`                 | the variable listing the folders the shell searches for a command                                          | six folders, from `/usr/local/sbin` to `/bin`                              | P.3       |
+| source code, compiler  | the text of a program as a person writes it; the tool that turns it into a program file the CPU can run    | `hello.c`; gcc, on the Machine; clang                                      | P.2       |
+| firmware               | software stored on the computer's board that runs first at power on                                        | the Machine's SeaBIOS (a BIOS); a laptop's UEFI                            | P.4       |
 | bootloader             | the small program firmware starts; it loads the kernel                                                     | GRUB; systemd-boot; U-Boot on small boards                                 | P.4       |
-| partition              | a part of a disk, set aside to hold its own filesystem                                                     | `vda1` (boot files), `vda2` (everything else)                              | P.4       |
-| filesystem, mount      | the way files and folders are laid out on a disk; to mount is to attach one into the folder tree           | ext4 on `vda2` mounted at `/`; a USB stick mounted at `/media/usb`         | P.4       |
+| partition              | a part of a disk, set aside to hold its own filesystem                                                     | `sda1`, the one partition on the Machine's disk                            | P.4       |
+| filesystem, mount      | the way files and folders are laid out on a disk; to mount is to attach one into the folder tree           | ext4 on `sda1`; a USB stick mounted at `/media/usb`                        | P.4       |
 | signal                 | a short notice the kernel delivers to a process; some end it                                               | `SIGSEGV` (bad memory access); `SIGINT` (Ctrl-C); `SIGTERM` (please stop)  | P.5       |
-| module                 | a piece of the kernel kept in a file and added while it runs                                               | `e1000.ko` (a network driver); `vfat.ko` (a filesystem)                    | P.5       |
-| distribution           | Linux plus everything around it: init, shell, tools, a way to install software                             | Debian, Fedora, Ubuntu; Kernelfall GNU/Linux                               | P.5       |
-| driver                 | the part of the kernel that knows how to operate one kind of device                                        | `e1000` (network card); `virtio_blk` (disk); the tty driver (terminal)     | P.6       |
+| module                 | a piece of the kernel kept in a file and added while it runs                                               | `virtio_net.ko` (a network driver); `vfat.ko` (a filesystem)               | P.5       |
+| distribution           | Linux plus everything around it: init, shell, tools, a way to install software                             | Debian, Fedora, Ubuntu; Alpine, the Machine's                              | P.5       |
+| driver                 | the part of the kernel that knows how to operate one kind of device                                        | `virtio_net` (network card); `ata_piix` (disk); the tty driver (terminal)  | P.6       |
 | bus                    | the wiring and rules that connect devices to the CPU                                                       | PCI (cards inside a PC); USB; I²C on small boards                          | P.6       |
 | register (of a device) | a small slot in a device that a driver reads or writes to control it                                       | "start sending"; "how many bytes arrived"; "lamp on"                       | P.6       |
 | interrupt              | a device's signal to the CPU: stop and deal with me now                                                    | a key pressed; a packet arrived; a timer went off                          | P.6       |
 | kernel thread          | a worker of the kernel's own, run by the scheduler like a process, but only running kernel code            | `kswapd0`, `ksoftirqd/0`, `kthreadd`                                       | P.7       |
-| scheduler              | the part of the kernel that decides which process runs on each CPU, and for how long                       | three `yes` programs on two CPUs; you waiting while init runs              | P.7       |
-| memory address         | the number of one byte of memory; a process's addresses are its own (virtual), not the RAM's               | `0x405010`; `0x7ffd6b300a4c`                                               | P.8       |
+| scheduler              | the part of the kernel that decides which process runs on each CPU, and for how long                       | three `yes` programs on one CPU; you waiting while init runs               | P.7       |
+| memory address         | the number of one byte of memory; a process's addresses are its own (virtual), not the RAM's               | `0x004a6000`; `0xbff3e000`                                                 | P.8       |
 | page                   | a 4 KiB block of memory, the unit the kernel hands out and maps                                            | one page of a program's code; one page of a file in the cache              | P.8       |
 | cache                  | a copy kept close by, so the next use is faster                                                            | the page cache (file contents in RAM); a CPU's caches; a browser cache     | P.8       |
 | socket                 | a file descriptor for talking over a network                                                               | a web browser's connection; a chat client; `harbor` (1.9)                  | P.9       |
@@ -174,7 +203,7 @@ parts."
 | Hardware discovery, driver model | `drivers/base/`, `drivers/acpi/`, `drivers/pci/`, `drivers/of/` | `lspci -k`, `/sys/bus`, a device tree (P.6)   | Device Quarter (2.4–2.7); Bus Yards (3.14–3.15)                                                      | udev                             |
 | Syscall interface                | `arch/x86/entry/`                                               | X-ray's syscalls view (P.2)                   | The Syscall Gate (1.B)                                                                               | the Gatekeeper                   |
 | Processes and signals            | `kernel/fork.c`, `kernel/exit.c`, `kernel/signal.c`             | `ps -e`, `/proc/<pid>/status` (P.7)           | Process District (1.4–1.8)                                                                           | init                             |
-| Scheduler                        | `kernel/sched/`                                                 | three programs sharing two CPUs (P.7)         | Process District (1.8); Clockwork Court (3.6–3.8)                                                    | —                                |
+| Scheduler                        | `kernel/sched/`                                                 | three programs sharing one CPU (P.7)          | Process District (1.8); Clockwork Court (3.6–3.8)                                                    | —                                |
 | Memory                           | `mm/`, `arch/x86/mm/`                                           | `/proc/meminfo`, `/proc/<pid>/maps` (P.8)     | Slab Mines (2.8a–b); Page-Table Labyrinth (3.3–3.5)                                                  | kswapd                           |
 | VFS and filesystems              | `fs/`                                                           | one `read` on ext4, procfs and sysfs (P.9)    | Surface Survey; Into the Archive (1.6); The Aqueducts (1.7, `fs/pipe.c`); Archive Stacks (3.16–3.17) | init                             |
 | Devices and drivers              | `drivers/`                                                      | `/dev`, major and minor numbers (P.9)         | Device Quarter (2.4–2.7)                                                                             | udev                             |

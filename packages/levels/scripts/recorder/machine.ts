@@ -11,6 +11,8 @@ const LINE_TIMEOUT_MS = 2 * 60_000
 /** The session saves the clean boot half a second after the first prompt; setting up sooner would race it. */
 const SAVE_SETTLE_MS = 3_000
 const STDIN = 0
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matches the terminal's escape sequences
+const TERMINAL_CODES = /\x1b\[[0-9;?]*[A-Za-z]/g
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -128,6 +130,20 @@ export async function bootMachine(repo: string, vm = join(repo, 'apps/web/public
       await until(`"${line}" to finish`, () => finished.length > before)
       await until('the prompt', atPrompt(from))
       return finished[before] as TracedCommand
+    },
+
+    /** Types `line` and returns what the terminal showed for it, without the echoed line and the next prompt. */
+    async output(line: string): Promise<string> {
+      const from = screen.length
+      await this.type(line)
+      // Without bash's bracketed-paste switches and colours, it reads as a player sees it.
+      const shown = Buffer.from(screen.slice(from), 'latin1')
+        .toString('utf8')
+        .replace(TERMINAL_CODES, '')
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '')
+      const lines = shown.split('\n')
+      return lines.slice(1, -1).join('\n')
     },
 
     /** Gets a stuck line off the terminal: `q` for a pager, then Ctrl-C. */

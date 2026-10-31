@@ -332,7 +332,8 @@ Players start knowing nothing, so a level ships only when:
 - Someone other than its writer has checked every fact against Linux 6.18 source, the
   man pages and the real Machine.
 - Facts about the Machine (versions, devices, paths, pids, users) come from the VM,
-  not from memory or another distribution.
+  not from memory or another distribution: `src/test/machine-facts.json` holds its
+  outputs (`pnpm vm:facts` re-records them after the image changes).
 - Output shown in the story, hints or Codex is copied from a real run on the Machine.
 - Every term is explained the first time it appears.
 - Every analogy says where it stops being true.

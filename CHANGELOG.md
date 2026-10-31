@@ -7,6 +7,16 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ## [Unreleased]
 
+### Added
+
+- `pnpm vm:facts` records what the Machine prints for the commands levels quote (uname,
+  lspci, /proc, ps, BusyBox errors) into `packages/levels/src/test/machine-facts.json`.
+
+### Changed
+
+- The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p
+  root, the IDE disk, virtio-net, and bash as init's shell.
+
 ## [0.1.0-alpha.1] - 2026-10-31
 
 The first public pre-release: the engine, and the levels built so far, playable at

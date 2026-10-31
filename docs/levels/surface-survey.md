@@ -44,14 +44,15 @@ program found through `PATH` (1.4), `cd` and the environment (1.5), `cat`'s
 `/proc/<pid>/status` (1.5). Root, met in S.2, is granted at the Syscall Gate (1.B)
 and needed in the Deep (2.2, 2.4).
 
-**What the Survey doesn't do:** the rescue shell has no pipes (`|`), no redirection
-(`>`, `<`), no variables (`$HOME`), no quoting and no wildcards (`*`). Act I builds
-those into the player's own shell (1.5–1.7). So the Survey uses programs, never
-those shell features: `sort -o out.txt` instead of `sort > out.txt`, two steps
-instead of a pipe. When a real shell would differ, the level says so.
+**The shell's features as tools:** init's shell is the Machine's real bash, so pipes
+(`|`), redirection (`>`, `<`, `2>`), variables (`$HOME`), quoting and wildcards
+(`*`) all work. The Survey teaches them as tools, each with its real trace: `>` is
+an `open` and a `dup2` in the forked child before its `execve`, `|` is a `pipe` and
+a `fork` for each side (S.4, S.5).
+How bash does them inside is what the player builds in Act I (1.5–1.7).
 
-**Project:** none yet. The player uses init's rescue shell. Its gaps are why they
-build `ksh-lite` in Act I.
+**Project:** none yet. The player uses bash; in Act I they build their own shell,
+`ksh-lite`, to see how one works.
 
 ## Glossary additions (Survey)
 
@@ -71,7 +72,7 @@ build `ksh-lite` in Act I.
 Players who already live in a terminal can skip the Survey. At the edge of
 init's street, init offers: "Know your way around? Show me, and walk on."
 
-- **Format:** about 7 minutes, five errands in the rescue shell, one per level. No
+- **Format:** about 7 minutes, five errands at the shell, one per level. No
   trivia, no timer.
   1. Make `/tmp/survey`, copy `/etc/motd` into it, and rename the copy `motd.old`.
   2. Make `notes.txt` readable by you only, and keep it readable by you.

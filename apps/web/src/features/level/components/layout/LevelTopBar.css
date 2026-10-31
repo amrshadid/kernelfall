@@ -7,6 +7,7 @@
   display: grid;
   align-content: center;
   row-gap: 0.3125rem;
+  min-width: 0;
   line-height: 1.1;
   padding-right: 1.25rem;
   border-right: var(--rule);
@@ -26,14 +27,39 @@
   color: var(--ink-2);
 }
 
+/* The Guide is never narrower than this group, so a capped title leaves the step rail its room. */
 @media (max-width: 85rem) {
   .level-topbar {
     gap: 0.875rem;
+  }
+  .level-topbar__name {
+    max-width: 12rem;
+    white-space: normal;
   }
   .level-topbar__name span {
     display: none;
   }
   .level-topbar__name h1 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
     font-size: 1.1875rem;
+  }
+}
+
+/* Small laptops: Replay keeps its icon, its name stays in the tooltip and for screen readers. */
+@media (max-width: 72rem) {
+  .level-topbar__name {
+    max-width: 10rem;
+  }
+  .level-topbar__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

@@ -1,5 +1,7 @@
-import type { RailStep } from '@shared/types'
-import { stepStates } from '@shared/utils/level'
+import { useRailMode } from '@shared/hooks/layout'
+import type { RailMode, RailStep, StepState } from '@shared/types'
+import { railLabelShown, stepStates } from '@shared/utils/level'
+import { type Ref, useRef } from 'react'
 import './StepRail.css'
 
 export interface StepRailProps {
@@ -12,33 +14,77 @@ export interface StepRailProps {
   onSelect?: (id: string) => void
 }
 
+const labelClass = (shown: boolean) => (shown ? 'kf-rail__label' : 'kf-rail__label kf-visually-hidden')
+
 export function StepRail({ steps, currentIndex, reviewing = null, onSelect }: StepRailProps) {
   const states = stepStates(steps.length, currentIndex)
+  const railRef = useRef<HTMLDivElement>(null)
+  const fullRef = useRef<HTMLOListElement>(null)
+  const currentRef = useRef<HTMLOListElement>(null)
+  const mode = useRailMode(railRef, fullRef, currentRef)
   return (
-    <ol className="kf-rail" aria-label="Level steps">
+    <div className="kf-rail" ref={railRef}>
+      <ol className={`kf-rail__list kf-rail__list--${mode}`} aria-label="Level steps">
+        {steps.map((step, index) => {
+          const state = states[index] ?? 'future'
+          const isReviewed = reviewing === step.id
+          const shown = railLabelShown(mode, state)
+          // A hidden label still names the step for screen readers; the tooltip names it for the mouse.
+          const tooltip = shown ? undefined : step.label
+          return (
+            <li
+              key={step.id}
+              className={`kf-rail__step kf-rail__step--${state}${isReviewed ? ' kf-rail__step--reviewing' : ''}${shown ? '' : ' kf-rail__step--bare'}`}
+              aria-current={state === 'current' ? 'step' : undefined}
+              title={state === 'done' && onSelect ? undefined : tooltip}
+            >
+              {state === 'done' && onSelect ? (
+                <button
+                  type="button"
+                  onClick={() => onSelect(step.id)}
+                  aria-pressed={isReviewed}
+                  aria-label={`${step.label} (done), look again`}
+                  title={tooltip}
+                >
+                  <span className="kf-rail__sq" aria-hidden="true" />
+                  <span className={labelClass(shown)}>{step.label}</span>
+                </button>
+              ) : (
+                <>
+                  <span className="kf-rail__sq" aria-hidden="true" />
+                  <span className={labelClass(shown)}>{step.label}</span>
+                </>
+              )}
+              {state === 'done' && !onSelect && <span className="kf-visually-hidden">(done)</span>}
+            </li>
+          )
+        })}
+      </ol>
+      {/* Unseen copies at their natural width: what each mode would need, measured in the real fonts. */}
+      <div className="kf-rail__measure" aria-hidden="true" inert>
+        <RailCopy listRef={fullRef} mode="full" steps={steps} states={states} />
+        <RailCopy listRef={currentRef} mode="current" steps={steps} states={states} />
+      </div>
+    </div>
+  )
+}
+
+interface RailCopyProps {
+  listRef: Ref<HTMLOListElement>
+  mode: RailMode
+  steps: readonly RailStep[]
+  states: readonly StepState[]
+}
+
+function RailCopy({ listRef, mode, steps, states }: RailCopyProps) {
+  return (
+    <ol ref={listRef} className={`kf-rail__list kf-rail__list--${mode}`}>
       {steps.map((step, index) => {
         const state = states[index] ?? 'future'
-        const isReviewed = reviewing === step.id
         return (
-          <li
-            key={step.id}
-            className={`kf-rail__step kf-rail__step--${state}${isReviewed ? ' kf-rail__step--reviewing' : ''}`}
-            aria-current={state === 'current' ? 'step' : undefined}
-          >
-            <span className="kf-rail__sq" aria-hidden="true" />
-            {state === 'done' && onSelect ? (
-              <button
-                type="button"
-                onClick={() => onSelect(step.id)}
-                aria-pressed={isReviewed}
-                aria-label={`${step.label} (done), look again`}
-              >
-                {step.label}
-              </button>
-            ) : (
-              <span>{step.label}</span>
-            )}
-            {state === 'done' && !onSelect && <span className="kf-visually-hidden">(done)</span>}
+          <li key={step.id} className={`kf-rail__step kf-rail__step--${state}`}>
+            <span className="kf-rail__sq" />
+            <span className={labelClass(railLabelShown(mode, state))}>{step.label}</span>
           </li>
         )
       })}

@@ -1,14 +1,68 @@
+import { createHash } from 'node:crypto'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
+// A relative path: the config is loaded before the app's aliases exist.
+import { injectSwManifest, precacheFiles, SW_FILE } from './src/shared/utils/offline/index.ts'
 
 const src = (path: string): string => fileURLToPath(new URL(`./src/${path}`, import.meta.url))
+const PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url))
+// The machine caches the image's files itself, and they are far too big to precache.
+const VM_DIR = 'vm'
+
+function publicFiles(dir = PUBLIC_DIR, prefix = ''): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = `${prefix}${entry.name}`
+    if (path === VM_DIR) {
+      return []
+    }
+    return entry.isDirectory() ? publicFiles(`${dir}${entry.name}/`, `${path}/`) : [path]
+  })
+}
+
+// The version hashes the precached files, so every new build installs a new worker.
+function serviceWorker(): Plugin {
+  return {
+    name: 'kernelfall:service-worker',
+    apply: 'build',
+    buildStart() {
+      this.emitFile({ type: 'chunk', id: src('sw.ts'), fileName: SW_FILE })
+    },
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const worker = bundle[SW_FILE]
+        if (worker?.type !== 'chunk') {
+          return this.error(`${SW_FILE} is missing from the build`)
+        }
+        if (worker.imports.length > 0 || worker.dynamicImports.length > 0) {
+          return this.error(`${SW_FILE} imports ${worker.imports.join(', ')}: it must share no module with the app`)
+        }
+        const files = precacheFiles([...Object.keys(bundle), ...publicFiles()])
+        const hash = createHash('sha256')
+        for (const file of files) {
+          const output = bundle[file]
+          hash.update(file)
+          hash.update(
+            output ? (output.type === 'chunk' ? output.code : output.source) : readFileSync(PUBLIC_DIR + file)
+          )
+        }
+        const code = injectSwManifest(worker.code, { version: hash.digest('hex').slice(0, 12), files })
+        if (code === null) {
+          return this.error(`${SW_FILE} lost its manifest token`)
+        }
+        worker.code = code
+      },
+    },
+  }
+}
 
 export default defineConfig({
   // For a host that serves the site under a sub-path; Vercel serves it at the root.
   base: process.env.KF_BASE ?? '/',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), serviceWorker()],
   resolve: {
     alias: {
       '@': src(''),

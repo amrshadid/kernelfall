@@ -1,13 +1,23 @@
 .screen {
+  /* Taller than a plain running head: its buttons keep 0.5rem of paper above and below. */
+  --screen-head: 2.5rem;
   display: grid;
-  grid-template-rows: 2rem auto minmax(0, 1fr) 2rem;
+  grid-template-rows: var(--screen-head) auto minmax(0, 1fr) 2rem;
   height: 100dvh;
   min-height: 34rem;
   overflow: hidden;
 }
 
 .screen--with-topbar {
-  grid-template-rows: 2rem auto auto minmax(0, 1fr) 2rem;
+  grid-template-rows: var(--screen-head) auto auto minmax(0, 1fr) 2rem;
+}
+
+.screen > .kf-man-head--head {
+  height: var(--screen-head);
+}
+
+.screen > .kf-man-head--head > :last-child {
+  gap: 0.5rem;
 }
 
 .screen__banner:not(:empty) {
@@ -15,7 +25,7 @@
 }
 
 .screen__theme {
-  min-height: 1.75rem;
+  min-height: 1.5rem;
   padding: 0 0.625rem;
   font-size: 0.8125rem;
   font-variation-settings: "wdth" 75;
@@ -23,6 +33,7 @@
 }
 
 .screen__page {
+  margin-left: 0.5rem;
   text-transform: uppercase;
 }
 

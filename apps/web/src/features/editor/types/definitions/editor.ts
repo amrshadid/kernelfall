@@ -16,4 +16,7 @@ export interface RevealRequest {
   readonly column: number
 }
 
-export type RunState = { readonly kind: 'idle' } | { readonly kind: 'busy'; readonly label: string }
+export type RunState =
+  | { readonly kind: 'idle' }
+  /** `reason` says why Run is off, for its title and screen readers. */
+  | { readonly kind: 'busy'; readonly label: string; readonly reason: string }

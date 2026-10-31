@@ -6,8 +6,10 @@ import { type RefObject, useEffect, useRef } from 'react'
 import '@xterm/xterm/css/xterm.css'
 
 /** The terminal on the real Linux VM's console: keys go to bash, its output comes back as bytes. */
-export function useTerminalSession(container: RefObject<HTMLDivElement | null>): void {
+export function useTerminalSession(container: RefObject<HTMLDivElement | null>, locked = false): void {
   const terminal = useRef<Terminal | null>(null)
+  const isLocked = useRef(locked)
+  isLocked.current = locked
   // What arrives before the terminal opens (console bytes, the first status line) is shown once it does.
   const early = useRef<(Uint8Array | string)[]>([])
   const show = (data: Uint8Array | string) => {
@@ -29,6 +31,12 @@ export function useTerminalSession(container: RefObject<HTMLDivElement | null>):
   }, [phase, detail])
 
   useEffect(() => {
+    if (terminal.current) {
+      terminal.current.options.disableStdin = locked
+    }
+  }, [locked])
+
+  useEffect(() => {
     const element = container.current
     if (!element) {
       return
@@ -38,7 +46,13 @@ export function useTerminalSession(container: RefObject<HTMLDivElement | null>):
       opened.terminal.write(data)
     }
     early.current = []
-    const typing = opened.terminal.onData(send)
+    opened.terminal.options.disableStdin = isLocked.current
+    // Keys typed while the Machine starts would land in a shell that is about to be replaced.
+    const typing = opened.terminal.onData((data) => {
+      if (!isLocked.current) {
+        send(data)
+      }
+    })
     terminal.current = opened.terminal
     return () => {
       typing.dispose()

@@ -97,6 +97,7 @@ export function readSettings(stored: unknown): Settings {
     xrayAutoplayed: readKeys(raw.xrayAutoplayed),
     xrayGuesses: readGuesses(raw.xrayGuesses),
     panelSizes: readPanelSizes(raw.panelSizes),
+    shareRecordings: readBoolean(raw.shareRecordings, DEFAULT_SETTINGS.shareRecordings),
   }
 }
 
@@ -115,9 +116,10 @@ export function parseSettings(json: string | null): Settings {
 /** What is persisted: no actions or per-tab state. */
 export function settingsOf(state: Settings): Settings {
   const { theme, motion, uiScale, showAllPanels, xray, toursSeen } = state
-  const { xrayDepth, xrayLens, xrayPredict, xraySeen, xrayAutoplayed, xrayGuesses, panelSizes } = state
+  const { xrayDepth, xrayLens, xrayPredict, xraySeen, xrayAutoplayed, xrayGuesses, panelSizes, shareRecordings } = state
   return {
     panelSizes,
+    shareRecordings,
     theme,
     motion,
     uiScale,

@@ -118,6 +118,18 @@ describe('useTerminalSession', () => {
     expect(screen.text).toContain('Booting Linux…')
   })
 
+  it('drops every key while locked, and sends them again once unlocked', () => {
+    const container = { current: document.createElement('div') }
+    const { rerender } = renderHook(({ locked }) => useTerminalSession(container, locked), {
+      initialProps: { locked: true },
+    })
+    act(() => screen.type('ls\r'))
+    expect(vm.sent).toEqual([])
+    rerender({ locked: false })
+    act(() => screen.type('pwd\r'))
+    expect(vm.sent).toEqual(['pwd\r'])
+  })
+
   it('says what the Machine is doing while Linux starts', () => {
     const { rerender } = open()
     vm.status = { phase: 'booting', detail: null }

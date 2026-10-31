@@ -9,15 +9,21 @@ skills: [drv-hardware-discovery]
 prerequisites: [sys-kernel-role]
 objectives:
   - id: reads-disk-driver
-    text: "Read the disk's `driver` link in `/sys/bus/pci/devices/0000:00:01.0`: it names the disk's driver."
+    text: "Read the disk controller's `driver` link in `/sys/bus/pci/devices/0000:00:1e.0`: it names the controller's driver."
   - id: compiles-dts
     text: "`dtc` compiles `lighthouse.dts` into `lighthouse.dtb` without errors."
   - id: lamp-binds
-    text: "On the lighthouse board's boot, the `leds-gpio` driver takes the lamp, and `/sys/class/leds/lighthouse:lamp` appears."
+    text: "`board lighthouse.dtb` shows the `leds-gpio` driver taking the lamp, and `lighthouse:lamp` in the board's `/sys/class/leds`."
 hints:
-  - "In `/sys`, a device that has a driver has a link called `driver`. Where does the disk's link point?"
+  - "In `/sys`, a device that has a driver has a link called `driver`. Where does the disk controller's link point?"
   - "A device tree node binds when its `compatible` text is one of the texts in a driver's `of_match_table`, whole and letter for letter (only upper and lower case may differ). One letter off and nothing happens."
   - 'The `leds` node says `"gpio-led"`. The driver''s list says `"gpio-leds"`.'
+chips:
+  - { command: lspci, explain: "list the PCI devices: -k adds the driver each one uses, -nn the IDs" }
+  - { command: readlink, explain: "print where a link points, like a device's driver link in /sys" }
+  - { command: cat, explain: "cat /proc/interrupts counts each interrupt line" }
+  - { command: dtc, explain: "the device tree compiler: -I dts -O dtb -o out.dtb in.dts" }
+  - { command: board, explain: "boot the lighthouse board from a .dtb, as far as matching its drivers" }
 xray: [syscalls, files]
 codex:
   - id: drivers
@@ -34,13 +40,14 @@ codex:
   - id: acpi-pci
     term: "finding hardware: ACPI and PCI"
     simple: >-
-      On PCs the firmware describes the board (ACPI) and the kernel asks each PCI slot
-      what's there: vendor and device IDs.
+      On PCs the firmware usually describes the board (ACPI) and the kernel asks each
+      PCI slot what's there: vendor and device IDs.
     deep: >-
       ACPI tables (the DSDT and others) come from firmware and are parsed by the
-      kernel's ACPI core. PCI devices are found by reading each slot's configuration
-      space, in pci_scan_device(); each gets a struct pci_dev and a folder in
-      /sys/bus/pci/devices.
+      kernel's ACPI core; /sys/firmware/acpi/tables shows them. PCI devices are found
+      by reading each slot's configuration space, in pci_scan_device(); each gets a
+      struct pci_dev and a folder in /sys/bus/pci/devices. The Machine's firmware,
+      SeaBIOS under v86, gives no ACPI tables.
     sources: [drivers/acpi, drivers/pci/probe.c, include/linux/pci.h]
     docs: https://docs.kernel.org/PCI/pci.html
     tryIt: lspci -nn
@@ -68,8 +75,9 @@ codex:
       The driver model has struct bus_type, struct device and struct device_driver.
       When either side is added, the core calls the bus's match(), then the driver's
       probe() (driver_attach(), really_probe()); /sys/bus/<bus>/devices and
-      /sys/bus/<bus>/drivers show both sides, /sys/devices the physical tree. udev, in
-      user space, hears each new device as a uevent and loads its module by modalias.
+      /sys/bus/<bus>/drivers show both sides, /sys/devices the physical tree. On most
+      systems udev, in user space, hears each new device as a uevent and loads its
+      module by modalias; the Machine runs no udev.
     sources: [drivers/base/dd.c, drivers/base/bus.c, drivers/pci/pci-driver.c]
     docs: https://docs.kernel.org/driver-api/driver-model/overview.html
     tryIt: lspci -k
@@ -80,33 +88,317 @@ codex:
       addresses; the device calls for attention with an interrupt.
     deep: >-
       A driver maps the device's register range with ioremap() (or pci_iomap()) and
-      uses readl() and writel(). An interrupt (an IRQ line or a PCI MSI message) makes
-      the CPU run the kernel's interrupt entry, which calls the handler the driver
-      registered with request_irq(); slow work is deferred to softirqs or workqueues.
-      /proc/interrupts counts them per CPU.
-    sources: [kernel/irq, kernel/softirq.c, include/linux/io.h]
+      uses readl() and writel(); old PC devices also use I/O ports (inb(), outb()).
+      An interrupt (an IRQ line or a PCI MSI message) makes the CPU run the kernel's
+      interrupt entry, which calls the handler the driver registered with
+      request_irq(); slow work is deferred to softirqs or workqueues.
+      /proc/interrupts counts them per CPU and names the controller: XT-PIC (the
+      8259) on the Machine, IO-APIC on most PCs.
+    sources: [kernel/irq, kernel/softirq.c, include/linux/io.h, arch/x86/kernel/i8259.c]
     docs: https://docs.kernel.org/core-api/genericirq.html
     tryIt: cat /proc/interrupts
 # No Taint rules are live in the Prologue.
 taint: []
 fidelity:
   faithful:
-    - ACPI and PCI on x86, device trees on most ARM and RISC-V boards
-    - "PCI IDs 8086:100e for the 82540EM and 1af4:1001 for virtio block"
+    - "the Machine's real PCI devices, IDs and drivers (440FX, PIIX3, virtio, ata_piix), as lspci -k prints them"
     - "the /sys layout and its driver links"
-    - "the lspci -k format"
-    - "the device tree syntax, the gpio-leds and brcm,bcm2835-gpio compatible strings, and whole-string matching that ignores case (of_compat_cmp())"
-    - "the /proc/interrupts columns"
+    - "/proc/interrupts on one CPU, through the XT-PIC"
+    - "the device tree syntax, dtc, the gpio-leds and brcm,bcm2835-gpio compatible strings, and whole-string matching that ignores case (of_compat_cmp())"
+    - "the LED child named led-0, as the leds-gpio binding asks"
+    - "platform device names made from nodes (7e200000.gpio, leds) and LED names from labels"
   simplified:
-    - "the lighthouse board is made up (real bindings, invented board), and its kernel is simulated only as far as matching drivers: the lab does not run ARM code"
-    - the Machine has three PCI devices and no view of its ACPI tables
-    - IRQ numbers and counts are the lab's own
-    - "the probe message (`leds-gpio leds: probed`) is the lab's; the real driver core logs a binding only at debug level"
+    - "the lighthouse board is made up (real bindings, invented board); `board` reads a real .dtb and matches it with two drivers' real of_match_table, but runs no ARM kernel"
+    - "board's probe lines are its own: the real driver core logs a binding only at debug level"
 story:
   scene: story.md#scene
   debrief: story.md#debrief
   realWorld: story.md#real-world
 lab:
+  # board.c is the lighthouse board's stand-in kernel: it reads a .dtb and matches nodes to drivers.
   files:
-    - { path: /home/you/boards, kind: dir, owner: you }
-  cwd: /home/you/boards
+    - path: /usr/local/src/board.c
+      content: |
+        /*
+         * board: boots the lighthouse board as far as its drivers. It matches each
+         * device node of a .dtb against the of_match_table of the drivers the
+         * board's kernel has, as the driver core does. No ARM code runs.
+         */
+        #define _POSIX_C_SOURCE 200809L
+        #include <fcntl.h>
+        #include <stdint.h>
+        #include <stdio.h>
+        #include <string.h>
+        #include <unistd.h>
+
+        #define FDT_MAGIC 0xd00dfeedu
+        #define FDT_BEGIN_NODE 1u
+        #define FDT_END_NODE 2u
+        #define FDT_PROP 3u
+        #define FDT_NOP 4u
+        #define FDT_END 9u
+        #define MAX_BLOB 65536
+        #define MAX_NODES 64
+        #define MAX_DEPTH 16
+
+        struct driver {
+        	const char *name;
+        	const char *compatible;
+        	int leds;
+        };
+
+        /* From each driver's of_match_table in Linux 6.18. */
+        static const struct driver drivers[] = {
+        	/* drivers/pinctrl/bcm/pinctrl-bcm2835.c */
+        	{ "pinctrl-bcm2835", "brcm,bcm2835-gpio", 0 },
+        	/* drivers/leds/leds-gpio.c */
+        	{ "leds-gpio", "gpio-leds", 1 },
+        };
+
+        struct node {
+        	const char *name;
+        	int parent;
+        	int depth;
+        	const char *compatible;
+        	uint32_t compatible_len;
+        	const char *model;
+        	const char *label;
+        	uint32_t phandle;
+        	uint32_t gpio_phandle;
+        	int has_gpios;
+        	int gpio_controller;
+        	int has_reg;
+        	uint32_t reg;
+        	const struct driver *bound;
+        };
+
+        static unsigned char blob[MAX_BLOB];
+        static struct node nodes[MAX_NODES];
+        static int node_count;
+
+        static uint32_t be32(const unsigned char *p)
+        {
+        	return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 |
+        	       (uint32_t)p[2] << 8 | (uint32_t)p[3];
+        }
+
+        /* of_compat_cmp(): the whole string, ignoring case. */
+        static int same_compatible(const char *a, const char *b)
+        {
+        	for (; *a && *b; a++, b++) {
+        		char x = (*a >= 'A' && *a <= 'Z') ? (char)(*a + 32) : *a;
+        		char y = (*b >= 'A' && *b <= 'Z') ? (char)(*b + 32) : *b;
+
+        		if (x != y)
+        			return 0;
+        	}
+        	return *a == *b;
+        }
+
+        static const struct driver *match(const struct node *n)
+        {
+        	uint32_t at = 0;
+
+        	while (at < n->compatible_len) {
+        		const char *one = n->compatible + at;
+
+        		for (size_t i = 0; i < sizeof(drivers) / sizeof(drivers[0]); i++)
+        			if (same_compatible(one, drivers[i].compatible))
+        				return &drivers[i];
+        		at += (uint32_t)strlen(one) + 1;
+        	}
+        	return NULL;
+        }
+
+        static void property(struct node *n, const char *name,
+        		     const unsigned char *value, uint32_t len)
+        {
+        	const char *text = (const char *)value;
+        	int is_text = len > 0 && value[len - 1] == '\0';
+
+        	if (!strcmp(name, "compatible") && is_text) {
+        		n->compatible = text;
+        		n->compatible_len = len;
+        	} else if (!strcmp(name, "model") && is_text) {
+        		n->model = text;
+        	} else if (!strcmp(name, "label") && is_text) {
+        		n->label = text;
+        	} else if (!strcmp(name, "phandle") && len == 4) {
+        		n->phandle = be32(value);
+        	} else if (!strcmp(name, "gpio-controller")) {
+        		n->gpio_controller = 1;
+        	} else if (!strcmp(name, "reg") && len >= 4) {
+        		n->has_reg = 1;
+        		n->reg = be32(value);
+        	} else if (!strcmp(name, "gpios") && len >= 8) {
+        		n->has_gpios = 1;
+        		n->gpio_phandle = be32(value);
+        	}
+        }
+
+        static int parse(size_t size)
+        {
+        	uint32_t total, off_struct, off_strings, size_strings, at;
+        	int stack[MAX_DEPTH];
+        	int depth = 0;
+
+        	if (size < 40 || be32(blob) != FDT_MAGIC)
+        		return -1;
+        	total = be32(blob + 4);
+        	off_struct = be32(blob + 8);
+        	off_strings = be32(blob + 12);
+        	size_strings = be32(blob + 32);
+        	if (total > size || off_struct >= total || off_strings > total ||
+        	    size_strings > total - off_strings)
+        		return -1;
+        	at = off_struct;
+        	while (at + 4 <= total) {
+        		uint32_t token = be32(blob + at);
+
+        		at += 4;
+        		if (token == FDT_BEGIN_NODE) {
+        			const char *name = (const char *)blob + at;
+        			size_t len = strnlen(name, total - at);
+        			struct node *n;
+
+        			if (at + len >= total || node_count == MAX_NODES ||
+        			    depth == MAX_DEPTH)
+        				return -1;
+        			n = &nodes[node_count];
+        			memset(n, 0, sizeof(*n));
+        			n->name = name;
+        			n->depth = depth;
+        			n->parent = depth ? stack[depth - 1] : -1;
+        			stack[depth++] = node_count++;
+        			at += ((uint32_t)len + 1 + 3) & ~3u;
+        		} else if (token == FDT_END_NODE) {
+        			if (depth == 0)
+        				return -1;
+        			depth--;
+        		} else if (token == FDT_PROP) {
+        			uint32_t len, name_off;
+
+        			if (depth == 0 || at + 8 > total)
+        				return -1;
+        			len = be32(blob + at);
+        			name_off = be32(blob + at + 4);
+        			at += 8;
+        			if (len > total - at || name_off >= size_strings)
+        				return -1;
+        			property(&nodes[stack[depth - 1]],
+        				 (const char *)blob + off_strings + name_off,
+        				 blob + at, len);
+        			at += (len + 3) & ~3u;
+        		} else if (token == FDT_END) {
+        			return depth == 0 && node_count > 0 ? 0 : -1;
+        		} else if (token != FDT_NOP) {
+        			return -1;
+        		}
+        	}
+        	return -1;
+        }
+
+        /* of_device_make_bus_id(): "<address>.<name>", or the name alone. */
+        static void device_name(const struct node *n, char *buf, size_t size)
+        {
+        	const char *at = strchr(n->name, '@');
+        	int len = (int)(at ? (size_t)(at - n->name) : strlen(n->name));
+
+        	if (n->has_reg)
+        		snprintf(buf, size, "%x.%.*s", (unsigned int)n->reg, len,
+        			 n->name);
+        	else
+        		snprintf(buf, size, "%.*s", len, n->name);
+        }
+
+        static const struct node *by_phandle(uint32_t phandle)
+        {
+        	for (int i = 0; i < node_count; i++)
+        		if (phandle && nodes[i].phandle == phandle)
+        			return &nodes[i];
+        	return NULL;
+        }
+
+        /* leds-gpio's probe: an LED for each child node with a gpios line. */
+        static int probe_leds(int parent, const char **names, int *count)
+        {
+        	int found = 0;
+
+        	for (int i = 0; i < node_count; i++) {
+        		const struct node *led = &nodes[i];
+        		const struct node *gpio;
+
+        		if (led->parent != parent || !led->has_gpios)
+        			continue;
+        		gpio = by_phandle(led->gpio_phandle);
+        		if (!gpio || !gpio->gpio_controller || !gpio->bound)
+        			return -1;
+        		if (*count < MAX_NODES)
+        			names[(*count)++] = led->label ? led->label : led->name;
+        		found++;
+        	}
+        	return found;
+        }
+
+        int main(int argc, char **argv)
+        {
+        	const char *leds[MAX_NODES];
+        	int led_count = 0;
+        	size_t size = 0;
+        	ssize_t n;
+        	int fd;
+
+        	if (argc != 2) {
+        		fprintf(stderr, "usage: board <file.dtb>\n");
+        		return 2;
+        	}
+        	fd = open(argv[1], O_RDONLY);
+        	if (fd < 0) {
+        		perror(argv[1]);
+        		return 1;
+        	}
+        	while ((n = read(fd, blob + size, sizeof(blob) - size)) > 0)
+        		size += (size_t)n;
+        	if (n < 0) {
+        		perror("read");
+        		close(fd);
+        		return 1;
+        	}
+        	if (close(fd) < 0) {
+        		perror("close");
+        		return 1;
+        	}
+        	if (parse(size) < 0) {
+        		fprintf(stderr, "board: %s: not a device tree blob\n", argv[1]);
+        		return 1;
+        	}
+        	printf("OF: fdt: Machine model: %s\n",
+        	       nodes[0].model ? nodes[0].model : "unknown");
+        	for (int i = 0; i < node_count; i++) {
+        		struct node *dev = &nodes[i];
+        		char name[64];
+
+        		if (dev->depth != 1 || !dev->compatible)
+        			continue;
+        		device_name(dev, name, sizeof(name));
+        		dev->bound = match(dev);
+        		if (!dev->bound) {
+        			printf("%s: no driver matches \"%s\"\n", name,
+        			       dev->compatible);
+        			continue;
+        		}
+        		if (dev->bound->leds && probe_leds(i, leds, &led_count) <= 0) {
+        			printf("%s %s: probe failed: no LED to light\n",
+        			       dev->bound->name, name);
+        			dev->bound = NULL;
+        			continue;
+        		}
+        		printf("%s %s: probed\n", dev->bound->name, name);
+        	}
+        	printf("/sys/class/leds:");
+        	for (int i = 0; i < led_count; i++)
+        		printf(" %s", leds[i]);
+        	printf("%s\n", led_count ? "" : " (none)");
+        	return 0;
+        }
+  bin: [board]

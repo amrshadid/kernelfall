@@ -1,7 +1,7 @@
 import type { XraySource } from '@kernelfall/levels/types'
 
 /** The X-ray views this panel draws. Other views in a level's list are not built yet. */
-export type XrayLens = 'syscalls' | 'processes' | 'cpus' | 'route' | 'section'
+export type XrayLens = 'syscalls' | 'processes' | 'cpus' | 'route' | 'section' | 'boot'
 
 /** Simple shows the Gatekeeper and plain words; Deep shows registers and kernel functions. */
 export type XrayDepth = 'simple' | 'deep'

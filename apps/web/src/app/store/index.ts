@@ -5,6 +5,7 @@ export {
   useDisplaySettings,
   usePanelSizes,
   useSettings,
+  useShareRecordings,
   useShowAllPanels,
   useTourState,
   useXray,

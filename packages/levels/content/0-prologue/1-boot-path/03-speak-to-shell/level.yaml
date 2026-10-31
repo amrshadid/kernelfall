@@ -1,6 +1,7 @@
-# Prologue P.3, Speak to the Shell (docs/levels/prologue.md). No C: the player
-# types every command. checker.ts judges what happens inside the shell (Tab
-# completion) and inside one process (env's child); the rest is declared.
+# Prologue P.3, Speak to the Shell (docs/levels/prologue.md). No new C: the player
+# types every command into bash. checker.ts judges what happens inside the shell
+# (Tab completion, a command not found) and inside one process (env's child); the
+# rest is declared.
 id: prologue-boot-path-03-speak-to-shell
 title: Speak to the Shell
 summary: "Type your own commands: arguments and options, help with man, Tab to finish names, and the environment. You learn how the shell finds a program through PATH and starts it."
@@ -28,16 +29,19 @@ objectives:
   - id: man-section
     text: "`man` shows a page from a section you chose by number, like `man 2 write`."
     check: { kind: ran, program: man, args: { match: ["^[1-8]$"] }, status: 0 }
+  # Judged by when the shell read the folder: before Enter is Tab, after it a glob like `cat /etc/mo*`.
   - id: completes-a-file
     text: "Tab finishes a file name for you: `cat /etc/mot`, then Tab."
   - id: completes-a-command
-    text: "Tab finishes a command name for you: `ec`, then Tab."
+    text: "Tab finishes a command name for you: `printen`, then Tab."
   - id: env-adds-a-setting
     text: "`env` starts a program with one setting added, and that program prints it."
+  - id: not-found
+    text: "Just `hello` gets `command not found`: bash searched `PATH` and started nothing."
   # Re-tests P.2: the program the player built still runs.
   - id: runs-hello
-    text: "`./hello` runs from your home and exits with status 0."
-    check: { kind: exit-status, status: 0 }
+    text: "`./hello` runs and exits with status 0."
+    check: { kind: exit-status, status: 0, program: hello }
 hints:
   - "The shell found `ls` without you saying where it lives. Where did it look? There's a command that prints the list."
   - "A name without a `/` is searched in each folder of `PATH`, in order. A name with a `/` is a path: the shell runs exactly that file."
@@ -50,7 +54,10 @@ chips:
   - { command: man, explain: "show a command's manual page; q quits" }
   - { command: printenv, explain: "print environment variables, or just the one you name" }
   - { command: env, explain: "print the environment, or run a program with a setting added" }
+  - { command: type, explain: "say what a command is: a builtin, or a file and where" }
 xray: [syscalls]
+# bash's PATH search and the fork that runs (or can't run) a command.
+xrayFocus: [statx, faccessat2, fork, execve]
 codex:
   - id: shell
     term: the shell
@@ -61,12 +68,12 @@ codex:
     deep: >-
       A shell is an ordinary user process (bash, dash, BusyBox ash), not part of the
       kernel. It reads your line from standard input (fd 0) and runs each command
-      with fork (the clone syscall), execve and wait4. The prompt usually ends in $
-      for an ordinary user and # for root. Tab completion is the shell reading a
+      with fork (the fork or clone syscall), execve and wait4. The prompt usually ends
+      in $ for an ordinary user and # for root. Tab completion is the shell reading a
       folder (getdents64) and finishing the name; the kernel only sees the read.
     sources: [kernel/fork.c, fs/exec.c, fs/readdir.c]
-    docs: https://man7.org/linux/man-pages/man1/dash.1.html
-    tryIt: strace -f -e trace=clone,execve,wait4 sh -c 'ls /'
+    docs: https://www.gnu.org/software/bash/manual/bash.html
+    tryIt: strace -f -e trace=fork,clone,execve,wait4 sh -c 'ls /; true'
   - id: command
     term: commands
     simple: >-
@@ -76,7 +83,8 @@ codex:
       For a program, the shell calls execve() with the file's path; the kernel opens
       the file, checks that it may be run, and replaces the process's program with
       it. cd must be a builtin because a working directory belongs to one process: a
-      child that changed its own would change nothing for the shell.
+      child that changed its own would change nothing for the shell. type tells you
+      which a name is.
     sources: [fs/exec.c]
     docs: https://man7.org/linux/man-pages/man2/execve.2.html
     tryIt: type cat cd
@@ -111,24 +119,28 @@ codex:
       The list of folders the shell searches for a command name. A name with a / is
       run as it is, with no search.
     deep: >-
-      The search happens in user space, in the shell or in the C library's execvp();
-      the kernel's execve() takes only a path and answers -ENOENT when nothing is
-      there. The current folder is not in PATH, so a stray program in a shared folder
-      can't stand in for a real command.
-    sources: [fs/exec.c]
+      The search happens in user space. bash asks the kernel about each candidate
+      file in turn (stat; statx on the Machine), checks it may run the one it finds,
+      and remembers it (hash). The C library's execvp() simply tries execve() in
+      each folder. The kernel's execve() takes only a path and answers -ENOENT
+      when nothing is there. The current folder is not in PATH, so a stray program
+      in a shared folder can't stand in for a real command.
+    sources: [fs/exec.c, fs/stat.c]
     docs: https://man7.org/linux/man-pages/man3/exec.3.html
-    tryIt: strace -f -e trace=execve sh -c nosuchcmd
+    tryIt: strace -f -e trace=%%stat,execve,fork,clone bash -c 'nosuchcmd; true'
   - id: man-pages
     term: the manual
     simple: >-
       man ls shows the manual page for ls. A number picks a section: man 2 write is
-      the syscall, man 1 write a command.
+      the syscall, man 1 printf the command and man 3 printf the C function.
     deep: >-
       Sections: 1 commands, 2 syscalls, 3 C library functions, 4 devices, 5 file
       formats, 7 overviews, 8 admin commands. The Linux man-pages project documents
       the kernel's user-space interface; the kernel's own documentation lives in its
-      Documentation/ folder, published at docs.kernel.org. Every card in this Codex
-      names its man pages this way.
+      Documentation/ folder, published at docs.kernel.org. The Machine's pages for
+      commands like ls and wc are GNU's; its ls and wc are BusyBox, whose --help
+      lists the options it really takes. Every card in this Codex names its man pages
+      this way.
     sources: [Documentation]
     docs: https://man7.org/linux/man-pages/man7/man-pages.7.html
     tryIt: man 2 write
@@ -137,18 +149,16 @@ fidelity:
   faithful:
     - argv as passed to execve, the program's name first
     - splitting a line on runs of spaces
-    - PATH searched in order, and a name with a / not searched (POSIX)
-    - ENOENT from execve for a missing file
+    - "bash's real PATH search: statx on each folder in order, faccessat2 on the file it finds, then hash"
+    - a name with a / not searched (POSIX)
+    - "a command not found: bash forks, the child prints `-bash: hello: command not found` and exits 127, and nothing is executed"
     - . and .. as real entries in every folder
     - the environment passed to children and never back
-    - Tab completion reading the folder
-    - man page section numbers and the ls -a text
+    - "Tab completion reading the folder before Enter, and a glob reading it after"
+    - "the real manual (mandoc, the man-pages project and GNU's pages) and BusyBox's own ls and wc"
   simplified:
-    - "the lab's PATH is /bin:/usr/bin; most distributions also list /usr/local/bin (and sbin folders) and make /bin a link to /usr/bin"
-    - "the rescue shell searches by trying execve in each folder, like dash and BusyBox ash; bash checks with stat first"
-    - the rescue shell's "command not found" message follows bash's
-    - the lab's man pages are short excerpts of the real ones
-    - the rescue shell completes only command and file names
+    - "the traces in the story are trimmed: they leave out calls bash makes around each search and fork (a look at the current folder, a second access check, signal masks, a pipe, process groups), which X-ray shows"
+    - "the kernel doesn't see the Enter key; Tab is told apart from a glob because the trace drops the shell's housekeeping before Enter (its close() of the folder among it) and keeps it after"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

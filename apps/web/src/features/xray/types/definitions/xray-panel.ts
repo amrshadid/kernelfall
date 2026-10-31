@@ -1,3 +1,5 @@
+import type { BootView } from './boot'
+import type { CallListView } from './call-list'
 import type { CpuLanesView } from './cpu-lanes'
 import type { ProcessStoryboard } from './processes'
 import type { RouteView } from './route'
@@ -13,6 +15,8 @@ export type XrayFigure =
   | { readonly kind: 'section'; readonly view: SectionView; readonly commandLine: string }
   | { readonly kind: 'route'; readonly view: RouteView }
   | { readonly kind: 'cpus'; readonly view: CpuLanesView }
+  /** The Machine's boot, from its own record; no command needed. */
+  | { readonly kind: 'boot'; readonly view: BootView }
 
 export interface XrayChoice<Id> {
   readonly id: Id
@@ -34,6 +38,8 @@ export interface XrayControls {
   readonly pickLegend: string
   /** The selected run as strace prints it, for the Syscalls sequence. */
   readonly log: LogRun | null
+  /** The Syscalls view's calls, by process, with the noise folded. */
+  readonly callList: CallListView | null
   readonly expanded: boolean
 }
 
@@ -45,6 +51,11 @@ export interface XrayControlActions {
   /** A call id or an episode key. */
   select(pick: string): void
   setExpanded(expanded: boolean): void
+}
+
+export interface XrayBoardActions extends XrayControlActions {
+  /** Opens or closes a process group or a fold of the call list, by key. */
+  toggleRow(key: string): void
 }
 
 /** The player's X-ray choices: lens, depth, Predict, and which run and call to show. */

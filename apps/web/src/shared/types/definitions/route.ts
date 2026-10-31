@@ -1,5 +1,5 @@
 /** The Settings screen's sections, in the order they print: each has its own `#/settings/<section>`. */
-export const SETTINGS_SECTIONS = ['display', 'gameplay', 'keyboard', 'saves', 'about'] as const
+export const SETTINGS_SECTIONS = ['display', 'gameplay', 'keyboard', 'saves', 'privacy', 'about'] as const
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]
 

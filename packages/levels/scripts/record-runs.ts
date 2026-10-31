@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import type { TracedCommand } from '@kernelfall/machine/types'
-import { setupScript } from '@kernelfall/machine/utils'
+import { setupNeedsReboot, setupScript } from '@kernelfall/machine/utils'
 import { labSetups, runFileText } from '#recorder/content'
 import { bootMachine } from '#recorder/machine'
 import { REFERENCE_RUNS, type ReferenceRun, type RunLine } from '#test/reference-runs'
@@ -28,13 +28,13 @@ const setups = labSetups(contentDir)
 const machine = await bootMachine(repo, process.env.VM_IMAGE_DIR)
 
 const linesOf = (run: ReferenceRun): RunLine[] => [
-  ...(run.lines ?? []),
   ...(run.script === undefined
     ? []
     : readFileSync(join(contentDir, run.script), 'utf8')
         .split('\n')
         .filter((line) => line.trim() !== '' && !line.startsWith('#'))
         .map((line) => ({ line }))),
+  ...(run.lines ?? []),
 ]
 
 async function record(run: ReferenceRun): Promise<TracedCommand[]> {
@@ -42,14 +42,20 @@ async function record(run: ReferenceRun): Promise<TracedCommand[]> {
   if (!setup) {
     throw new Error(`no level ${run.level}`)
   }
-  await machine.setup(setupScript(setup))
+  // A boot level waits at GRUB's menu: its run's first lines are keys.
+  await machine.setup(setupScript(setup), { reboot: setupNeedsReboot(setup) })
   await machine.writeFiles(
     Object.fromEntries(Object.entries(run.files ?? {}).map(([name, file]) => [name, runFileText(contentDir, file)]))
   )
   const commands: TracedCommand[] = []
-  for (const { line, input, record } of linesOf(run)) {
-    const command = await machine.type(line, input)
-    if (record !== false) {
+  for (const step of linesOf(run)) {
+    if ('keys' in step) {
+      await machine.keys(step.keys, step.until)
+      continue
+    }
+    const command =
+      step.as === undefined ? await machine.type(step.line, step.input) : await machine.runAs(step.as, step.line)
+    if (step.record !== false) {
       commands.push(command)
     }
   }

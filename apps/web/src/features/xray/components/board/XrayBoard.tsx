@@ -1,4 +1,5 @@
 import {
+  BootDrawing,
   CpuLanesDrawing,
   ProcessDrawing,
   RouteDrawing,
@@ -9,7 +10,7 @@ import { StraceLog } from '@features/xray/components/log'
 import type {
   ProcessScene,
   SyscallScene,
-  XrayControlActions,
+  XrayBoardActions,
   XrayControls,
   XrayFigure,
   XrayPlayback,
@@ -18,6 +19,7 @@ import type {
 import { STAGE_MS, transcriptOf } from '@features/xray/utils/storyboard'
 import { InlineText, Segmented } from '@shared/components/ui'
 import type { CSSProperties, KeyboardEvent } from 'react'
+import { CallList } from './CallList'
 import { Narration } from './Narration'
 import { Predict } from './Predict'
 import { Transcript } from './Transcript'
@@ -28,7 +30,7 @@ export interface XrayBoardProps {
   /** `dock` stacks everything in the level's X-ray column; `sheet` is the full-size drawing board. */
   layout: 'dock' | 'sheet'
   controls: XrayControls
-  controlActions: XrayControlActions
+  controlActions: XrayBoardActions
   figure: XrayFigure | null
   /** Shown instead of a drawing: nothing has run yet, or the run has nothing for this view. */
   emptyText: string | null
@@ -144,7 +146,7 @@ export function XrayBoard({
             />
             Predict first
           </label>
-          {controls.picks.length > 1 && (
+          {controls.callList === null && controls.picks.length > 1 && (
             <fieldset className="xr__picks">
               <legend className="kf-visually-hidden">{controls.pickLegend}</legend>
               {controls.picks.map((pick) => (
@@ -162,11 +164,21 @@ export function XrayBoard({
         </div>
       )}
 
+      {controls.callList !== null && controls.callList.groups.length > 0 && (
+        <CallList
+          view={controls.callList}
+          selectedId={controls.pickId !== null ? Number(controls.pickId) : null}
+          onSelect={(id) => controlActions.select(String(id))}
+          onToggle={controlActions.toggleRow}
+        />
+      )}
+
       {figure !== null && figure.kind !== 'syscalls' && figure.kind !== 'processes' ? (
         <figure className="xr__drawing">
           {figure.kind === 'section' && <SectionDrawing view={figure.view} />}
           {figure.kind === 'route' && <RouteDrawing view={figure.view} />}
           {figure.kind === 'cpus' && <CpuLanesDrawing view={figure.view} />}
+          {figure.kind === 'boot' && <BootDrawing view={figure.view} />}
           <figcaption className="xr__caption">
             <span>
               <InlineText text={caption} />

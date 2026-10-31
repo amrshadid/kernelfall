@@ -23,13 +23,13 @@ export function bordersOf(element: Element): BoxSides {
   }
 }
 
-// An `<hr>` divider draws its line with a background, not a border.
+// An `<hr>` or a splitter draws its line with a background, not a border; missing one pads the cut-out over it.
 export function rulesOf(element: Element): StageBox[] {
   const box = boxOf(element)
   if (!isShown(box)) {
     return []
   }
-  if (element instanceof HTMLHRElement) {
+  if (element instanceof HTMLHRElement || element.getAttribute('role') === 'separator') {
     return [box]
   }
   const border = bordersOf(element)

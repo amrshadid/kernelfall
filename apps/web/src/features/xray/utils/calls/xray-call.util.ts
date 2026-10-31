@@ -6,7 +6,7 @@ import { ERRNO_TABLE } from '@kernelfall/machine/types'
 import { formatCall, isErrorReturn, syscallName } from '@kernelfall/machine/utils'
 import { baseName, programOf } from './program-name.util'
 import { syscallContent } from './syscall-content.util'
-import { ARG_REGISTERS, MAX_BUFFER_CELLS, PT_REGS_FIELDS } from './xray-call.constants'
+import { ARG_REGISTERS, MAX_BUFFER_CELLS, PT_REGS_FIELDS, SHELL_PROGRAM } from './xray-call.constants'
 
 const SPACE = 0x20
 const NEWLINE = 0x0a
@@ -82,7 +82,9 @@ export function toXrayCalls(run: TraceRun, events: readonly RunEvent[], content:
   const printed = new Map<number, string>()
   const programAt = new Map<number, string>()
   let writing: number | null = null
-  const first = programOf(run.commandLine)
+  // A root that forks is the shell running the command; one that doesn't ran a builtin, named after it.
+  const forks = events.some((e) => e.type === 'sched_process_fork' && e.parentPid === run.pid)
+  const first = forks ? SHELL_PROGRAM : programOf(run.commandLine)
   if (run.pid !== null) {
     programs.set(run.pid, first)
   }

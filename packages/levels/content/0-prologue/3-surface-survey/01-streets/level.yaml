@@ -9,17 +9,17 @@ skills: [io-fs-hierarchy]
 prerequisites: [sys-shell-basics, sys-command-lifecycle]
 objectives:
   - id: cd-absolute
-    text: '`cd /etc`: the shell''s own `chdir("/etc")`, no program started.'
+    text: '`cd /etc`: bash''s own `chdir("/etc")`, no program started.'
   - id: cd-up
     text: "`cd ..` from `/etc` climbs to the root, `/`."
-  - id: cd-relative
-    text: "`cd home/you` from `/` walks back to `/home/you`, a relative path."
+  - id: relative-path
+    text: "`cat ../../etc/motd` from `/home/you`: `cat` hands the kernel a relative path, and the kernel walks it from where you stand."
   - id: mkdir-parents
     text: "`mkdir -p` makes two folders in one run."
   - id: copy-new-inode
     text: "`ls -i` on a file and your copy prints two different inode numbers: a copy is a new file."
   - id: rename-no-bytes
-    text: "`mv` renames a file with one `renameat2`: not one byte is read or written."
+    text: "`mv` renames a file with one `rename`: not one byte is read or written."
   - id: rmdir-not-empty
     text: "`rmdir` refuses a folder that isn't empty: `Directory not empty`."
     check: { kind: syscall, program: rmdir, names: [rmdir, unlinkat], errno: ENOTEMPTY }
@@ -62,20 +62,23 @@ codex:
       entries. readdir(3) and ls sit on top of it; ls sorts the names itself.
     sources: [fs/readdir.c]
     docs: https://man7.org/linux/man-pages/man2/getdents.2.html
-    tryIt: strace -e trace=openat,getdents64 ls /
+    tryIt: strace -e trace=open,openat,getdents64 ls /
   - id: directory-entries
     term: names and files (inodes)
     simple: >-
       A folder maps names to files. mv changes a name, rm removes one, cp makes a new
       file; ls -i shows which file a name points to.
     deep: >-
-      The kernel's record of a file is its inode: its data, size, owner and mode. A
-      folder entry only points a name at an inode, so one inode can have several names
+      The kernel's record of a file is its inode: its size, owner and mode, and where
+      its data lies on the disk (the data itself is kept apart). A folder entry only
+      points a name at an inode, so one inode can have several names
       (i_nlink counts them). rename moves a name within one filesystem without touching
       the data; across filesystems mv has to copy and delete. unlink removes a name;
       the kernel frees the file only when no names and no open file descriptors are
-      left. rmdir refuses a folder that isn't empty (ENOTEMPTY). In the kernel:
-      do_mkdirat(), do_renameat2(), do_unlinkat() and do_rmdir().
+      left. rmdir refuses a folder that isn't empty (ENOTEMPTY). On the Machine,
+      BusyBox calls mkdir, rename, unlink and rmdir; GNU tools on a 64-bit PC call
+      mkdir, renameat2 and unlinkat. All of them end in do_mkdirat(), do_renameat2(),
+      do_unlinkat() and do_rmdir().
     sources: [fs/namei.c, include/linux/fs.h]
     docs: https://man7.org/linux/man-pages/man2/rename.2.html
     tryIt: "cp /etc/os-release /tmp/x && ls -i /etc/os-release /tmp/x && mv /tmp/x /tmp/y && ls -i /tmp/y"
@@ -93,18 +96,17 @@ codex:
 taint: []
 fidelity:
   faithful:
-    - "the names and order of the syscalls shown for ls, cd, cat, mkdir, mv, rm and rmdir"
+    - "the Machine's real bash, BusyBox tools and Linux 6.18 kernel: every call X-ray shows is one the kernel made"
+    - "cd as bash's own chdir() to the absolute path it worked out, after a statx() of each folder on the way"
+    - "a relative path handed to the kernel by a program, walked from its working directory"
     - getdents64 returning 0 at the end of a folder
-    - chdir changing only the calling process's working directory
-    - "cd as the shell's own chdir() to the absolute path it worked out, as bash does"
     - rename moving no data and keeping the inode; cp making a new inode; unlink removing a name
     - "ENOTEMPTY (39, Directory not empty) from rmdir"
     - /proc contents made on read, with size 0 in ls -l
-    - the standard folder names
   simplified:
-    - "the lab's ls, cat, cp and mkdir are small programs: real GNU tools make extra calls (locale files, fstat), read with bigger buffers, GNU ls writes a whole line at once, and GNU cp first tries to clone or copy_file_range instead of read and write"
-    - "the lab's tree holds only the folders and files the levels use (no /var or /opt); /bin is a real folder, not the merged-/usr link most distributions use"
-    - "bash's pwd is a builtin that prints $PWD without a syscall, so the checker reads what the shell itself wrote, which any echo of the same text would match"
+    - "the street signs and the Kernel Map are drawings"
+    - "bash's pwd prints the path it keeps, without a syscall, so the checker reads what the shell wrote, which an echo of the same text would match"
+    - "bash hands the kernel an absolute path for every cd, so `cd /etc` and `cd etc` from `/` look the same: the checker judges where a cd lands, and a `..` by the folder bash checks on the way"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

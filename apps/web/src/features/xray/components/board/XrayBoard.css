@@ -302,13 +302,24 @@
   display: grid;
   height: 100%;
   grid-template-columns: minmax(0, 1fr) 27.5rem;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 2fr) minmax(0, 3fr) auto;
+  grid-template-areas:
+    "bar bar"
+    "run run"
+    "drawing calls"
+    "drawing side"
+    "transport transport";
+  border: var(--rule);
+}
+
+/* Without a call list (the other views) the side takes the whole column. */
+.xr-sheet .xr:not(:has(.xr-calls)) {
   grid-template-areas:
     "bar bar"
     "run run"
     "drawing side"
+    "drawing side"
     "transport transport";
-  border: var(--rule);
 }
 
 .xr-sheet .xr__bar {

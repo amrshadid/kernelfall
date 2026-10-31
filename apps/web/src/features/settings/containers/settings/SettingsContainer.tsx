@@ -1,3 +1,4 @@
+import { appConfig } from '@app/config'
 import { useCheatSheet, useSettings } from '@app/store'
 import { useExportSave, useSaveStatus } from '@features/chrome/hooks/save'
 import { useScreenChrome } from '@features/chrome/hooks/screen'
@@ -27,7 +28,8 @@ export interface SettingsContainerProps {
 
 export function SettingsContainer({ section }: SettingsContainerProps) {
   const chrome = useScreenChrome()
-  const { settings, setTheme, setMotion, setUiScale, setShowAllPanels, resetSettings } = useSettings()
+  const { settings, setTheme, setMotion, setUiScale, setShowAllPanels, setShareRecordings, resetSettings } =
+    useSettings()
   const { storageIssue } = useSaveStatus()
   const { reset } = useSaveActions()
   const exportSave = useExportSave()
@@ -43,6 +45,7 @@ export function SettingsContainer({ section }: SettingsContainerProps) {
     if (patch.motion !== undefined) setMotion(patch.motion)
     if (patch.uiScale !== undefined) setUiScale(patch.uiScale)
     if (patch.showAllPanels !== undefined) setShowAllPanels(patch.showAllPanels)
+    if (patch.shareRecordings !== undefined) setShareRecordings(patch.shareRecordings)
   }
 
   return (
@@ -73,6 +76,7 @@ export function SettingsContainer({ section }: SettingsContainerProps) {
       }}
       cheatSheetKeys={CHEAT_SHEET_KEYS}
       onOpenShortcuts={openCheatSheet}
+      clarityConfigured={appConfig().clarityId !== null}
       message={message}
     />
   )

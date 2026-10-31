@@ -8,7 +8,7 @@ export type MotionSetting = 'system' | 'reduce'
 export type TourScreen = 'title' | 'map' | 'level'
 
 export type XrayDepthSetting = 'simple' | 'deep'
-export type XrayLensSetting = 'syscalls' | 'processes' | 'cpus' | 'route' | 'section'
+export type XrayLensSetting = 'syscalls' | 'processes' | 'cpus' | 'route' | 'section' | 'boot'
 
 /** The level screen's resizable panels. */
 export type PanelId = 'guide' | 'xray' | 'editor'
@@ -42,4 +42,6 @@ export interface Settings {
   /** By `<level>:<view>:<kind>:<stage>`: an answered Predict isn't asked again. */
   readonly xrayGuesses: Readonly<Record<string, string>>
   readonly panelSizes: PanelSizes
+  /** Off: Microsoft Clarity isn't loaded from the next page load on. */
+  readonly shareRecordings: boolean
 }

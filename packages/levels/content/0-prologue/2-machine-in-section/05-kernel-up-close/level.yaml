@@ -9,16 +9,16 @@ skills: [sys-kernel-role]
 prerequisites: [sys-user-kernel-mode]
 objectives:
   - id: poke-segfaults
-    text: "`./poke` tries to read the Kernel's memory, and the Kernel ends it with `SIGSEGV`."
+    text: "`./poke` tries to read the first byte of kernel space: the CPU faults on that address, and the kernel ends it with `SIGSEGV`."
   - id: asks-uname
-    text: "`./myuname` asks the Kernel with the `uname` syscall, and the Kernel answers 0."
+    text: "`./myuname` asks the kernel with the `uname` syscall, and the kernel answers 0."
     # The kernel's tracepoint is sys_enter_newuname; strace calls it uname.
     check: { kind: syscall, names: [uname, newuname], ret: 0, program: myuname }
   - id: exits-zero
     text: "`./myuname` exits with status 0."
     check: { kind: exit-status, status: 0, program: myuname }
   - id: prints-machine
-    text: "`./myuname` prints the kernel name, its release and the CPU type on one line: `Linux`, `6.18.59-0-virt` and `i686`."
+    text: "After asking the kernel, `./myuname` prints the kernel name, its release and the CPU type on one line: `Linux`, `6.18.59-0-virt` and `i686`."
   - id: compares-uname
     text: "The `uname` command, with `-m`, prints the CPU type too."
     check: { kind: wrote, fd: 1, program: uname, text: { contains: i686 } }
@@ -26,6 +26,10 @@ hints:
   - "`u` has more fields than the two the program prints. Which one holds the CPU type?"
   - "`printf` takes a format with one `%s` per piece of text, then the pieces in the same order."
   - "Change the format to `\"%s %s %s\\n\"` and add `u.machine` after `u.release`."
+chips:
+  - { command: echo, explain: "echo $? prints how the last command ended: 139 is 128 + signal 11, SIGSEGV" }
+  - { command: cat, explain: "show a file: /proc/modules lists the loaded modules, /etc/os-release the distribution" }
+  - { command: uname, explain: "ask the kernel who it is: -s its name, -r its release, -m the CPU type" }
 xray: [syscalls, modules]
 codex:
   - id: kernel-resources
@@ -36,9 +40,12 @@ codex:
       asking.
     deep: >-
       A program that touches what isn't its own gets a fault, and the kernel answers
-      with a signal: SIGSEGV for memory it may not touch. On x86-64 a user-mode access
-      to a kernel address faults in the CPU, and the kernel's page fault handler,
-      do_user_addr_fault(), sends the signal.
+      with a signal: SIGSEGV for memory it may not touch. On x86 a user-mode access to
+      a kernel address faults in the CPU. The kernel's page fault handler,
+      handle_page_fault(), sees an address in kernel space and calls
+      do_kern_addr_fault(), which finds no excuse for it (bad_area_nosemaphore()) and
+      sends SIGSEGV with si_code SEGV_MAPERR. A shell reports a process ended by
+      signal n with the status 128 + n.
     sources: [arch/x86/mm/fault.c, kernel/signal.c]
     docs: https://man7.org/linux/man-pages/man7/signal.7.html
     tryIt: "sh -c 'kill -SEGV $$'; echo $?"
@@ -49,12 +56,15 @@ codex:
       Every process's addresses are split: the lower part is its own, the upper part
       belongs to the kernel and is locked.
     deep: >-
-      On x86-64 with 4-level page tables, user space is the 128 TiB from 0 to
-      0x00007fffffffffff; kernel space is the top half. The kernel's pages are marked
-      supervisor-only, and with page-table isolation (PTI) most of them aren't even
-      mapped while user code runs.
-    sources: [Documentation/arch/x86/x86_64/mm.rst, arch/x86/mm/pti.c]
-    docs: https://docs.kernel.org/arch/x86/x86_64/mm.html
+      On 32-bit x86 with the usual 3G/1G split (CONFIG_VMSPLIT_3G), user space is the
+      3 GiB from 0 to 0xbfffffff and kernel space starts at PAGE_OFFSET, 0xc0000000.
+      On x86-64 with 4-level page tables, user space is the 128 TiB up to
+      0x00007fffffffffff and kernel space the top half. The kernel's pages are marked
+      supervisor-only; with page-table isolation (PTI, against Meltdown) most of them
+      aren't even mapped while user code runs. The Machine boots with
+      mitigations=off, so PTI is off there.
+    sources: [arch/x86/include/asm/page_32_types.h, arch/x86/Kconfig, arch/x86/mm/pti.c]
+    docs: https://docs.kernel.org/arch/x86/pti.html
     tryIt: cat /proc/self/maps
   - id: signals
     term: signals
@@ -64,8 +74,8 @@ codex:
     deep: >-
       Each signal has a number and a default action (end, end with a core dump,
       ignore, stop, continue); a process may install a handler for most of them, but
-      never for SIGKILL or SIGSTOP.
-    sources: [kernel/signal.c, include/uapi/asm-generic/signal.h]
+      never for SIGKILL or SIGSTOP. On x86, SIGSEGV is 11.
+    sources: [kernel/signal.c, arch/x86/include/uapi/asm/signal.h]
     docs: https://man7.org/linux/man-pages/man7/signal.7.html
     tryIt: kill -l
   - id: monolithic-kernel
@@ -76,9 +86,9 @@ codex:
     deep: >-
       Every part of Linux shares one address space and full privilege, so a bad
       driver can crash the whole machine. Microkernels (seL4, QNX, MINIX 3) run
-      drivers as processes instead. Linux modules are .ko files under
-      /lib/modules/$(uname -r), loaded with finit_module() and listed in
-      /proc/modules.
+      drivers as processes instead. Linux modules are .ko files (often compressed,
+      .ko.gz or .ko.xz) under /lib/modules/$(uname -r), loaded with finit_module()
+      and listed in /proc/modules.
     sources: [kernel/module/main.c, kernel/module/procfs.c]
     docs: https://man7.org/linux/man-pages/man8/lsmod.8.html
     tryIt: lsmod | head
@@ -89,10 +99,11 @@ codex:
       Linux is the kernel. A distribution adds init, a shell, a C library, tools and a
       way to install software.
     deep: >-
-      GNU/Linux distributions combine Linux with GNU tools (coreutils, bash), a C
-      library (glibc or musl), an init system (often systemd) and a package manager.
-      Android uses the Linux kernel with its own user space (bionic, ART). uname asks
-      the kernel who it is; /etc/os-release says which distribution you're on.
+      Many distributions combine Linux with GNU tools (coreutils, bash) and the GNU C
+      library, glibc, and call themselves GNU/Linux. Alpine, the Machine's, uses musl
+      and BusyBox instead. Android uses the Linux kernel with its own user space
+      (bionic, ART). uname asks the kernel who it is; /etc/os-release says which
+      distribution you're on.
     sources: [kernel/sys.c, init/version.c]
     docs: https://man7.org/linux/man-pages/man5/os-release.5.html
     tryIt: uname -srm; cat /etc/os-release
@@ -105,7 +116,8 @@ codex:
       Each mainline release opens with a two-week merge window, then weekly release
       candidates (-rc1, -rc2, …). Stable maintainers backport fixes as 6.18.1, 6.18.2
       and so on. One release a year, usually the last, becomes LTS; kernel.org lists
-      each one's projected end of life.
+      each one's projected end of life. Distributions add their own suffix: Alpine's
+      6.18.59-0-virt is its build 0 of 6.18.59, virt flavour.
     sources: [Documentation/process/2.Process.rst]
     docs: https://docs.kernel.org/process/2.Process.html
     tryIt: uname -r
@@ -113,29 +125,29 @@ codex:
     term: the GPL
     simple: >-
       Linux is free software under the GPL, version 2: use, study, change and share
-      it, and share your source when you share a changed kernel.
+      it, and share its source when you share the kernel as a program.
     deep: >-
       The kernel is GPL-2.0-only, with a "syscall note" that keeps ordinary programs
       which only use syscalls outside the GPL. Every source file states its license in
       an SPDX-License-Identifier line. Modules declare theirs with MODULE_LICENSE().
     sources: [COPYING, LICENSES, Documentation/process/license-rules.rst]
     docs: https://docs.kernel.org/process/license-rules.html
-    tryIt: modinfo -F license e1000
+    tryIt: modinfo -F license ext4
 # No Taint rules are live in the Prologue.
 taint: []
 fidelity:
   faithful:
-    - uname() and struct utsname
-    - SIGSEGV for a user-mode read of a kernel address
-    - the x86-64 split between user space and kernel space
+    - uname() and struct utsname, and the kernel's newuname tracepoint
+    - "SIGSEGV for a user-mode read of a kernel address, judged from the CPU's fault (exceptions:page_fault_user) and the kill, and status 139 in the shell"
+    - the 32-bit split between user space and kernel space at 0xc0000000
+    - "page table isolation off under mitigations=off, as the Machine's dmesg says"
     - "/proc/modules columns, and its addresses shown as zeros to anyone but root"
-    - "the /lib/modules/<release> layout"
+    - "the /lib/modules/<release> layout and its .ko.gz files"
     - "the release model: mainline, stable and LTS"
     - the license facts
   simplified:
-    - "`poke` is a lab program"
-    - "the lab's /lib/modules holds only the Machine's few modules"
-    - "X-ray's SIGSEGV line is shorter than strace's, which also prints si_code"
+    - "the drawing's five parts are a map of what the kernel owns, not its real code layout"
+    - "the trace doesn't carry the record uname filled in, so myuname's line is judged by its words and by coming after a uname that answered 0: a line typed into the program after that call would pass too"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

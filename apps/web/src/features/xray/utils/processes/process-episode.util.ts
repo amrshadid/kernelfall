@@ -10,7 +10,8 @@ const EXITS = new Set(['exit', 'exit_group'])
 const decoder = new TextDecoder()
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] }
-type Draft = Mutable<ProcessEpisode>
+// Pushed to, never copied: a child like `find /` makes tens of thousands of calls.
+type Draft = Mutable<ProcessEpisode> & { work: string[] }
 
 const errnoOf = (ret: number) => (isErrorReturn(ret) ? (ERRNO_TABLE.get(-ret)?.name ?? `errno ${-ret}`) : null)
 
@@ -70,7 +71,7 @@ export function processEpisodes(run: TraceRun, events: readonly RunEvent[]): rea
           exitCall.set(event.pid, event.nr)
         } else if (!FORKS.has(event.name)) {
           // After a failed execve the child is still the parent's program; its calls still count.
-          mine.work = [...mine.work, event.name]
+          mine.work.push(event.name)
         }
         break
       }

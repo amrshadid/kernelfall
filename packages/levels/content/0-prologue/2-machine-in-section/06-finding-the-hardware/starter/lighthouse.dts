@@ -21,7 +21,7 @@
 	leds {
 		compatible = "gpio-led";
 
-		lamp {
+		led-0 {
 			label = "lighthouse:lamp";
 			gpios = <&gpio 4 0>;
 		};

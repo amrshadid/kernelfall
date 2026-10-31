@@ -3,7 +3,7 @@
 
 /*
  * init: Every process has a number, its PID, and a parent: the process that
- * started it. Only the Kernel knows both, so you ask it.
+ * started it. Only the kernel knows both, so you ask it.
  *
  *   pid_t getpid(void);    your own PID
  *

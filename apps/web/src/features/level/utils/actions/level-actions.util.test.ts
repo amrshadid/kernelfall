@@ -12,6 +12,7 @@ function input(fields: Partial<GuideActionsInput> = {}): GuideActionsInput {
     askReference: vi.fn(),
     heldWithTaint: false,
     nextKeys: 'Alt+N',
+    restart: null,
     ...fields,
   } as GuideActionsInput
 }
@@ -51,6 +52,16 @@ describe('guideActionsOf', () => {
     expect(actions.map((action) => action.id)).toEqual(['reference'])
     actions[0]?.onSelect()
     expect(moves.askReference).toHaveBeenCalledOnce()
+  })
+
+  it('lets a boot level restart the Machine while building, since the player may not reboot', () => {
+    const restart = vi.fn()
+    const actions = guideActionsOf(at('build'), input({ restart }))
+    expect(actions.map((action) => action.id)).toEqual(['restart'])
+    actions[0]?.onSelect()
+    expect(restart).toHaveBeenCalledOnce()
+    expect(ids(at('build', { hintsRevealed: ALL_HINTS }), { restart })).toEqual(['restart', 'reference'])
+    expect(ids(at('watch'), { restart })).toEqual(['next'])
   })
 
   it('restores after an oops and offers nothing on the card', () => {

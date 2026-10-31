@@ -1,3 +1,4 @@
+export { BootDrawing, type BootDrawingProps } from './BootDrawing'
 export { ByteCells, type ByteCellsProps } from './ByteCells'
 export { CpuLanesDrawing, type CpuLanesDrawingProps } from './CpuLanesDrawing'
 export { CrossingTag, type CrossingTagProps } from './CrossingTag'

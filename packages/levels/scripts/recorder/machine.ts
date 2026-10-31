@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { LabEvent } from '@kernelfall/machine/events'
 import { createVmSession } from '@kernelfall/machine/services'
-import { type TracedCommand, VM_PROMPT, type VmManifest } from '@kernelfall/machine/types'
+import { type TracedCommand, VM_PROMPT, type VmManifest, type VmSetupOptions } from '@kernelfall/machine/types'
 
 const POLL_MS = 50
 const BOOT_TIMEOUT_MS = 10 * 60_000
@@ -11,8 +11,22 @@ const LINE_TIMEOUT_MS = 2 * 60_000
 /** The session saves the clean boot half a second after the first prompt; setting up sooner would race it. */
 const SAVE_SETTLE_MS = 3_000
 const STDIN = 0
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matches the terminal's escape sequences
+const TERMINAL_CODES = /\x1b\[[0-9;?]*[A-Za-z]/g
+
+/** In the image's grub.cfg: the menu is up. */
+const GRUB_MENU = 'Alpine, with Linux virt'
+const KEYS_SETTLE_MS = 1_000
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Without bash's bracketed-paste switches, colours and GRUB's cursor moves, it reads as a player sees it.
+const plain = (shown: string) =>
+  Buffer.from(shown, 'latin1')
+    .toString('utf8')
+    .replace(TERMINAL_CODES, '')
+    .replaceAll('\r\n', '\n')
+    .replaceAll('\r', '')
 
 async function until(what: string, ok: () => boolean, timeoutMs = LINE_TIMEOUT_MS): Promise<void> {
   const deadline = Date.now() + timeoutMs
@@ -94,15 +108,45 @@ export async function bootMachine(repo: string, vm = join(repo, 'apps/web/public
   await wait(SAVE_SETTLE_MS)
 
   const atPrompt = (from: number) => () => VM_PROMPT.test(screen.slice(from))
+  const shows = (from: number, text: string) => () => plain(screen.slice(from)).includes(text)
+  const commandAfter = async (before: number, what: string): Promise<TracedCommand> => {
+    await until(what, () => finished.length > before)
+    return finished[before] as TracedCommand
+  }
 
   return {
     image: manifest.version,
 
-    /** The clean boot with a level's setup applied, its shell back at the prompt. */
-    async setup(lines: readonly string[]) {
+    /** The clean boot with a level's setup applied: its shell back at the prompt, or GRUB's menu after a reboot. */
+    async setup(lines: readonly string[], options: VmSetupOptions = {}) {
       const from = screen.length
-      await session.setupLevel(lines)
-      await until('the level shell', atPrompt(from))
+      await session.setupLevel(lines, options)
+      if (options.reboot) {
+        await until("GRUB's menu", shows(from, GRUB_MENU), BOOT_TIMEOUT_MS)
+      } else {
+        await until('the level shell', atPrompt(from))
+      }
+    },
+
+    /**
+     * Keys sent as they are, then a wait for `text` on the screen, or bash's prompt (a whole boot after
+     * Ctrl-X); `''` only lets GRUB redraw, whose wrapped lines may never show the text whole.
+     */
+    async keys(keys: string, text?: string) {
+      const from = screen.length
+      session.input(keys)
+      if (text === '') {
+        await wait(KEYS_SETTLE_MS)
+        return
+      }
+      await until(text ?? 'the prompt', text === undefined ? atPrompt(from) : shows(from, text), BOOT_TIMEOUT_MS)
+    },
+
+    /** Root runs `line` as `user` on the control channel; resolves with its trace. */
+    async runAs(user: string, line: string): Promise<TracedCommand> {
+      const before = finished.length
+      await session.runAs(user, line)
+      return commandAfter(before, `"${line}" as ${user} to finish`)
     },
 
     writeFiles: (files: Readonly<Record<string, string>>) => session.writeFiles(files),
@@ -125,9 +169,16 @@ export async function bootMachine(repo: string, vm = join(repo, 'apps/web/public
         }
         session.input(`${text}\n`)
       }
-      await until(`"${line}" to finish`, () => finished.length > before)
+      const command = await commandAfter(before, `"${line}" to finish`)
       await until('the prompt', atPrompt(from))
-      return finished[before] as TracedCommand
+      return command
+    },
+
+    /** Types `line` and returns what the terminal showed for it, without the echoed line and the next prompt. */
+    async output(line: string): Promise<string> {
+      const from = screen.length
+      await this.type(line)
+      return plain(screen.slice(from)).split('\n').slice(1, -1).join('\n')
     },
 
     /** Gets a stuck line off the terminal: `q` for a pager, then Ctrl-C. */
@@ -135,6 +186,9 @@ export async function bootMachine(repo: string, vm = join(repo, 'apps/web/public
       session.input('q')
       session.input('\x03')
     },
+
+    /** Everything the terminal showed so far, as plain text: for finding the keys a GRUB run needs. */
+    shown: () => plain(screen),
 
     stop: () => session.stop(),
   }

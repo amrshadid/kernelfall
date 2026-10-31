@@ -7,6 +7,15 @@ export function clampSize(size: number, { min, max }: SizeLimits): number {
   return Math.round(Math.min(max, Math.max(min, size)) * PRECISION) / PRECISION
 }
 
+// Rounded up, so a panel at its minimum still fits what it needs; the maximum moves along so the range stays valid.
+export function limitsAtLeast(limits: SizeLimits, needed: number | null): SizeLimits {
+  if (needed === null || !Number.isFinite(needed) || needed <= limits.min) {
+    return limits
+  }
+  const min = Math.ceil(needed * PRECISION) / PRECISION
+  return { min, max: Math.max(limits.max, min) }
+}
+
 /**
  * The size after dragging the divider `deltaPx` pixels. `direction` is 1 when dragging
  * right or down grows the panel, -1 when it shrinks it (a panel on the right or below).

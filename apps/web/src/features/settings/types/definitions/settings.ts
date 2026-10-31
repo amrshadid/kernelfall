@@ -6,6 +6,7 @@ export interface SettingsValues {
   readonly motion: MotionSetting
   readonly uiScale: number
   readonly showAllPanels: boolean
+  readonly shareRecordings: boolean
 }
 
 export interface ImportPreview {

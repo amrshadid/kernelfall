@@ -17,9 +17,12 @@ describe('lensesOf', () => {
     ])
   })
 
-  it("opens the route for a level's files view, and nothing for a boot view until the VM's boot is drawn", () => {
+  it("opens the route for a level's files view, and the boot first for P.4's boot view", () => {
     expect(lensesOf(['syscalls', 'files']).map((lens) => lens.id)).toEqual(['syscalls', 'route'])
-    expect(lensesOf(['boot', 'syscalls']).map((lens) => lens.id)).toEqual(['syscalls'])
+    expect(lensesOf(['boot', 'syscalls'])).toEqual([
+      { id: 'boot', label: 'Boot' },
+      { id: 'syscalls', label: 'Syscalls' },
+    ])
   })
 
   it('shows Syscalls when the level unlocks none it draws', () => {
@@ -30,12 +33,8 @@ describe('lensesOf', () => {
 
 describe('isWholeRun', () => {
   it('knows the views drawn at once from the ones played stage by stage', () => {
-    expect(['syscalls', 'processes', 'cpus', 'route', 'section'].map((lens) => isWholeRun(lens as never))).toEqual([
-      false,
-      false,
-      true,
-      true,
-      true,
-    ])
+    expect(
+      ['syscalls', 'processes', 'cpus', 'route', 'section', 'boot'].map((lens) => isWholeRun(lens as never))
+    ).toEqual([false, false, true, true, true, true])
   })
 })

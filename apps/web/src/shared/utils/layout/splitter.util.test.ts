@@ -1,7 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { clampSize, draggedSize, keyedSize } from './splitter.util'
+import { clampSize, draggedSize, keyedSize, limitsAtLeast } from './splitter.util'
 
 const LIMITS = { min: 15, max: 34 }
+
+describe('limitsAtLeast', () => {
+  it('raises the minimum to what the panel needs, rounded up', () => {
+    expect(limitsAtLeast(LIMITS, 23.4567)).toEqual({ min: 23.46, max: 34 })
+  })
+
+  it('keeps the limits when the need is smaller or unknown', () => {
+    expect(limitsAtLeast(LIMITS, 12)).toBe(LIMITS)
+    expect(limitsAtLeast(LIMITS, null)).toBe(LIMITS)
+    expect(limitsAtLeast(LIMITS, Number.NaN)).toBe(LIMITS)
+  })
+
+  it('moves the maximum along when the need passes it', () => {
+    expect(limitsAtLeast(LIMITS, 40)).toEqual({ min: 40, max: 40 })
+  })
+
+  it('stops a drag at the raised minimum', () => {
+    expect(draggedSize(30, -10_000, 16, 1, limitsAtLeast(LIMITS, 26))).toBe(26)
+  })
+})
 
 describe('draggedSize', () => {
   it('grows a left panel when dragged right, in the size unit', () => {

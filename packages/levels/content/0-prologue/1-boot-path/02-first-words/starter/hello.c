@@ -2,11 +2,11 @@
 
 /*
  * init: Your first program. A program can't reach the terminal by itself; it
- * asks the Kernel with a syscall.
+ * asks the kernel with a syscall.
  *
  *   ssize_t write(int fd, const void *buf, size_t count);
  *
- * write() hands `count` bytes from `buf` to the open file `fd`, and the Kernel
+ * write() hands `count` bytes from `buf` to the open file `fd`, and the kernel
  * answers with how many bytes it took, or -1 if it refused.
  *
  * Every program starts with three open files: 0 is standard input, 1 is

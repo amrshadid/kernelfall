@@ -2,5 +2,7 @@
 find attic -name lantern-plan.txt
 cat attic/boxes/old/lantern-plan.txt
 find attic -type d
+find attic -type d > folders.txt
 find /tmp -user guest
 find / -name passwd
+find / -name passwd 2>/dev/null

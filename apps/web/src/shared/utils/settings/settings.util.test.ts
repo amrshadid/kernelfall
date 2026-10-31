@@ -55,6 +55,18 @@ describe('readSettings', () => {
   })
 })
 
+describe('readSettings: usage recordings', () => {
+  it('shares by default, also for a save from before the setting, and keeps an opt-out', () => {
+    expect(readSettings({ shareRecordings: false }).shareRecordings).toBe(false)
+    expect(readSettings({ shareRecordings: 'no' }).shareRecordings).toBe(true)
+    expect(readSettings({ theme: 'dark' }).shareRecordings).toBe(true)
+  })
+
+  it('is persisted with the other settings', () => {
+    expect(settingsOf({ ...DEFAULT_SETTINGS, shareRecordings: false }).shareRecordings).toBe(false)
+  })
+})
+
 describe('readKeys', () => {
   it('caps the X-ray lists, keeping the most recent keys', () => {
     const many = Array.from({ length: MAX_XRAY_KEYS + 10 }, (_, i) => `k${i}`)

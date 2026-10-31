@@ -1,7 +1,7 @@
 import { useCodeEditor } from '@features/editor/hooks/codemirror'
 import type { EditorFile, RevealRequest, RunState } from '@features/editor/types'
 import { ariaKeyShortcut, FORMAT_BINDING, RUN_BINDING, shortcutLabel } from '@shared/utils/keyboard'
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { FileTabs } from './FileTabs'
 
 export interface CodeEditorPresentationProps {
@@ -36,9 +36,15 @@ const FORMAT_SHORTCUT = shortcutLabel(FORMAT_BINDING)
 const BUTTON =
   'inline-flex min-h-8 shrink-0 items-center gap-2 border-2 px-3 text-sm font-semibold whitespace-nowrap disabled:cursor-not-allowed disabled:border-dashed disabled:border-[var(--ink-2,#55554f)] disabled:bg-[var(--sheet,#fafaf7)] disabled:text-[var(--ink-2,#55554f)]'
 
+const RUN_ON =
+  'border-[var(--red,#c8201a)] bg-[var(--red,#c8201a)] text-[var(--on-red,#fafaf7)] hover:border-[var(--ink,#141414)] hover:bg-[var(--ink,#141414)]'
+const RUN_OFF =
+  'cursor-not-allowed border-dashed border-[var(--ink-2,#55554f)] bg-[var(--sheet,#fafaf7)] text-[var(--ink-2,#55554f)]'
+
 export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
   const { files, activePath, run, status } = props
   const surface = useRef<HTMLDivElement>(null)
+  const runReasonId = useId()
   const [confirmingReset, setConfirmingReset] = useState(false)
   const file = files.find((f) => f.path === activePath) ?? files[0]
   const { loaded, failed, format } = useCodeEditor(surface, {
@@ -90,7 +96,10 @@ export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
           )}
           {confirmingReset ? (
             <>
-              <span className="text-sm">Reset every file to the starter?</span>
+              <span className="text-sm whitespace-nowrap">
+                <span className="@3xl:hidden">Reset all files?</span>
+                <span className="hidden @3xl:inline">Reset every file to the starter?</span>
+              </span>
               <button type="button" className={`${BUTTON} border-[var(--ink,#141414)]`} onClick={reset}>
                 Reset
               </button>
@@ -99,7 +108,8 @@ export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
                 className={`${BUTTON} border-transparent`}
                 onClick={() => setConfirmingReset(false)}
               >
-                Keep my code
+                <span className="@3xl:hidden">Keep mine</span>
+                <span className="hidden @3xl:inline">Keep my code</span>
               </button>
             </>
           ) : (
@@ -115,7 +125,8 @@ export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
           )}
           <button
             type="button"
-            className={`${BUTTON} border-[var(--ink,#141414)] hover:bg-[var(--ink,#141414)] hover:text-[var(--sheet,#fafaf7)]`}
+            // A narrow editor drops Format while the reset question is up, so Run stays on screen.
+            className={`${BUTTON} border-[var(--ink,#141414)] hover:bg-[var(--ink,#141414)] hover:text-[var(--sheet,#fafaf7)]${confirmingReset ? ' @max-3xl:hidden' : ''}`}
             aria-keyshortcuts={ariaKeyShortcut(FORMAT_BINDING)}
             disabled={!loaded || !props.canFormat}
             onClick={format}
@@ -123,16 +134,24 @@ export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
             Format
             <kbd className="hidden text-xs font-medium @3xl:inline">{FORMAT_SHORTCUT}</kbd>
           </button>
+          {/* aria-disabled, not disabled: the button stays focusable, so its reason can be read. */}
           <button
             type="button"
-            className={`${BUTTON} border-[var(--red,#c8201a)] bg-[var(--red,#c8201a)] text-[var(--on-red,#fafaf7)] hover:border-[var(--ink,#141414)] hover:bg-[var(--ink,#141414)]`}
+            className={`${BUTTON} ${run.kind === 'busy' ? RUN_OFF : RUN_ON}`}
             aria-keyshortcuts={ariaKeyShortcut(RUN_BINDING)}
-            disabled={run.kind === 'busy'}
-            onClick={props.onRun}
+            aria-disabled={run.kind === 'busy' || undefined}
+            aria-describedby={run.kind === 'busy' ? runReasonId : undefined}
+            title={run.kind === 'busy' ? run.reason : undefined}
+            onClick={run.kind === 'busy' ? undefined : props.onRun}
           >
             {run.kind === 'busy' ? run.label : 'Run'}
             <kbd className="hidden text-xs font-medium @xl:inline">{RUN_SHORTCUT}</kbd>
           </button>
+          {run.kind === 'busy' && (
+            <span id={runReasonId} className="sr-only">
+              {run.reason}
+            </span>
+          )}
         </div>
       </div>
       <div ref={surface} className="relative min-h-0 flex-1 overflow-hidden">

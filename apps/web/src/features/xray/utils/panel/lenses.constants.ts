@@ -6,6 +6,7 @@ export const LENS_LABELS: Readonly<Record<XrayLens, string>> = {
   cpus: 'CPUs',
   route: 'Route',
   section: 'Section',
+  boot: 'Boot',
 }
 
 /**
@@ -16,10 +17,9 @@ export const LENSES_OF_VIEW: Readonly<Record<string, readonly XrayLens[]>> = {
   syscalls: ['syscalls'],
   processes: ['processes', 'cpus'],
   files: ['route'],
-  // TODO(#vm-boot-lens): draw the real boot from the VM's dmesg; P.4 asks for it.
-  boot: [],
+  boot: ['boot'],
   section: ['section'],
 }
 
-/** Lenses that draw a whole run at once. */
-export const WHOLE_RUN_LENSES: ReadonlySet<XrayLens> = new Set(['cpus', 'route', 'section'])
+/** Lenses that draw a whole run at once, or (boot) no run at all. */
+export const WHOLE_RUN_LENSES: ReadonlySet<XrayLens> = new Set(['cpus', 'route', 'section', 'boot'])

@@ -7,7 +7,7 @@ import { readsByAnyTask } from '#content/0-prologue/2-machine-in-section/lab-tas
 const MEMINFO = '/proc/meminfo'
 const STACK = '[stack]'
 const DATA_PERMS = 'rw-p'
-/** The fewest addresses `where` prints: the global's and the local's. */
+/** The global's and the local's. */
 const MIN_ADDRESSES = 2
 
 // models fs/proc/task_mmu.c: show_map_vma()
@@ -27,10 +27,9 @@ interface WhereRun {
   readonly regions: readonly Region[]
 }
 
-/** /proc/self/maps, or the run's own /proc/<pid>/maps. */
 const isOwnMaps = (path: string, pid: Pid): boolean => path === '/proc/self/maps' || path === `/proc/${pid}/maps`
 
-/** What one run of `where` printed: the addresses before its map, and the map's regions. */
+// Addresses are the lines before the map; the map is what the run read from its own maps file.
 function readRun(events: readonly LabEvent[], pid: Pid): WhereRun | null {
   if (!filesOpened(events, pid).some(({ path, ret }) => isOwnMaps(path, pid) && ret !== undefined && ret >= 0)) {
     return null
@@ -49,7 +48,7 @@ function readRun(events: readonly LabEvent[], pid: Pid): WhereRun | null {
   return { addresses, regions }
 }
 
-/** An address inside a region that passes `wanted`; a region's end is the first byte past it. */
+// A region's end is the first byte past it.
 const printedIn = ({ addresses, regions }: WhereRun, wanted: (region: Region) => boolean): boolean =>
   addresses.some((address) =>
     regions.some((region) => wanted(region) && region.start <= address && address < region.end)
@@ -58,7 +57,6 @@ const printedIn = ({ addresses, regions }: WhereRun, wanted: (region: Region) =>
 const runsOf = (events: readonly LabEvent[]): WhereRun[] =>
   programsNamed(events, 'where').flatMap((pid) => readRun(events, pid) ?? [])
 
-/** level.yaml declares `exits-zero`. */
 export const checker = defineChecker({
   applies: ({ events }: CheckInput) =>
     programsNamed(events, 'where').length > 0 || readsByAnyTask(events, (path) => path === MEMINFO).length > 0,

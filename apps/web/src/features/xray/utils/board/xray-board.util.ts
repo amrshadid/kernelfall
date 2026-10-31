@@ -3,7 +3,7 @@ import { defaultCallId } from '@features/xray/utils/calls'
 import { isWholeRun } from '@features/xray/utils/panel'
 import { episodeLabel } from '@features/xray/utils/processes'
 import type { TraceRun } from '@kernelfall/machine/types'
-import { ANY_STEP, FREE_PLAY, NO_RUN, PROCESS_KIND } from './xray-board.constants'
+import { ANY_STEP, BOOT_PENDING, FREE_PLAY, NO_RUN, PROCESS_KIND } from './xray-board.constants'
 
 export interface XrayEmptyTextInput {
   readonly run: TraceRun | undefined
@@ -22,9 +22,24 @@ export interface XrayMemoryKeys {
   readonly autoplayKey: string
 }
 
-/** The call the player picked, or the run's default one. */
-export function pickCall(calls: readonly XrayCall[], pick: string | null): XrayCall | undefined {
-  return calls.find((c) => String(c.id) === pick) ?? calls.find((c) => c.id === defaultCallId(calls))
+/** The call the player picked, else the lesson's lead call, else the run's default one. */
+export function pickCall(
+  calls: readonly XrayCall[],
+  pick: string | null,
+  lead: number | null = null
+): XrayCall | undefined {
+  return calls.find((c) => String(c.id) === pick) ?? calls.find((c) => c.id === (lead ?? defaultCallId(calls)))
+}
+
+/** Playing runs on to the next call the level teaches, or the next call when it teaches none. */
+export function nextCallPick(
+  calls: readonly XrayCall[],
+  lesson: readonly XrayCall[],
+  current: number | null
+): XrayChoice<string> | undefined {
+  const order = lesson.length > 0 ? lesson : calls
+  const next = current === null ? undefined : order.find((c) => c.id > current)
+  return next && { id: String(next.id), label: next.name }
 }
 
 /** The child the player picked; otherwise a running shell's newest child leads, as the command just typed. */
@@ -55,6 +70,9 @@ export function runChoices(runs: readonly TraceRun[]): readonly XrayChoice<numbe
 
 /** Why there is nothing to draw, or null when there is. */
 export function xrayEmptyText({ run, lens, live, count, logNote }: XrayEmptyTextInput): string | null {
+  if (lens === 'boot') {
+    return count > 0 ? null : BOOT_PENDING
+  }
   if (!run) {
     return NO_RUN
   }
@@ -90,6 +108,9 @@ export function xrayCaption(figure: XrayFigure | null): string {
   }
   if (figure?.kind === 'cpus') {
     return `Fig. 5. The CPUs while \`${figure.view.commandLine.trim()}\` ran: who ran where, and each run queue.`
+  }
+  if (figure?.kind === 'boot') {
+    return `Fig. 6. How this Machine booted, from its own kernel log (Linux ${figure.view.kernel}).`
   }
   return ''
 }

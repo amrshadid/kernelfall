@@ -56,7 +56,7 @@ export function KernelMapPresentation({
           />
           {recommended && (
             <p className="map-topbar__next">
-              Recommended next: <b>{recommended.label}</b>
+              Recommended next: <b title={recommended.label}>{recommended.label}</b>
               <ButtonLink variant="primary" href={recommended.href}>
                 Continue
               </ButtonLink>

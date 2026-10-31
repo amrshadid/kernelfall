@@ -1,0 +1,161 @@
+/* A parts list on the drawing: each process a ruled block, folded calls as dashed rows with a count. */
+.xr-calls {
+  max-height: 16rem;
+  overflow: auto;
+  padding: 0.25rem 0.875rem 0.5rem;
+  border-bottom: var(--rule);
+}
+
+.xr-calls__live {
+  padding: 0.25rem 0;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.xr-calls__groups,
+.xr-calls__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.xr-calls__group + .xr-calls__group {
+  border-top: var(--rule-thin);
+}
+
+.xr-calls__head,
+.xr-calls__fold-head,
+.xr-calls__call {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+}
+
+.xr-calls__head {
+  padding: 0.375rem 0 0.125rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.xr-calls__head:disabled {
+  cursor: default;
+}
+
+.xr-calls__mark {
+  flex: none;
+  width: 0.75rem;
+  font-family: var(--mono);
+}
+
+.xr-calls__title,
+.xr-calls__fold-label,
+.xr-calls__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xr-calls__head:not(:disabled):hover .xr-calls__title,
+.xr-calls__fold-head:hover .xr-calls__fold-label {
+  text-decoration: underline;
+}
+
+.xr-calls__count {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.xr-calls__facts {
+  padding: 0 0 0.25rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+}
+
+.xr-calls__group > .xr-calls__rows {
+  padding: 0 0 0.375rem 1.25rem;
+}
+
+.xr-calls__fold > .xr-calls__rows {
+  padding-left: 1.25rem;
+}
+
+.xr-calls__call,
+.xr-calls__fold-head {
+  padding: 0.125rem 0.25rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.xr-calls__call:hover {
+  background: var(--soft);
+}
+
+.xr-calls__call[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.xr-calls__ret {
+  flex: none;
+  color: var(--ink-2);
+}
+
+.xr-calls__call[aria-pressed="true"] .xr-calls__ret {
+  color: inherit;
+}
+
+/* The lesson's calls: a red rule at the margin, like a revision mark. */
+.xr-calls__call--focus {
+  box-shadow: inset 3px 0 0 var(--red);
+  font-weight: 700;
+}
+
+.xr-calls__call--focus .xr-calls__name {
+  color: var(--red);
+}
+
+.xr-calls__call--focus[aria-pressed="true"] .xr-calls__name {
+  color: inherit;
+}
+
+.xr-calls__fold {
+  border-top: 1px dashed var(--hatch);
+  border-bottom: 1px dashed var(--hatch);
+}
+
+.xr-calls__fold + .xr-calls__fold {
+  border-top: 0;
+}
+
+.xr-calls__fold-head {
+  color: var(--ink-2);
+}
+
+.xr-calls__fold--focus > .xr-calls__fold-head {
+  box-shadow: inset 3px 0 0 var(--red);
+  color: var(--ink);
+}
+
+.xr-calls__more {
+  padding: 0.125rem 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+}
+
+.xr-sheet .xr-calls {
+  grid-area: calls;
+  max-height: none;
+  border-bottom: var(--rule);
+  border-left: var(--rule);
+}

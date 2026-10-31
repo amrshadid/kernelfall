@@ -1,9 +1,11 @@
 import { CardOverlay } from '@features/level/components/card'
 import { GuidePanel } from '@features/level/components/guide'
+import { useHeaderWidth } from '@features/level/hooks/layout'
 import type { LevelLayoutModel } from '@features/level/types'
 import { ScreenFrame, Splitter, StatusBar } from '@shared/components/layout'
 import { Dialog } from '@shared/components/modals'
 import { Button, TitleBlock } from '@shared/components/ui'
+import { limitsAtLeast } from '@shared/utils/layout'
 import { PANEL_LIMITS } from '@shared/utils/settings'
 import type { CSSProperties } from 'react'
 import { LevelTopBar } from './LevelTopBar'
@@ -43,8 +45,11 @@ export function LevelLayout({
 }: LevelLayoutProps) {
   const columns = panels.xray ? 'level-work--with-xray' : 'level-work--no-xray'
   const { sizes, onResize } = panelSizes
+  // Map, Replay and the title sit over the Guide, so it never gets narrower than they are.
+  const guideLimits = limitsAtLeast(PANEL_LIMITS.guide, useHeaderWidth('.level-topbar__name', 'level-guide'))
   // Only sizes the player chose are set; otherwise each screen width keeps its own default.
   const sizeVars = {
+    '--guide-min': `${guideLimits.min}rem`,
     ...(sizes.guide === null ? {} : { '--guide-w': `${sizes.guide}rem` }),
     ...(sizes.xray === null ? {} : { '--xray-w': `${sizes.xray}rem` }),
     ...(sizes.editor === null ? {} : { '--editor-share': `${sizes.editor}%` }),
@@ -81,7 +86,7 @@ export function LevelLayout({
           label="Resize the Guide"
           orientation="vertical"
           direction={1}
-          limits={PANEL_LIMITS.guide}
+          limits={guideLimits}
           step={WIDTH_STEP_REM}
           value={sizes.guide}
           measure={() => widthOf('level-guide')}
@@ -124,11 +129,11 @@ export function LevelLayout({
             </div>
             <div className="level-terminal__slot">{slots.terminal}</div>
           </section>
-          {card && <CardOverlay card={card} />}
         </section>
 
         {panels.xray && (
           <Splitter
+            inert={card !== null}
             label="Resize X-ray"
             orientation="vertical"
             direction={-1}
@@ -143,11 +148,13 @@ export function LevelLayout({
         )}
         {/* A plain dock, not a landmark: X-ray names its own region, so a label here would be announced twice. */}
         {panels.xray && (
-          <div className="level-xray" id="level-xray" tabIndex={-1}>
+          <div className="level-xray" id="level-xray" tabIndex={-1} inert={card !== null}>
             <div className="level-xray__slot">{slots.xray}</div>
             <TitleBlock entries={titleBlock} />
           </div>
         )}
+        {/* The debrief takes the workspace and X-ray together, so it reads whole on a narrow screen. */}
+        {card && <CardOverlay card={card} />}
       </main>
 
       <Dialog open={taintReport.open} onClose={taintReport.onClose} title="Taint report">

@@ -6,6 +6,7 @@ import {
   defineChecker,
   eventsOf,
   execsOf,
+  filesOpened,
   programsNamed,
   writtenTo,
 } from '@kernelfall/game/utils'
@@ -14,28 +15,64 @@ import { STDOUT_FILENO } from '@kernelfall/machine/types'
 import { plainText } from '#utils/terminal/index'
 
 const SURVEY = '/tmp/survey'
-/** The walk's stops: `cd /etc`, `cd ..` and `cd home/you`, by where each one lands. */
 const ETC = '/etc'
 const ROOT = '/'
-const HOME = '/home/you'
+// A path the kernel walks from the working directory, climbing first: `../../etc/motd`.
+const RELATIVE_UP = /^\.\.(\/|$)/
+// BusyBox on musl makes the old i386 calls (mkdir, rename); glibc on x86-64 the *at ones.
 const MKDIR_CALLS = ['mkdir', 'mkdirat']
 const RENAME_CALLS = ['rename', 'renameat', 'renameat2']
-/** Every way a program can move a file's bytes. */
-const DATA_CALLS = ['read', 'write', 'copy_file_range', 'sendfile', 'splice']
+// Judged by the calls alone, so sendfile64 counts even where the trace holds no data.
+const DATA_CALLS = [
+  'read',
+  'readv',
+  'pread64',
+  'write',
+  'writev',
+  'pwrite64',
+  'copy_file_range',
+  'sendfile',
+  'sendfile64',
+  'splice',
+]
 
 const succeeded = (pid: Pid, events: readonly LabEvent[], names: readonly string[]) =>
   callsOf(events, pid, names).filter(({ exit }) => exit?.ret === 0)
 
-// Like bash, the shell chdir()s to the absolute path it worked out, so a cd is judged by where it lands.
-/** The paths every successful chdir() went to; `cd` is the shell's own call, so any task counts. */
-function chdirPaths(events: readonly LabEvent[]): string[] {
-  const pids = new Set(
-    eventsOf(events, 'sys_enter')
-      .filter((event) => event.name === 'chdir')
-      .map((event) => event.pid)
-  )
-  return [...pids].flatMap((pid) => succeeded(pid, events, ['chdir']).map(({ enter }) => asText(enter.data)))
+interface Landing {
+  readonly path: string
+  /** What bash statx()ed right before: each folder of the path, and the folder again before each `..`. */
+  readonly checked: readonly string[]
 }
+
+// bash chdir()s to the absolute path it worked out, so `cd /` and `cd ..` both land on "/"; only a
+// `..` makes bash check a folder on the way there. `cd` is the shell's own call, so any task counts.
+function cdLandings(events: readonly LabEvent[]): Landing[] {
+  const enters = eventsOf(events, 'sys_enter')
+  const pids = new Set(enters.filter((event) => event.name === 'chdir').map((event) => event.pid))
+  return [...pids].flatMap((pid) => {
+    const landed = new Set(succeeded(pid, events, ['chdir']).map(({ enter }) => enter.seq))
+    const landings: Landing[] = []
+    let checked: string[] = []
+    for (const event of enters.filter((enter) => enter.pid === pid)) {
+      if (event.name === 'statx') {
+        checked.push(asText(event.data))
+        continue
+      }
+      if (event.name === 'chdir' && landed.has(event.seq)) {
+        landings.push({ path: asText(event.data), checked })
+      }
+      checked = []
+    }
+    return landings
+  })
+}
+
+/** A program (not the shell) opened a path that climbs from its working directory. */
+const openedRelative = (events: readonly LabEvent[]) =>
+  [...new Set(eventsOf(events, 'sched_process_exec').map((event) => event.pid))].some((pid) =>
+    filesOpened(events, pid).some(({ path, ret }) => RELATIVE_UP.test(path) && ret !== undefined && ret >= 0)
+  )
 
 /** `ls -i`'s `<inode> <name>` pairs, in the order printed. */
 function inodeEntries(stdout: string): { readonly inode: string; readonly name: string }[] {
@@ -101,12 +138,12 @@ export const checker = defineChecker({
   applies: ({ events }: CheckInput) => events.length > 0,
 
   check({ events }) {
-    const paths = chdirPaths(events)
+    const landings = cdLandings(events)
     const ls = programsNamed(events, 'ls').map((pid) => plainText(writtenTo(events, pid, STDOUT_FILENO)))
     const judged: Readonly<Record<string, boolean>> = {
-      'cd-absolute': paths.includes(ETC),
-      'cd-up': paths.includes(ROOT),
-      'cd-relative': paths.includes(HOME),
+      'cd-absolute': landings.some(({ path }) => path === ETC),
+      'cd-up': landings.some(({ path, checked }) => path === ROOT && checked.length > 0),
+      'relative-path': openedRelative(events),
       'mkdir-parents': programsNamed(events, 'mkdir').some((pid) => succeeded(pid, events, MKDIR_CALLS).length >= 2),
       'copy-new-inode': ls.some(showsCopy),
       'rename-no-bytes': programsNamed(events, 'mv').some(

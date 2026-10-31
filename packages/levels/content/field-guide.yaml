@@ -1,130 +1,139 @@
 # The Field Guide: the Codex page of commands and folders
 # (docs/levels/surface-survey.md#the-field-guide-codex-page). Each entry appears when
-# the level of its `firstMet` slot starts. `syscalls` are the kernel's names of what it
-# asks in the lab; `syscallNote` says what the list can't. `deepenedIn` names the slots
-# that build it or teach the mechanism underneath.
+# the level of its `firstMet` slot starts. `syscalls` are the key calls the command
+# makes on the Machine, measured with strace and the trace (i386 names, as in
+# syscall_32.tbl), leaving out what every program does to start and stop (execve,
+# brk, mmap2, mprotect, rt_sigprocmask, exit_group). `syscallNote` says what the list
+# can't. `deepenedIn` names the slots that build it or teach the mechanism underneath.
 opensAt: "P.3"
 entries:
   - name: echo
     kind: command
     what: "print its arguments (built into the shell: no program starts; /bin/echo is the program)"
-    syscalls: [write]
-    syscallNote: "the shell's own write; /bin/echo adds an execve"
+    syscalls: [writev]
+    syscallNote: "bash's own writev; /bin/echo (BusyBox) writes with write"
     firstMet: "P.1"
     deepenedIn: ["P.2"]
   - name: ls
     kind: command
     what: "list a folder (-l long form, -a names starting with . too, -i inode numbers)"
-    syscalls: [openat, getdents64, newfstatat, write]
-    syscallNote: "a newfstatat per entry; -l also reads /etc/passwd and /etc/group for the names"
+    syscalls: [open, getdents64, statx, close, writev]
+    syscallNote: "a statx per name; -l also reads /etc/passwd and /etc/group for the names"
     firstMet: "P.1"
     deepenedIn: ["S.1", "2.7"]
   - name: cat
     kind: command
     what: copy files to standard output
-    syscalls: [openat, read, write, close]
+    syscalls: [open, sendfile64, close]
+    syscallNote: "sendfile64: the kernel copies from the file to the output itself, until it answers 0"
     firstMet: "P.1"
     deepenedIn: ["1.6", "2.5"]
   - name: dmesg
     kind: command
     what: "print the kernel's log"
-    syscalls: [openat, read, write]
-    syscallNote: openat of /dev/kmsg
+    syscalls: [syslog, writev]
+    syscallNote: "syslog() reads the kernel's log buffer; BusyBox's dmesg doesn't open /dev/kmsg"
     firstMet: "P.4"
     deepenedIn: ["2.2"]
   - name: uname
     kind: command
     what: "print the kernel's name, release and CPU type"
-    syscalls: [uname]
+    syscalls: [uname, writev]
     firstMet: "P.5"
     deepenedIn: ["P.5"]
   - name: lspci
     kind: command
     what: "list PCI devices (-k: and their drivers)"
-    syscalls: [openat, getdents64, read, readlinkat]
-    syscallNote: "reads /sys/bus/pci; -k: readlinkat of each device's driver link"
+    syscalls: [open, getdents64, pread64, read, readlink, writev]
+    syscallNote: "reads /sys/bus/pci/devices: each device's config with pread64, then its vendor, device and class files; -k: readlink of each device's driver link"
     firstMet: "P.6"
     deepenedIn: ["2.4"]
   - name: dtc
     kind: command
     what: compile a device tree from text to binary
-    syscalls: [openat, read, write]
+    syscalls: [open, readv, writev, close]
     firstMet: "P.6"
     deepenedIn: ["P.6"]
   - name: ps
     kind: command
     what: list processes
-    syscalls: [openat, getdents64, read]
-    syscallNote: reads /proc
+    syscalls: [sysinfo, open, getdents64, statx, read, close, writev]
+    syscallNote: "reads /proc: its numbered folders, then each process's stat file, and its cmdline for the default COMMAND column (-o comm needs only stat); sysinfo for the times, /etc/passwd for user names"
     firstMet: "P.7"
     deepenedIn: ["S.3", "1.4", "1.5"]
   - name: nproc
     kind: command
     what: print how many CPUs this process may use
-    syscalls: [sched_getaffinity]
+    syscalls: [sched_getaffinity, writev]
     firstMet: "P.7"
     deepenedIn: ["P.7"]
   - name: "yes"
     kind: command
     what: print y forever, until stopped
-    syscalls: [write]
-    syscallNote: again and again
+    syscalls: [writev]
+    syscallNote: "again and again: into a file or pipe, 1,025 bytes a call from musl's stdio buffer"
     firstMet: "P.7"
     deepenedIn: ["1.7"]
   - name: free
     kind: command
     what: show memory use
-    syscalls: [openat, read]
-    syscallNote: reads /proc/meminfo
+    syscalls: [sysinfo, open, read, writev]
+    syscallNote: "sysinfo for the totals, /proc/meminfo for buffers and cache"
     firstMet: "P.8"
     deepenedIn: ["2.8a"]
   - name: reboot
     kind: command
     what: restart the Machine
-    syscalls: [reboot]
+    syscalls: [sync, kill]
+    syscallNote: "BusyBox's reboot asks init with a signal to PID 1, and init makes the reboot syscall; as you, the signal fails with EPERM"
     firstMet: "P.10"
     deepenedIn: ["P.10"]
   - name: pwd
     kind: command
-    what: print the working directory
-    syscalls: [getcwd]
+    what: "print the working directory (built into bash: no program starts)"
+    syscalls: [writev]
+    syscallNote: "bash prints the path it keeps, with no getcwd; /bin/pwd (BusyBox) calls getcwd"
     firstMet: "P.3"
     deepenedIn: ["1.5"]
   - name: man
     kind: command
     what: show a manual page; q quits
-    syscalls: [openat, read, write]
+    syscalls: [open, readlink, dup2, writev, fork, execve, wait4, unlink]
+    syscallNote: "on a terminal it formats the page into a temporary file in /tmp (dup2 puts it on fd 1), forks and runs the pager on it, then unlinks the file; to anything but a terminal it writes the page straight out"
     firstMet: "P.3"
     deepenedIn: ["P.3"]
   - name: printenv
     kind: command
     what: "print environment variables (printenv PATH: just one)"
-    syscalls: [write]
+    syscalls: [writev]
     syscallNote: the environment is already in its memory
     firstMet: "P.3"
     deepenedIn: ["1.5"]
   - name: env
     kind: command
     what: print the environment, or run a program with a setting added
-    syscalls: [write, execve]
+    syscalls: [execve, writev]
+    syscallNote: "to run a program it tries each folder of PATH with execve until one works"
     firstMet: "P.3"
     deepenedIn: ["1.5"]
   - name: wc
     kind: command
     what: "count lines, words and bytes (-l lines, -w words, -c bytes)"
-    syscalls: [openat, read, write]
+    syscalls: [open, read, close, writev]
     firstMet: "P.3"
     deepenedIn: ["S.5", "1.6"]
   - name: cd
     kind: command
-    what: "change the shell's working directory (part of the shell, not a program)"
-    syscalls: [chdir]
+    what: "change the shell's working directory (built into bash, not a program)"
+    syscalls: [statx, chdir]
+    syscallNote: "bash checks the path with statx, then chdir()s to the absolute path it worked out"
     firstMet: "S.1"
     deepenedIn: ["1.5"]
   - name: mkdir
     kind: command
     what: "make a folder (-p: and any missing folders above it)"
     syscalls: [mkdir]
+    syscallNote: "-p: a mkdir for each folder on the way, EEXIST for the ones already there"
     firstMet: "S.1"
     deepenedIn: ["S.1"]
   - name: rmdir
@@ -136,100 +145,115 @@ entries:
   - name: cp
     kind: command
     what: copy a file
-    syscalls: [openat, read, write, close]
+    syscalls: [statx, open, sendfile64, close]
+    syscallNote: "the kernel copies the bytes itself with sendfile64, into a new file"
     firstMet: "S.1"
     deepenedIn: ["1.6"]
   - name: mv
     kind: command
     what: move or rename a file (no bytes are copied on one filesystem)
-    syscalls: [renameat2]
+    syscalls: [statx, rename]
     firstMet: "S.1"
     deepenedIn: ["S.1"]
   - name: rm
     kind: command
     what: "remove a file's name; there is no bin to get it back from"
-    syscalls: [unlinkat]
+    syscalls: [statx, access, unlink]
     firstMet: "S.1"
     deepenedIn: ["S.1"]
   - name: id
     kind: command
     what: show your user and group IDs
-    syscalls: [getuid, geteuid, getgid, getegid, getgroups]
+    syscalls: [getuid32, geteuid32, getgid32, getegid32, getgroups32, writev]
+    syscallNote: "then reads /etc/passwd and /etc/group to print the names"
     firstMet: "S.2"
     deepenedIn: ["S.2", "1.B"]
   - name: chmod
     kind: command
     what: "change a file's permission bits"
-    syscalls: [fchmodat]
+    syscalls: [statx, chmod]
     firstMet: "S.2"
     deepenedIn: ["S.2"]
   - name: kill
     kind: command
     what: "send a signal to a process (-STOP, -CONT, -TERM, -KILL; -l lists them)"
     syscalls: [kill]
+    syscallNote: "built into bash; /bin/kill (BusyBox) makes the same call"
     firstMet: "S.3"
     deepenedIn: ["1.8"]
   - name: sleep
     kind: command
     what: wait a number of seconds, then exit
-    syscalls: [clock_nanosleep]
+    syscalls: [nanosleep]
     firstMet: "S.3"
     deepenedIn: ["1.4", "1.5"]
   - name: find
     kind: command
     what: search a folder tree for files by name, type, owner
-    syscalls: [openat, getdents64, newfstatat]
-    syscallNote: a stat call per entry
+    syscalls: [statx, open, getdents64, close, writev]
+    syscallNote: "a statx per entry; an open and getdents64 per folder; errors go out with write on fd 2"
     firstMet: "S.4"
     deepenedIn: ["S.4"]
+  - name: cmd > file
+    kind: command
+    what: "send a program's standard output into a file (2> file: its standard error)"
+    syscalls: [open, dup2, close]
+    syscallNote: "bash's forked child opens the file, moves it onto fd 1 (2 for 2>) with dup2, closes the spare, then runs the program"
+    firstMet: "S.4"
+    deepenedIn: ["1.6"]
   - name: grep
     kind: command
     what: "print the lines that contain a word (-c count, -n numbers, -v the others, -i any case)"
-    syscalls: [openat, read, write]
+    syscalls: [open, read, close, writev]
     firstMet: "S.5"
     deepenedIn: ["1.7"]
   - name: head
     kind: command
     what: "print the first lines (-n 3: three)"
-    syscalls: [openat, read, write]
+    syscalls: [open, read, writev, _llseek]
+    syscallNote: "_llseek gives back what it read past the last line it printed"
     firstMet: "S.5"
     deepenedIn: ["1.7"]
   - name: tail
     kind: command
     what: print the last lines
-    syscalls: [openat, read, write]
+    syscalls: [open, _llseek, read, write]
+    syscallNote: "_llseek to the end to learn the size, then back to read"
     firstMet: "S.5"
     deepenedIn: ["2.2"]
   - name: sort
     kind: command
     what: "print lines in order (-r reversed, -n by number, -o file into a file)"
-    syscalls: [openat, read, write]
+    syscalls: [open, read, close, writev]
     firstMet: "S.5"
     deepenedIn: ["1.6"]
   - name: uniq
     kind: command
     what: "drop repeated neighbouring lines (-c: count them)"
-    syscalls: [openat, read, write]
+    syscalls: [open, read, close, writev]
+    firstMet: "S.5"
+    deepenedIn: ["1.7"]
+  - name: cmd | cmd
+    kind: command
+    what: "connect two programs: the first one's standard output becomes the second one's input"
+    syscalls: [pipe, fork, dup2, close, execve, wait4]
+    syscallNote: "bash makes the pipe, forks a child per side, each child dup2s its end onto fd 1 or fd 0 and runs its program; bash waits for both. Right after the data pipe, bash makes a second pipe of its own, as before every command it starts: it holds the first child until the whole pipeline exists"
     firstMet: "S.5"
     deepenedIn: ["1.7"]
   - name: true/false
     kind: command
     what: do nothing, and exit 0 or 1
     syscalls: [exit_group]
+    syscallNote: "bash's builtins make no syscall at all; /bin/true and /bin/false (BusyBox) only start and exit"
     firstMet: "1.7"
     deepenedIn: ["1.7"]
   - name: dd
     kind: command
     what: "copy data in blocks of a chosen size (bs=1: one byte per read)"
-    syscalls: [openat, read, write]
+    syscalls: [open, dup2, read, write]
+    syscallNote: "dup2 puts the input file on fd 0, then a read and a write per block; the record counts go to fd 2 with writev"
     firstMet: "2.5"
     deepenedIn: ["2.5", "2.8a"]
-  - name: cmd | cmd
-    kind: command
-    what: connect two programs
-    syscalls: [pipe, fork, dup2, execve, wait4]
-    firstMet: "S.5"
-    deepenedIn: ["1.7"]
   - name: /
     kind: folder
     what: the root of the one tree; every path starts here or at the working directory
@@ -247,7 +271,7 @@ entries:
     deepenedIn: ["P.3", "1.4"]
   - name: /boot
     kind: folder
-    what: the kernels, initramfs files and GRUB
+    what: "the kernel and its boot files: on the Machine vmlinuz-virt, its config and System.map; on most PCs also an initramfs and GRUB's files"
     firstMet: "P.4"
     deepenedIn: ["2.1"]
   - name: /etc

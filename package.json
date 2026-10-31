@@ -13,6 +13,7 @@
     "vm:image": "node packages/machine/scripts/vm-image/build.ts",
     "vm:syscalls": "node packages/machine/scripts/vm-image/syscall-table.ts",
     "vm:record": "pnpm --filter @kernelfall/levels vm:record",
+    "vm:facts": "pnpm --filter @kernelfall/levels vm:facts",
     "vm:mirror": "node packages/machine/scripts/vm-image/build.ts --mirror-out node_modules/.cache/kernelfall-vm-mirror",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --workspace-concurrency=1 --if-present test",

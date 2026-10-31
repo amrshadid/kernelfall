@@ -1,15 +1,17 @@
-# init's version, one command per line, typed into bash.
-# init started sleep as PID 401 and yes as PID 402 (level.yaml's processes:).
-kill -CONT 401
-cat /proc/401/status
+# init's version, one command per line, typed into bash. Players read the PIDs from ps;
+# the recorded run finds them with pidof, since they differ from run to run.
+ps -o pid,ppid,user,stat,time,comm
+kill -STOP $(pidof sleep)
+kill -CONT $(pidof sleep)
+cat /proc/$(pidof sleep)/status
 cat /proc/$$/status
-cat /proc/402/status
-ps -e -o pid,stat,time,comm
-kill -STOP 402
-ps -e -o pid,stat,time,comm
-kill 402
-cat /proc/402/status
-kill -CONT 402
-kill 401
+ps -o pid,stat,time,comm
+kill -STOP $(pidof yes)
+ps -o pid,stat,time,comm
+kill $(pidof yes)
+cat /proc/$(pidof yes)/status
+kill -CONT $(pidof yes)
+ps -o pid,stat,comm
+kill $(pidof sleep)
 kill 1
-ps -e -o pid,ppid,user,stat,time,comm
+ps -o pid,ppid,user,stat,time,comm

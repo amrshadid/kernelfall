@@ -21,6 +21,8 @@ export interface SplitterProps {
   onResize: (size: number) => void
   /** Double-click: back to the default. */
   onReset: () => void
+  /** Out of reach while something covers it, like the level-complete card. */
+  inert?: boolean
 }
 
 interface Drag {
@@ -97,6 +99,7 @@ export function Splitter(props: SplitterProps) {
     <div
       role="separator"
       tabIndex={0}
+      inert={props.inert}
       aria-label={props.label}
       aria-orientation={orientation}
       aria-valuemin={limits.min}

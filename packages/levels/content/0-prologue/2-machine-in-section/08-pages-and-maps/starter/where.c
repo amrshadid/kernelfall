@@ -10,7 +10,7 @@
 int global = 42;
 
 /*
- * init: This prints the map the Kernel keeps for this process. It opens
+ * init: This prints the map the kernel keeps for this process. It opens
  * /proc/self/maps, reads it a piece at a time and writes each piece to
  * standard output. You'll write this kind of loop yourself one day.
  */

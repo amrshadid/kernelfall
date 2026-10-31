@@ -1,0 +1,196 @@
+/* The boot: a time scale like a drawing's scale bar, then numbered callouts joined by one leader line. */
+.xr-boot {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: var(--rule);
+  background: var(--sheet);
+}
+
+.xr-boot__ruler {
+  display: grid;
+  gap: 0.25rem;
+  padding-top: 1rem;
+}
+
+.xr-boot__scale {
+  position: relative;
+  height: 0.625rem;
+  border-bottom: var(--rule);
+  background-image: repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 10%);
+  background-size: 100% 0.25rem;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+
+.xr-boot__tick {
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--at) * 100%);
+  width: 2px;
+  height: 0.875rem;
+  background: var(--ink);
+  transform: translateX(-1px);
+}
+
+.xr-boot__tick--failed {
+  background: var(--red);
+}
+
+.xr-boot__tick-label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.xr-boot__tick--failed .xr-boot__tick-label {
+  color: var(--red);
+}
+
+.xr-boot__ends {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  color: var(--ink-2);
+}
+
+.xr-boot__stages {
+  position: relative;
+  display: grid;
+  gap: 0.625rem;
+  list-style: none;
+}
+
+/* The leader line runs through every balloon's centre. */
+.xr-boot__stages::before {
+  content: "";
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  border-left: var(--rule-thin);
+}
+
+.xr-boot__stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.625rem;
+}
+
+.xr-boot__balloon {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: var(--rule);
+  border-radius: 50%;
+  background: var(--sheet);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.xr-boot__stage--failed .xr-boot__balloon {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--on-red);
+}
+
+.xr-boot__body {
+  display: grid;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.375rem 0.5rem;
+  border: var(--rule-thin);
+  background: var(--sheet);
+}
+
+.xr-boot__stage--failed .xr-boot__body {
+  border: 2px solid var(--red);
+  background-color: var(--red-wash);
+  background-image: repeating-linear-gradient(-45deg, transparent 0 6px, var(--soft) 6px 7px);
+}
+
+.xr-boot__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.xr-boot__time {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.xr-boot__note {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.xr-boot__params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  list-style: none;
+}
+
+.xr-boot__params li {
+  padding: 0.0625rem 0.375rem;
+  border: var(--rule-thin);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+}
+
+.xr-boot__params .xr-boot__param--unknown {
+  border: 2px solid var(--red);
+  background: var(--red-wash);
+  color: var(--red);
+}
+
+.xr-boot__lines {
+  overflow-x: auto;
+  padding: 0.25rem 0.375rem;
+  border-left: 2px solid var(--ink);
+  background: var(--soft);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.xr-boot__stage--failed .xr-boot__lines {
+  border-left-color: var(--red);
+}
+
+.xr-boot__more summary,
+.xr-boot__log summary {
+  cursor: pointer;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xr-boot__log {
+  padding-top: 0.5rem;
+  border-top: var(--rule-thin);
+}
+
+.xr-boot__log .xr-boot__lines {
+  max-height: 16rem;
+  margin-top: 0.375rem;
+  overflow-y: auto;
+}

@@ -30,6 +30,8 @@ describe('the data a probe read', () => {
     expect(parseProbeName('write_2')).toEqual({ kind: 'write', iov: 0, chunk: 2 })
     expect(parseProbeName('writev_3_1')).toEqual({ kind: 'writev', iov: 3, chunk: 1 })
     expect(parseProbeName('tty_0')).toEqual({ kind: 'tty', iov: 0, chunk: 0 })
+    expect(parseProbeName('splice_7')).toEqual({ kind: 'splice', iov: 0, chunk: 7 })
+    expect(parseProbeName('splice_begin')).toBeNull()
     expect(parseProbeName('path_open')).toBeNull()
     expect(parseProbeName('execve')).toBeNull()
   })

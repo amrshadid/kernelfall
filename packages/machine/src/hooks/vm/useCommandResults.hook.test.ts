@@ -28,7 +28,7 @@ describe('useCommandResults', () => {
 
     eventBus.emit<CommandProgressPayload>(
       LAB_EVENTS.COMMAND_PROGRESS,
-      { command: { commandLine: 'uname' }, events: [fork] },
+      { command: { commandLine: 'uname' }, from: 0, events: [fork] },
       { source: 'test' }
     )
     finish('uname', 0)

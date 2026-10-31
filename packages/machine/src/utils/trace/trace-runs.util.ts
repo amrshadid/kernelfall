@@ -19,8 +19,8 @@ export function keepRunEvents(
   return next
 }
 
-// Each update carries everything since the command started, so it begins with
-// the live run's first event; a run left from a command that never finished doesn't match.
+// An update from index 0 carries the whole run so far, so it begins with the live run's first
+// event; a run left from a command that never finished doesn't match.
 export function liveRunOf(state: TraceRunsState, events: readonly LabEvent[]): TraceRun | undefined {
   const last = state.runs.at(-1)
   if (!last?.running) {

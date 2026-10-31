@@ -7,6 +7,7 @@ import {
   connectVm,
   disconnectVm,
   onVmOutput,
+  rebootVm,
   runVmCommandAs,
   sendToVm,
   setupVmLevel,
@@ -14,7 +15,7 @@ import {
 } from '#services/vm/vm-connection.service'
 import { BOOT_REPORT } from '#test/boot-report'
 import type { MachineEndpoint } from '#types/definitions/endpoint'
-import type { VmFacts, VmSession, VmStartOptions, VmStatus } from '#types/definitions/vm'
+import type { VmFacts, VmSession, VmSetupOptions, VmStartOptions, VmStatus } from '#types/definitions/vm'
 import type { TracedCommand } from '#types/definitions/vm-trace'
 import { parseBootReport } from '#utils/boot/boot-report.util'
 
@@ -25,6 +26,8 @@ function fakeVm() {
     input: [] as string[],
     files: [] as object[],
     setups: [] as (readonly string[])[],
+    setupOptions: [] as VmSetupOptions[],
+    reboots: 0,
     facts: 0,
     runAs: [] as [string, string][],
     stops: 0,
@@ -43,8 +46,9 @@ function fakeVm() {
     async writeFiles(files) {
       calls.files.push(files)
     },
-    async setupLevel(lines) {
+    async setupLevel(lines, options) {
       calls.setups.push(lines)
+      calls.setupOptions.push(options ?? {})
     },
     async facts() {
       calls.facts++
@@ -53,6 +57,9 @@ function fakeVm() {
     async runAs(user, commandLine) {
       calls.runAs.push([user, commandLine])
       return 0
+    },
+    async reboot() {
+      calls.reboots++
     },
     async stop() {
       calls.stops++
@@ -137,11 +144,13 @@ describe('the VM connection', () => {
 
     const fork = { type: 'sched_process_fork', parentPid: 434, childPid: 441, cpu: 0, seq: 0, time: 1 } as const
     vm.command({ commandLine: 'ls', status: null, events: [fork] })
+    vm.command({ commandLine: 'ls', status: null, from: 1, events: [] })
     vm.command({ commandLine: 'ls', status: 0, events: [fork] })
     await settle()
 
     expect(seen).toEqual([
-      { type: LAB_EVENTS.COMMAND_PROGRESS, payload: { command: { commandLine: 'ls' }, events: [fork] } },
+      { type: LAB_EVENTS.COMMAND_PROGRESS, payload: { command: { commandLine: 'ls' }, from: 0, events: [fork] } },
+      { type: LAB_EVENTS.COMMAND_PROGRESS, payload: { command: { commandLine: 'ls' }, from: 1, events: [] } },
       { type: LAB_EVENTS.COMMAND_FINISHED, payload: { command: { commandLine: 'ls', status: 0 }, events: [fork] } },
     ])
     subscription.unsubscribe()
@@ -182,6 +191,31 @@ describe('the VM connection', () => {
     expect(await setupVmLevel('p1', ['adduser guest'])).toBe(false)
     expect(await setupVmLevel('s2', ['mkdir /home/you/attic'])).toBe(true)
     expect(vm.calls.setups).toEqual([['adduser guest'], ['mkdir /home/you/attic']])
+  })
+
+  it("passes a boot level's reboot to the setup, and restarts the VM on request", async () => {
+    expect(await rebootVm()).toBe(false)
+    const vm = fakeVm()
+    configureMachine({ createVmEndpoint: () => vm.endpoint })
+    connectVm(() => {})
+    await settle()
+
+    await setupVmLevel('p10', ['umount /run/kf-boot'], undefined, { reboot: true })
+    expect(vm.calls.setupOptions).toEqual([{ reboot: true }])
+    expect(await rebootVm()).toBe(true)
+    expect(vm.calls.reboots).toBe(1)
+  })
+
+  it('asks again after a restart: the new boot has a record of its own', async () => {
+    const vm = fakeVm()
+    configureMachine({ createVmEndpoint: () => vm.endpoint })
+    connectVm(() => {})
+    await settle()
+    for (const phase of ['booting', 'ready', 'restoring', 'booting', 'ready'] as const) {
+      vm.status({ phase, detail: null })
+    }
+    await settle()
+    expect(vm.calls.facts).toBe(2)
   })
 
   it("runs another user's command on the VM, and nothing without one", async () => {

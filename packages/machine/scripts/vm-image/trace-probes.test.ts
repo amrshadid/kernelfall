@@ -30,6 +30,20 @@ describe("the guest's probes", () => {
     expect(probe('tty_7')?.filter).toBe('nr > 1792')
   })
 
+  it("reads a splice's copies from _copy_to_iter's kernel buffer, on only while copy_splice_read runs", () => {
+    expect(probe('splice_0')?.group).toBe('kf_splice')
+    expect(probe('splice_0')?.definition).toMatch(
+      /^p:kf_splice\/splice_0 _copy_to_iter n=\$arg2 t=\+0\(\$arg3\):u8 b0=\+0\(\$arg1\):x32 /
+    )
+    expect(probe('splice_0')?.filter).toBe('t == 2')
+    expect(probe('splice_7')?.filter).toBe('t == 2 && n > 1792')
+    expect(probe('splice_begin')).toMatchObject({ definition: 'p:kf_splice/splice_begin copy_splice_read' })
+    expect(probe('splice_begin')?.triggers).toContain('enable_event:kf_splice:splice_7')
+    expect(probe('splice_end')).toMatchObject({ definition: 'r:kf_splice/splice_end copy_splice_read' })
+    expect(probe('splice_end')?.triggers).toHaveLength(8)
+    expect(probe('splice_end')?.triggers?.[0]).toBe('disable_event:kf_splice:splice_0')
+  })
+
   it("reads paths at return by the argument's register, and execve's at entry", () => {
     expect(probe('path_openat')?.definition).toBe('r:kf/path_openat __ia32_sys_openat p0=+u0(+4($arg1)):ustring')
     expect(probe('path_renameat2')?.definition).toBe(
@@ -42,5 +56,6 @@ describe("the guest's probes", () => {
     const names = TRACE_PROBE_LIST.map((each) => each.name)
     expect(new Set(names).size).toBe(names.length)
     expect(TRACE_PROBE_LIST.some((each) => each.definition.includes('|'))).toBe(false)
+    expect(TRACE_PROBE_LIST.some((each) => each.triggers?.some((trigger) => /[\s|]/.test(trigger)))).toBe(false)
   })
 })

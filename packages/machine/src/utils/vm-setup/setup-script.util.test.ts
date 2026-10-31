@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { runAsScript, setupScript, shellQuote } from '#utils/vm-setup/setup-script.util'
+import { grubConfig, runAsScript, setupNeedsReboot, setupScript, shellQuote } from '#utils/vm-setup/setup-script.util'
 
 const decoded = (line: string | undefined) => {
   const b64 = line?.match(/^echo (\S+) \| base64 -d/)?.[1]
@@ -85,13 +85,35 @@ describe('setupScript', () => {
   })
 })
 
+describe('setupScript with lab.boot', () => {
+  it("writes the level's command line into GRUB's entry on the boot partition, mounted aside", () => {
+    const args = "console=ttyS0 root=/dev/vda3 ro greeting='hi'"
+    const lines = setupScript({ boot: { args } })
+    expect(lines.slice(0, 3)).toEqual([
+      'mkdir -p /run/kf-boot && mount -t ext4 /dev/sda1 /run/kf-boot',
+      expect.stringMatching(/^echo \S+ \| base64 -d > '\/run\/kf-boot\/boot\/grub\/grub.cfg'$/),
+      'umount /run/kf-boot',
+    ])
+    expect(decoded(lines[1])).toBe(grubConfig(args))
+    expect(decoded(lines[1])).toContain(`\tlinux\t/boot/vmlinuz-virt ${args}\n`)
+    expect(setupNeedsReboot({ boot: { args } })).toBe(true)
+  })
+
+  it('leaves grub.cfg alone without args, and only a boot block reboots', () => {
+    expect(setupScript({ boot: {} })).toEqual(setupScript({}))
+    expect(setupNeedsReboot({ boot: {} })).toBe(true)
+    expect(setupNeedsReboot({ cwd: '/tmp' })).toBe(false)
+    expect(setupNeedsReboot(undefined)).toBe(false)
+  })
+})
+
 describe('runAsScript', () => {
   it('runs the line as the user between run-as markers, the line and user passed as quoted arguments', () => {
     const script = runAsScript('guest', "echo 'knock'")
     expect(script).toMatch(/^sh -c '.*' kf-as 'echo '\\''knock'\\''' 'guest'$/)
     expect(script).toContain('exec 9>/sys/kernel/tracing/trace_marker; echo $$ >> /sys/kernel/tracing/set_event_pid;')
     expect(script).toContain('kf-as-start %s')
-    expect(script).toContain('su -s /bin/sh "$2" -c "$1" < /dev/null')
+    expect(script).toContain('runuser -u "$2" -- sh -c "$1" < /dev/null')
     expect(script).toContain('echo "kf-as-end $status" >&9')
   })
 })

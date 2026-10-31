@@ -23,16 +23,40 @@ import {
   type VmFacts,
   type VmManifest,
   type VmSession,
+  type VmSetupOptions,
   type VmStartOptions,
   type VmStatus,
 } from '#types/definitions/vm'
 import { TRACE_PROGRESS_MS, type TracedCommand } from '#types/definitions/vm-trace'
 import { BOOT_REPORT_SCRIPT, parseBootReport } from '#utils/boot/index'
 import { runAsScript, shellQuote } from '#utils/vm-setup/index'
+import { mergeProgress } from '#utils/vm-trace/index'
 
 const PROMPT_TAIL = 64
 const CONTROL_UART = 2
+const REBOOT = 'reboot'
 const settle = () => new Promise((resolve) => setTimeout(resolve, VM_RESTORE_SETTLE_MS))
+
+// v86 internals: no public API reaches them.
+interface V86Cpu {
+  option_roms: unknown[]
+  reboot_internal: () => void
+}
+
+/** v86's kernel ROM would jump to a stale kernel, so restarts boot SeaBIOS → GRUB from the disk. */
+function bootDiskOnReset(emulator: V86, onReset: () => void) {
+  const cpu = (emulator as unknown as { v86?: { cpu?: Partial<V86Cpu> } }).v86?.cpu
+  if (typeof cpu?.reboot_internal !== 'function' || !Array.isArray(cpu.option_roms)) {
+    return
+  }
+  const reset = cpu.reboot_internal.bind(cpu)
+  const roms = cpu.option_roms
+  cpu.reboot_internal = () => {
+    roms.length = 0
+    onReset()
+    reset()
+  }
+}
 
 /** One Linux VM in this worker: the console goes out as bytes, keys come in as text. `wasmUrl` is
  * the emulator a start without its own uses. */
@@ -51,6 +75,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
   let status: (phase: VmStatus['phase'], detail?: string | null) => void = () => {}
   let resetTrace: () => void = () => {}
   let nextPrompt: () => Promise<void> = async () => {}
+  let rebooting = false
   // Keys typed while a level is set up wait for its new shell: the restore and the shell's restart
   // would lose them.
   let heldInput: string[] | null = null
@@ -111,6 +136,13 @@ export function createVmSession(wasmUrl?: string): VmSession {
         let tail = ''
         let atPrompt = Boolean(saved)
         running.add_listener('emulator-ready', () => {
+          // v86 creates its CPU only once the wasm has loaded.
+          bootDiskOnReset(running, () => {
+            rebooting = true
+            control.drop()
+            resetTrace()
+            status('booting')
+          })
           if (!saved) {
             status('booting')
             return
@@ -137,6 +169,13 @@ export function createVmSession(wasmUrl?: string): VmSession {
             onPrompt()
             onPrompt = null
           }
+          // Never saved: the clean boot is the first one.
+          if (rebooting && VM_PROMPT.test(tail)) {
+            rebooting = false
+            status('ready')
+            markReady()
+            return
+          }
           if (atPrompt || !VM_PROMPT.test(tail)) {
             return
           }
@@ -159,7 +198,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
         const newTrace = () =>
           createVmTrace({
             onProgress: (command) => {
-              progress = command
+              progress = mergeProgress(progress, command)
             },
             onFinished: (command) => {
               progress = null
@@ -226,7 +265,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
       })
     },
 
-    setupLevel(lines) {
+    setupLevel(lines, options: VmSetupOptions = {}) {
       // From the request on: keys typed while it waits its turn would reach the shell it replaces.
       heldInput = heldInput ?? []
       return exclusive(async () => {
@@ -243,9 +282,14 @@ export function createVmSession(wasmUrl?: string): VmSession {
             await running.restore_state(clean.slice(0))
             await settle()
             resetTrace()
+            rebooting = false
           }
           for (const line of lines) {
             await control.capture(line, VM_SETUP_TIMEOUT_MS)
+          }
+          if (options.reboot) {
+            await control.run(REBOOT)
+            return
           }
           const prompt = nextPrompt()
           await control.run(`kill -9 "$(cat ${VM_SHELL_PID_FILE})"`)
@@ -280,6 +324,12 @@ export function createVmSession(wasmUrl?: string): VmSession {
         status = (await control.capture(runAsScript(user, commandLine), VM_SETUP_TIMEOUT_MS)).status
       })
       return status
+    },
+
+    reboot() {
+      return exclusive(async () => {
+        await control.run(REBOOT)
+      })
     },
 
     async stop() {

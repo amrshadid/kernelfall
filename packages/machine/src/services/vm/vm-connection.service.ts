@@ -3,17 +3,17 @@ import { proxy, type Remote, wrap } from 'comlink'
 import { getMachineConfig } from '#config'
 import { type BootedPayload, type CommandFinishedPayload, type CommandProgressPayload, LAB_EVENTS } from '#events/types'
 import type { MachineEndpoint } from '#types/definitions/endpoint'
-import type { VmFacts, VmSession, VmStatus } from '#types/definitions/vm'
+import type { VmFacts, VmSession, VmSetupOptions, VmStatus } from '#types/definitions/vm'
 import type { TracedCommand } from '#types/definitions/vm-trace'
 
 const SOURCE = 'machine/vm'
 
 /** A command's events go out on the bus the trace store, X-ray and the checkers already follow. */
-function publishCommand({ commandLine, status, events }: TracedCommand): void {
+function publishCommand({ commandLine, status, events, from = 0 }: TracedCommand): void {
   if (status === null) {
     eventBus.emit<CommandProgressPayload>(
       LAB_EVENTS.COMMAND_PROGRESS,
-      { command: { commandLine }, events },
+      { command: { commandLine }, from, events },
       { source: SOURCE }
     )
   } else {
@@ -54,6 +54,7 @@ export function connectVm(
   const started: VmConnection = { endpoint, session: wrap<VmSession>(endpoint) }
   connection = started
   let asked = false
+  let rebooted = false
   void started.session.start(
     { baseUrl: config.vmBaseUrl, ...(config.vmWasmUrl === null ? {} : { wasmUrl: config.vmWasmUrl }) },
     proxy((bytes: Uint8Array) => {
@@ -67,8 +68,13 @@ export function connectVm(
         return
       }
       onStatus(status)
-      if (status.phase === 'ready' && !asked) {
+      // A restart is a new boot, with its own record (the boot levels judge it).
+      if (asked && status.phase === 'booting') {
+        rebooted = true
+      }
+      if (status.phase === 'ready' && (!asked || rebooted)) {
         asked = true
+        rebooted = false
         void started.session.facts().then((facts) => {
           if (connection !== started) {
             return
@@ -121,14 +127,29 @@ export async function writeVmFiles(files: Readonly<Record<string, string>>): Pro
  * coming back to the same level's screen keeps what the player made there. `onStart` runs only
  * when the setup really begins.
  */
-export async function setupVmLevel(key: string, lines: readonly string[], onStart?: () => void): Promise<boolean> {
+export async function setupVmLevel(
+  key: string,
+  lines: readonly string[],
+  onStart?: () => void,
+  options: VmSetupOptions = {}
+): Promise<boolean> {
   const running = connection
   if (!running || setupKeys.get(running) === key) {
     return false
   }
   setupKeys.set(running, key)
   onStart?.()
-  await running.session.setupLevel(lines)
+  await running.session.setupLevel(lines, options)
+  return true
+}
+
+/** Restarts the Machine through SeaBIOS and GRUB; false while no VM runs. */
+export async function rebootVm(): Promise<boolean> {
+  const running = connection
+  if (!running) {
+    return false
+  }
+  await running.session.reboot()
   return true
 }
 

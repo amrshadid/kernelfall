@@ -15,16 +15,18 @@ import { TRACE_PROBE_LIST } from '#vm-image/trace-probes'
 const TRACING = '/sys/kernel/tracing'
 
 // Started at boot, outside the shell, so the reader never traces itself; kf-shell turns tracing on.
-// A probe whose function this kernel lacks is skipped; the rest still load.
+// A probe whose function this kernel lacks is skipped; the rest still load. Triggers go in with >>:
+// O_TRUNC on a trigger file removes the others.
 export const TRACE = `#!/bin/sh
 T=${TRACING}
 echo 0 > $T/tracing_on
 echo 4096 > $T/buffer_size_kb
-while IFS='|' read -r name definition filter; do
+while IFS='|' read -r event definition filter triggers; do
   echo "$definition" >> $T/dynamic_events 2>/dev/null || continue
-  [ -n "$filter" ] && echo "$filter" > $T/events/${VM_TRACE_GROUP}/$name/filter
+  [ -n "$filter" ] && echo "$filter" > $T/events/$event/filter
+  for trigger in $triggers; do echo "$trigger" >> $T/events/$event/trigger; done
 done <<'PROBES'
-${TRACE_PROBE_LIST.map((probe) => `${probe.name}|${probe.definition}|${probe.filter ?? ''}`).join('\n')}
+${TRACE_PROBE_LIST.map((probe) => [`${probe.group ?? VM_TRACE_GROUP}/${probe.name}`, probe.definition, probe.filter ?? '', probe.triggers?.join(' ') ?? ''].join('|')).join('\n')}
 PROBES
 echo 1 > $T/events/syscalls/enable
 echo 1 > $T/events/${VM_TRACE_GROUP}/enable
@@ -110,17 +112,31 @@ exec su -l "$(cat ${VM_PLAYER_FILE} 2>/dev/null || echo ${VM_PLAYER.name})"
 
 // The 9p root is v86's "host9p" share; its modules come from this initramfs. cache=mmap, not
 // loose: loose keeps a file's old pages, so an edit the editor writes would never reach gcc.
+// root= is honored so a wrong one in GRUB stops here, in a shell, as Alpine's initramfs does.
 export const INIT = `#!/bin/busybox sh
 /bin/busybox --install -s /bin
 mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t devtmpfs dev /dev
-for m in netfs 9pnet 9pnet_virtio 9p; do insmod /lib/$m.ko; done
+for m in netfs 9pnet 9pnet_virtio 9p sd_mod; do insmod /lib/$m.ko; done
+root=host9p fstype=9p flags=
+for arg in $(cat /proc/cmdline); do
+  case $arg in
+    root=*) root=\${arg#root=} ;;
+    rootfstype=*) fstype=\${arg#rootfstype=} ;;
+    rootflags=*) flags=\${arg#rootflags=} ;;
+  esac
+done
+[ "$fstype" = 9p ] && flags=\${flags:-trans=virtio,version=9p2000.L,cache=mmap,msize=512000}
 mkdir -p /newroot
-mount -t 9p -o trans=virtio,version=9p2000.L,cache=mmap,msize=512000 host9p /newroot || exec sh
+until mount -t "$fstype" -o "\${flags:-defaults}" "$root" /newroot; do
+  echo "Mounting root $root failed."
+  echo "initramfs emergency recovery shell launched. Type 'exit' to try again."
+  sh
+done
 mount --move /dev /newroot/dev
 umount /proc /sys
-exec switch_root /newroot /sbin/init
+exec switch_root /newroot /sbin/init "$@"
 `
 
 export function guestFile(path: string, content: string, mode = 0o644): ArchiveEntry {

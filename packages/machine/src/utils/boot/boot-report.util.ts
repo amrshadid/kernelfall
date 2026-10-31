@@ -5,7 +5,7 @@ const SECTION = '@kf:'
 const SECTIONS = ['dmesg', 'pci', 'net', 'mounts', 'meminfo', 'cpus'] as const
 type Section = (typeof SECTIONS)[number]
 
-// busybox dmesg reads 16 KiB unless told more, which cuts the start of the boot.
+// More than the 128 KiB log buffer, so the whole boot comes back whatever BusyBox reads by default.
 const DMESG_BYTES = 1 << 20
 
 const COMMANDS: Readonly<Record<Section, string>> = {

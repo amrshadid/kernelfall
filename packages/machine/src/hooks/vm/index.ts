@@ -3,6 +3,7 @@ export { type CommandResult, useCommandResults } from '#hooks/vm/useCommandResul
 export { type UseLinuxTerminalResult, useLinuxTerminal } from '#hooks/vm/useLinuxTerminal.hook'
 export { useMachineCpus } from '#hooks/vm/useMachineCpus.hook'
 export { type UseMachineFilesResult, useMachineFiles } from '#hooks/vm/useMachineFiles.hook'
+export { type UseMachineRebootResult, useMachineReboot } from '#hooks/vm/useMachineReboot.hook'
 export { useMachineSetup } from '#hooks/vm/useMachineSetup.hook'
 export { useMachineStatus } from '#hooks/vm/useMachineStatus.hook'
 export { type UseRunAsResult, useRunAs } from '#hooks/vm/useRunAs.hook'

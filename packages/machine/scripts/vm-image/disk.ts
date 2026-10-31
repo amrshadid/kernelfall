@@ -1,13 +1,22 @@
 // The Machine's data disk: an MBR with one ext4 partition, made by the guest's own mke2fs (Alpine's
-// pinned e2fsprogs) on a blank disk, so the host needs no root, Docker or filesystem tools.
+// pinned e2fsprogs) on a blank disk, so the host needs no root, Docker or filesystem tools. Its GRUB
+// boots the Machine on a restart.
 import { join } from 'node:path'
 import { V86 } from 'v86'
 import { createVmControl } from '#services/vm/vm-control.service'
-import { VM_CMDLINE, VM_MEMORY_BYTES, VM_NET_DEVICE, VM_PROMPT } from '#types/definitions/vm'
-import { shellQuote } from '#utils/vm-setup/setup-script.util'
+import {
+  VM_BOOT_FS_UUID,
+  VM_CMDLINE,
+  VM_GRUB_CFG,
+  VM_MEMORY_BYTES,
+  VM_NET_DEVICE,
+  VM_PROMPT,
+} from '#types/definitions/vm'
+import { grubConfig, shellQuote } from '#utils/vm-setup/setup-script.util'
 
 const SECTOR = 512
-export const DISK_BYTES = 8 * 1024 * 1024
+/** Room for the 8 MB kernel and GRUB; the saved boot carries all of it, so no bigger. */
+export const DISK_BYTES = 16 * 1024 * 1024
 /** fdisk's default first sector: 1 MiB in, aligned for any disk. */
 const FIRST_SECTOR = 2048
 const LINUX_PARTITION = 0x83
@@ -16,13 +25,16 @@ const MBR_SIGNATURE = 0xaa55
 /** The MBR's disk id, fixed so the image is the same every build. */
 const DISK_ID = 0x4b46_0001
 /** Fixed for the same reason: mke2fs would pick a random UUID, hash seed and the current time. */
-const FS_UUID = '6b65726e-656c-4661-916c-000000000001'
+const FS_UUID = VM_BOOT_FS_UUID
 const FS_LABEL = 'kernelfall'
 const FS_TIME = 1_793_404_800
 const BOOT_TIMEOUT_MS = 300_000
 const MKFS_TIMEOUT_MS = 120_000
 const CONTROL_UART = 2
 const STAGING = '/tmp/kf-disk'
+const MOUNT = '/mnt'
+
+export const GRUB_CFG = grubConfig(VM_CMDLINE)
 
 /** What the disk holds; mke2fs adds lost+found. Owned by root, as a fresh disk's files are. */
 export const DISK_FILES: Readonly<Record<string, string>> = {
@@ -54,19 +66,28 @@ export function blankDisk(): Uint8Array<ArrayBuffer> {
   return disk
 }
 
-/** The root commands that stage DISK_FILES and make the filesystem on /dev/sda1 from them. */
+/** The root commands that stage DISK_FILES and /boot, install GRUB and make sda1's filesystem. */
 export function diskScript(): string[] {
   const base64 = (text: string) => btoa(String.fromCodePoint(...new TextEncoder().encode(text)))
+  const write = (path: string, text: string) => {
+    const file = shellQuote(`${STAGING}/${path}`)
+    return `mkdir -p "$(dirname ${file})" && echo ${base64(text)} | base64 -d > ${file}`
+  }
+  const mkfs = `E2FSPROGS_FAKE_TIME=${FS_TIME} mke2fs -q -F -t ext4 -L ${FS_LABEL} -U ${FS_UUID} -E hash_seed=${FS_UUID},root_owner=0:0 -d ${STAGING} /dev/sda1`
   return [
     'modprobe sd_mod && until [ -b /dev/sda1 ]; do sleep 1; done',
     // mke2fs -d copies each file's ctime, which only the clock sets: this guest lives for the build.
     `date -s @${FS_TIME} > /dev/null`,
-    ...Object.entries(DISK_FILES).map(([path, text]) => {
-      const file = shellQuote(`${STAGING}/${path}`)
-      return `mkdir -p "$(dirname ${file})" && echo ${base64(text)} | base64 -d > ${file}`
-    }),
-    `find ${STAGING} -exec touch -d @${FS_TIME} {} +`,
-    `E2FSPROGS_FAKE_TIME=${FS_TIME} mke2fs -q -F -t ext4 -L ${FS_LABEL} -U ${FS_UUID} -E hash_seed=${FS_UUID},root_owner=0:0 -d ${STAGING} /dev/sda1 && sync`,
+    ...Object.entries(DISK_FILES).map(([path, text]) => write(path, text)),
+    `mkdir -p ${STAGING}/boot && cp /boot/vmlinuz-virt /boot/initramfs-virt ${STAGING}/boot/`,
+    write(VM_GRUB_CFG.slice(1), GRUB_CFG),
+    // grub-install needs a mounted /boot; its files are staged and the filesystem made again, since
+    // one the kernel wrote would differ every build. core.img sits before sector 2048, untouched.
+    mkfs,
+    `mount /dev/sda1 ${MOUNT} && grub-install --target=i386-pc --boot-directory=${MOUNT}/boot --fonts= --locales= --themes= /dev/sda && cp -a ${MOUNT}/boot/grub/. ${STAGING}/boot/grub/ && umount ${MOUNT}`,
+    // grub-install took a varying time: the clock goes back for the ctimes.
+    `date -s @${FS_TIME} > /dev/null && find ${STAGING} -exec touch -d @${FS_TIME} {} +`,
+    `${mkfs} && sync`,
   ]
 }
 

@@ -47,11 +47,16 @@ export interface BootRecord {
   readonly log: readonly KernelLogLine[]
 }
 
-/** A level.yaml `lab.boot:` block: how the Machine's boot entry reads before the player touches it. */
+/**
+ * A level.yaml `lab.boot:` block: the level starts at GRUB's menu. No firmware choice: the Machine
+ * has SeaBIOS only.
+ */
 export interface LabBootSetup {
-  /** The boot entry's kernel arguments. */
+  /**
+   * The whole command line GRUB's entry gives the kernel, written into grub.cfg. Left out, the
+   * Machine's own (VM_CMDLINE).
+   */
   readonly args?: string
-  readonly firmware?: FirmwareKind
 }
 
 /** The kernel's file in the image, as Alpine's linux-virt installs it. */

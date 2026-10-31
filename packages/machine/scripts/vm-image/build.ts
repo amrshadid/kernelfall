@@ -1,10 +1,11 @@
 // Builds the Linux image the game's VM boots: Alpine x86 with gcc, from pinned packages.
-// Usage: pnpm vm:image [--update] [--mirror-out <dir>]
+// Usage: pnpm vm:image [--update] [--mirror-out <dir>] [--out <dir>]
 //   --update             re-pins versions and checksums in vm-image.lock.json
 //   --mirror-out <dir>   also writes every pinned download there, flat, for the mirror release
+//   --out <dir>          writes the image there instead of apps/web/public/vm
 // Downloads fall back to the mirror (KF_VM_MIRROR, default DEFAULT_MIRROR) when upstream lacks them.
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import { SHADOW_GID } from '#types/definitions/cred'
@@ -55,9 +56,15 @@ const PACKAGES = [
   'setpriv',
   'lscpu',
   'lsblk',
+  // On the data disk, for the boot levels (disk.ts).
+  'grub',
+  'grub-bios',
 ]
-// modules.dep order: each one after what it needs.
-const NINEP_MODULES = ['fs/netfs/netfs', 'net/9p/9pnet', 'net/9p/9pnet_virtio', 'fs/9p/9p']
+// grub wants mkinitfs; this build makes the initramfs itself.
+const NOT_INSTALLED = ['initramfs-generator']
+// modules.dep order: each one after what it needs. sd_mod: /dev/sda in a stuck boot's shell.
+const INITRAMFS_MODULES = ['fs/netfs/netfs', 'net/9p/9pnet', 'net/9p/9pnet_virtio', 'fs/9p/9p', 'drivers/scsi/sd_mod']
+const INITRAMFS_PATH = 'boot/initramfs-virt'
 const V86_COMMIT = '94faf3d6b19ecabc53a4010aaa24252fa6a162e2'
 const BIOS = ['seabios.bin', 'vgabios.bin']
 
@@ -69,7 +76,11 @@ interface Lock {
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repo = join(here, '../../../..')
-const out = join(repo, 'apps/web/public/vm')
+const outAt = process.argv.indexOf('--out')
+if (outAt !== -1 && !process.argv[outAt + 1]) {
+  throw new Error('--out needs a directory')
+}
+const out = outAt === -1 ? join(repo, 'apps/web/public/vm') : resolvePath(process.argv[outAt + 1] ?? '')
 const cache = join(repo, 'node_modules/.cache/kernelfall-vm')
 const lockPath = join(here, 'vm-image.lock.json')
 const update = process.argv.includes('--update')
@@ -123,7 +134,8 @@ async function main() {
     throw new Error(`Alpine has no ${KERNEL_PACKAGE}`)
   }
   // Without the kernel's own dependencies (mkinitfs, kmod): they build initramfs images on a real install; ours is made here.
-  const wanted = [...resolve(PACKAGES, index, installedNames(rootfs)), kernelPackage]
+  const skipped = new Set([...installedNames(rootfs), ...NOT_INSTALLED])
+  const wanted = [...resolve(PACKAGES, index, skipped), kernelPackage]
   const packages: ArchiveEntry[][] = []
   for (const found of wanted) {
     const locked = lock.packages[found.name]
@@ -177,12 +189,6 @@ async function main() {
     ],
   ])
 
-  // Built aside, then moved to vm/<version>/: only manifest.json keeps a fixed name.
-  rmSync(out, { recursive: true, force: true })
-  const image = join(out, 'next')
-  mkdirSync(join(image, 'bios'), { recursive: true })
-  const { files, bytes } = writeV86Fs(tree, image)
-
   const fileOf = (path: string) => {
     const entry = tree.get(path)
     if (!entry) {
@@ -191,17 +197,25 @@ async function main() {
     return entry.data
   }
   const kernel = fileOf('boot/vmlinuz-virt')
-  writeFileSync(join(image, 'vmlinuz'), kernel)
   const initramfs = writeCpioGz([
     ...['bin', 'dev', 'lib', 'proc', 'sys', 'newroot'].map((path) => ({ path, mode: 0o40755, data: new Uint8Array() })),
     { path: 'bin/busybox', mode: 0o100755, data: fileOf('bin/busybox.static') },
     { path: 'init', mode: 0o100755, data: new TextEncoder().encode(INIT) },
-    ...NINEP_MODULES.map((module) => ({
+    ...INITRAMFS_MODULES.map((module) => ({
       path: `lib/${module.split('/').pop()}.ko`,
       mode: 0o100644,
       data: gunzipSync(fileOf(`lib/modules/${kernelRelease}/kernel/${module}.ko.gz`)),
     })),
   ])
+  // Where mkinitfs puts it; disk.ts copies it for GRUB.
+  tree.set(INITRAMFS_PATH, { ...guestFile(INITRAMFS_PATH, ''), data: initramfs })
+
+  // Built aside, then moved to vm/<version>/: only manifest.json keeps a fixed name.
+  rmSync(out, { recursive: true, force: true })
+  const image = join(out, 'next')
+  mkdirSync(join(image, 'bios'), { recursive: true })
+  const { files, bytes } = writeV86Fs(tree, image)
+  writeFileSync(join(image, 'vmlinuz'), kernel)
   writeFileSync(join(image, 'initramfs.cpio.gz'), initramfs)
 
   for (const name of BIOS) {

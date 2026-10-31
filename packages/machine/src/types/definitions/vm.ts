@@ -42,13 +42,20 @@ export interface VmSession {
   input(text: string): void
   /** Writes files into the player's home, once bash is up, owned by the player; flat names only. */
   writeFiles(files: Readonly<Record<string, string>>): Promise<void>
-  /** Back to the clean boot, then a level's setup commands as root, then a new shell in its session. */
-  setupLevel(lines: readonly string[]): Promise<void>
+  /** Back to the clean boot, then a level's setup commands as root, then a new shell (or a reboot). */
+  setupLevel(lines: readonly string[], options?: VmSetupOptions): Promise<void>
   /** What the guest reports about itself, once bash is up. */
   facts(): Promise<VmFacts>
   /** Runs a command line as another user, traced like the player's: its run arrives through onCommand. */
   runAs(user: string, commandLine: string): Promise<number>
+  /** Root's `reboot`, through SeaBIOS and GRUB on the data disk; resolves once the shutdown begins. */
+  reboot(): Promise<void>
   stop(): Promise<void>
+}
+
+export interface VmSetupOptions {
+  /** For the boot levels: GRUB's menu instead of a new shell. */
+  readonly reboot?: boolean
 }
 
 /** v86 emulates one CPU (owner's decision: the game teaches on one); the guest's answer replaces it. */
@@ -99,11 +106,18 @@ export const VM_TRACE_AS_END = 'kf-as-end'
 export const VM_NET_DEVICE = { type: 'virtio' } as const
 /** The data disk beside the image (v86's hda, the guest's /dev/sda): built by `pnpm vm:image`. */
 export const VM_DISK_FILE = 'disk.img'
+/** Holds /boot (GRUB, kernel, initramfs); not mounted at boot. */
+export const VM_BOOT_PARTITION = '/dev/sda1'
+/** On VM_BOOT_PARTITION. */
+export const VM_GRUB_CFG = '/boot/grub/grub.cfg'
+/** VM_BOOT_PARTITION's ext4 UUID, fixed so the image is the same every build; GRUB finds /boot by it. */
+export const VM_BOOT_FS_UUID = '6b65726e-656c-4661-916c-000000000001'
 /** Enough for gcc on a small program; the saved boot grows with it. */
 export const VM_MEMORY_BYTES = 256 * 1024 * 1024
 /** Alpine's /etc/profile sets PS1 to `\h:\w\$ `: `$` for the player, `#` for root. */
 export const VM_PROMPT = /kernelfall:[^\n]*[$#] $/
 // linux-virt's log buffer is 16 KiB, about one boot: 128K keeps the boot in dmesg as levels add to it.
+// GRUB's entry boots this same line, so both boots match.
 export const VM_CMDLINE = 'console=ttyS0 rw tsc=reliable mitigations=off random.trust_cpu=on log_buf_len=128K quiet'
 /** Content-addressed image files, so a cached one never goes stale. */
 export const VM_FILE_CACHE = 'kernelfall-vm-files-v1'

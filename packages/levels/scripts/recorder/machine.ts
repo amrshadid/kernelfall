@@ -93,7 +93,10 @@ export async function bootMachine(repo: string, vm = join(repo, 'apps/web/public
     },
     (command) => {
       if (command.status === null) {
-        running = command
+        // A live update carries only the events from `from` on, like the game's trace store splices them.
+        const from = command.from ?? 0
+        const earlier = running?.commandLine === command.commandLine ? running.events.slice(0, from) : []
+        running = { ...command, events: [...earlier, ...command.events] }
       } else {
         running = null
         finished.push(command)

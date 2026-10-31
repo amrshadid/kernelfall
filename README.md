@@ -1,6 +1,6 @@
 # Kernelfall
 
-[![Play](https://img.shields.io/badge/play-kernelfall.shadid.dev-d42a1f?logo=vercel&logoColor=white)](https://kernelfall.shadid.dev)
+[![Play](https://img.shields.io/badge/play-kernelfall.shadid.dev-1a1a1a?logo=vercel&logoColor=white)](https://kernelfall.shadid.dev)
 [![CI](https://github.com/amrshadid/kernelfall/actions/workflows/ci.yml/badge.svg)](https://github.com/amrshadid/kernelfall/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/amrshadid/kernelfall?include_prereleases&sort=semver)](https://github.com/amrshadid/kernelfall/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)

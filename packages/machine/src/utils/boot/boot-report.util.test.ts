@@ -10,6 +10,11 @@ describe("the guest's boot report", () => {
     expect(BOOT_REPORT_SCRIPT).toContain('dmesg -s 1048576')
   })
 
+  it('gives back the pids it took, with builtins only around it', () => {
+    expect(BOOT_REPORT_SCRIPT.startsWith('read kf_pid < /proc/sys/kernel/ns_last_pid; ')).toBe(true)
+    expect(BOOT_REPORT_SCRIPT.endsWith('; echo "$kf_pid" > /proc/sys/kernel/ns_last_pid; unset kf_pid')).toBe(true)
+  })
+
   it("sums up the VM's real boot", () => {
     const facts = parseBootReport(BOOT_REPORT)
     expect(facts.cpus).toBe(1)

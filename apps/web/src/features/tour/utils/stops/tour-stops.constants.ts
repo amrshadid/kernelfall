@@ -12,13 +12,6 @@ export const MAX_STOP_TEXT_LENGTH = 140
 export const TOUR_STOPS: Readonly<Record<TourScreen, readonly TourStop[]>> = {
   title: [
     {
-      id: 'title:wordmark',
-      selector: '.title__wordmark',
-      title: 'The Syscall Gate',
-      text: 'The red line is the Syscall Gate: Userland above, the Kernel below. You start up top and work your way down.',
-      side: 'bottom',
-    },
-    {
       id: 'title:start',
       // The button itself, not its wrapper with the "where you are" lines under it.
       selector: '.title__continue [data-primary]',

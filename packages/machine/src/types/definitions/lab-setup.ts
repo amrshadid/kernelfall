@@ -88,8 +88,8 @@ export interface LabSetup {
   /** Programs running before the player's first command, started in order (see `resolveLabProcesses()`). */
   readonly processes?: readonly LabProcess[]
   /**
-   * The Machine's firmware and boot entry. Validated, not applied: v86 boots the kernel directly,
-   * with no bootloader to configure yet.
+   * GRUB's entry; with it, the setup restarts the Machine, so nothing in tmpfs (/run, /tmp) or
+   * running survives it.
    */
   readonly boot?: LabBootSetup
 }

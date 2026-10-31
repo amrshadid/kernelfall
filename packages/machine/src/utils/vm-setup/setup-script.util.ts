@@ -1,7 +1,11 @@
+import type { LabBootSetup } from '#types/definitions/boot'
 import type { LabPath, LabSetup } from '#types/definitions/lab-setup'
 import {
   VM_BIN_DIR,
   VM_BIN_SOURCE_DIR,
+  VM_BOOT_FS_UUID,
+  VM_BOOT_PARTITION,
+  VM_GRUB_CFG,
   VM_MARKER_FD,
   VM_PLAYER,
   VM_PLAYER_FILE,
@@ -19,6 +23,7 @@ const SETPRIV = '/bin/setpriv'
 /** How far past a named pid the starting subshell forks; levels name pids close together. */
 const SUBSHELL_PID_GAP = 1000
 const TRACING = '/sys/kernel/tracing'
+const BOOT_MOUNT = '/run/kf-boot'
 
 /** A word the guest's shell takes literally, whatever it holds. */
 export const shellQuote = (text: string): string => `'${text.replace(/'/g, `'\\''`)}'`
@@ -48,8 +53,8 @@ function pathLines(file: LabPath): string[] {
 
 // The helper opens the marker, joins the traced set (>> appends to set_event_pid), then brackets the
 // command with markers of its own, so its events become a command apart from the player's shell.
-// su execs, keeping its pid.
-const RUN_AS = `exec ${VM_MARKER_FD}>${TRACING}/trace_marker; echo $$ >> ${TRACING}/set_event_pid; printf '${VM_TRACE_AS_START} %s\\n' "$1" >&${VM_MARKER_FD}; su -s /bin/sh "$2" -c "$1" < /dev/null; status=$?; echo "${VM_TRACE_AS_END} $status" >&${VM_MARKER_FD}; exit $status`
+// runuser, as S.2's story has init knock: it forks for its PAM session and runs the line in the child.
+const RUN_AS = `exec ${VM_MARKER_FD}>${TRACING}/trace_marker; echo $$ >> ${TRACING}/set_event_pid; printf '${VM_TRACE_AS_START} %s\\n' "$1" >&${VM_MARKER_FD}; runuser -u "$2" -- sh -c "$1" < /dev/null; status=$?; echo "${VM_TRACE_AS_END} $status" >&${VM_MARKER_FD}; exit $status`
 
 /**
  * One root line that runs `commandLine` as `user` inside the traced set: its events reach the
@@ -57,6 +62,41 @@ const RUN_AS = `exec ${VM_MARKER_FD}>${TRACING}/trace_marker; echo $$ >> ${TRACI
  */
 export const runAsScript = (user: string, commandLine: string): string =>
   `sh -c ${shellQuote(RUN_AS)} kf-as ${shellQuote(commandLine)} ${shellQuote(user)}`
+
+// grub-mkconfig's entry for Alpine's /etc/default/grub, by hand: grub-mkconfig can't probe a 9p root.
+// SIMPLIFIED: no countdown (no timers in the game); Alpine's boots after 2 seconds.
+export const grubConfig = (args: string): string => `serial --unit=0 --speed=115200
+terminal_input serial
+terminal_output serial
+set default=0
+set timeout=-1
+
+menuentry 'Alpine, with Linux virt' {
+\tinsmod gzio
+\tinsmod part_msdos
+\tinsmod ext2
+\tsearch --no-floppy --fs-uuid --set=root ${VM_BOOT_FS_UUID}
+\techo\t'Loading Linux virt ...'
+\tlinux\t/boot/vmlinuz-virt ${args}
+\techo\t'Loading initial ramdisk ...'
+\tinitrd\t/boot/initramfs-virt
+}
+`
+
+// The player's /mnt is theirs to mount on; the boot partition goes on a private, empty one.
+function bootLines(boot: LabBootSetup): string[] {
+  if (boot.args === undefined) {
+    return []
+  }
+  return [
+    `mkdir -p ${BOOT_MOUNT} && mount -t ext4 ${VM_BOOT_PARTITION} ${BOOT_MOUNT}`,
+    writeText(`${BOOT_MOUNT}${VM_GRUB_CFG}`, grubConfig(boot.args)),
+    `umount ${BOOT_MOUNT}`,
+  ]
+}
+
+/** The boot levels start at GRUB's menu, on the entry their setup wrote. */
+export const setupNeedsReboot = (setup: LabSetup | undefined): boolean => setup?.boot !== undefined
 
 /** Where a `lab.bin` program's C source goes (or is already, from `lab.files`), and its binary. */
 export const binSourcePath = (name: string) => `${VM_BIN_SOURCE_DIR}/${name}.c`
@@ -75,8 +115,9 @@ function buildLines(names: readonly string[], sources: Readonly<Record<string, s
 
 /**
  * The root commands that make the clean Machine into a level's: accounts, files, the programs it
- * builds (`lab.bin`, from `binSources` or a source `lab.files` put in place), the player's session
- * (who, where, which environment) and the programs init has running. One command per line.
+ * builds (`lab.bin`, from `binSources` or a source `lab.files` put in place), GRUB's entry
+ * (`lab.boot`), the player's session (who, where, which environment) and the programs init has
+ * running. One command per line. A setup with `lab.boot` ends in a reboot (`setupNeedsReboot()`).
  */
 export function setupScript(setup: LabSetup, binSources: Readonly<Record<string, string>> = {}): string[] {
   const accounts = resolveAccounts(setup)
@@ -107,6 +148,7 @@ export function setupScript(setup: LabSetup, binSources: Readonly<Record<string,
   }
   // After the files, so a source a level ships in lab.files is there; before processes, which may run them.
   lines.push(...buildLines(setup.bin ?? [], binSources))
+  lines.push(...(setup.boot ? bootLines(setup.boot) : []))
 
   const session = [
     ...(setup.cwd === undefined ? [] : [`cd ${shellQuote(setup.cwd)}`]),

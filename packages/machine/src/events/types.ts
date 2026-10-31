@@ -31,7 +31,9 @@ export interface CommandFinishedPayload {
 
 export interface CommandProgressPayload {
   readonly command: { readonly commandLine: string }
-  /** Everything since the command started, not only what is new. */
+  /** Where `events` starts in the run: what came before is unchanged since the last update. */
+  readonly from: number
+  /** The run's events from `from` on: the new ones, and any earlier one a probe has since completed. */
   readonly events: readonly LabEvent[]
 }
 
@@ -68,7 +70,7 @@ type LabEventKind =
       readonly name: string
       /** A negative value is -errno. */
       readonly ret: number
-      /** The start of a user buffer the call filled, after a successful return. */
+      /** The start of a user buffer the call filled, or of what sendfile or splice moved. */
       readonly data?: Uint8Array
       /** The call filled more bytes than `data` holds. */
       readonly dataCut?: boolean

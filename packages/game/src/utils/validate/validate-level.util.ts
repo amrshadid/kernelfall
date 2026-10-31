@@ -1,7 +1,8 @@
 import type { StringRule, Validated } from '@kernelfall/core/types'
 import { Issues, ObjectReader, reportDuplicates } from '@kernelfall/core/utils'
 import type { LabSetup } from '@kernelfall/machine/types'
-import { validateLabSetup } from '@kernelfall/machine/utils'
+import { findUser, resolveAccounts, validateLabSetup } from '@kernelfall/machine/utils'
+import { SYSCALL_NAME_PATTERN } from '#types/definitions/checks'
 import { HINT_TIERS } from '#types/definitions/hints'
 import type {
   CodexCard,
@@ -10,6 +11,7 @@ import type {
   LevelHints,
   LevelLocation,
   Objective,
+  RunAsCue,
   StoryRefs,
   TaintRule,
 } from '#types/definitions/level'
@@ -38,14 +40,17 @@ const LEVEL_FIELDS = [
   'hints',
   'chips',
   'xray',
+  'xrayFocus',
   'codex',
   'taint',
   'fidelity',
   'story',
   'lab',
+  'runAs',
 ] as const
 
 const SLUG: StringRule = { pattern: SLUG_PATTERN, expected: 'a kebab-case id like fork-exec' }
+const SYSCALL_NAME: StringRule = { pattern: SYSCALL_NAME_PATTERN, expected: 'a syscall name like fork' }
 const STORY_REF: StringRule = {
   pattern: STORY_REF_PATTERN,
   expected: 'a story section like story.md#scene',
@@ -55,6 +60,7 @@ const KERNEL_PATH: StringRule = {
   expected: 'a kernel source path like kernel/fork.c',
 }
 const DOCS_URL: StringRule = { pattern: DOCS_URL_PATTERN, expected: 'an https:// link' }
+const ONE_LINE: StringRule = { pattern: /^[^\n\0]+$/, expected: 'one command line' }
 
 /**
  * Checks a parsed `level.yaml` found in `location`'s folders and returns the
@@ -80,11 +86,13 @@ export function validateLevel(input: unknown, location: LevelLocation): Validate
     hints: readHints(level),
     ...(level.has('chips') ? { chips: level.list('chips', (value, path) => readChip(value, path, issues)) } : {}),
     xray: level.oneOfList('xray', XRAY_VIEWS),
+    ...(level.has('xrayFocus') ? { xrayFocus: level.stringList('xrayFocus', SYSCALL_NAME) } : {}),
     codex: level.list('codex', (value, path) => readCodexCard(value, path, issues)),
     taint: level.list('taint', (value, path) => readTaintRule(value, path, issues)),
     fidelity: readFidelity(level.object('fidelity')),
     story: readStoryRefs(level.object('story')),
     ...(level.has('lab') ? { lab: readLabSetup(level) } : {}),
+    ...(level.has('runAs') ? { runAs: level.list('runAs', (value, path) => readRunAsCue(value, path, issues)) } : {}),
   }
   checkConsistency(definition, issues)
   return issues.result(definition)
@@ -110,6 +118,12 @@ function readObjective(value: unknown, path: string, issues: Issues): Objective 
     text: objective.string('text'),
     ...(objective.has('check') ? { check: readObjectiveCheck(objective.object('check')) } : {}),
   }
+}
+
+function readRunAsCue(value: unknown, path: string, issues: Issues): RunAsCue {
+  const cue = new ObjectReader(value, path, issues)
+  cue.rejectUnknownKeys(['after', 'user', 'command'])
+  return { after: cue.string('after', SLUG), user: cue.string('user'), command: cue.string('command', ONE_LINE) }
 }
 
 function readChip(value: unknown, path: string, issues: Issues): CommandChip {
@@ -220,6 +234,19 @@ function checkConsistency(level: LevelDefinition, issues: Issues): void {
   for (const skill of level.prerequisites.filter((id) => level.skills.includes(id))) {
     issues.add('prerequisites', `"${skill}" is also a skill this level unlocks`)
   }
+  checkRunAs(level, issues)
+}
+
+function checkRunAs(level: LevelDefinition, issues: Issues): void {
+  const accounts = resolveAccounts(level.lab ?? {})
+  level.runAs?.forEach((cue, i) => {
+    if (!level.objectives.some((objective) => objective.id === cue.after)) {
+      issues.add(`runAs[${i}].after`, `no objective "${cue.after}"`)
+    }
+    if (!findUser(accounts, cue.user)) {
+      issues.add(`runAs[${i}].user`, `no user named "${cue.user}" on the level's Machine`)
+    }
+  })
 }
 
 function checkId(level: LevelDefinition, issues: Issues): void {

@@ -232,6 +232,18 @@
     "libcap-ng": {
       "version": "0.8.5-r2",
       "sha256": "cd6579d81e394a88d269bae9b4f6868825c14316cfc56541b116d6d9077a36a9"
+    },
+    "grub-bios": {
+      "version": "2.14-r0",
+      "sha256": "d31d49952a6361e8a7fe9216a336943e6e5244e929eb1e288da52009c647c5dc"
+    },
+    "grub": {
+      "version": "2.14-r0",
+      "sha256": "6372cc79d2d3f14f4c2ed51eb03e65173a94e35142212e4074a224dff4c0a004"
+    },
+    "device-mapper-libs": {
+      "version": "2.03.35-r3",
+      "sha256": "d53be78833c5a6c52a4f54ec69940442f47e521d34bdee22f506b7ca4c0636b4"
     }
   }
 }

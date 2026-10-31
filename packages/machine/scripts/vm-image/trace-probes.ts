@@ -10,6 +10,8 @@ import {
   VM_TRACE_IOVECS,
   VM_TRACE_PATH_ARGS,
   VM_TRACE_READ_CHUNKS,
+  VM_TRACE_SPLICE_CHUNKS,
+  VM_TRACE_SPLICE_GROUP,
   VM_TRACE_TTY_CHUNKS,
   VM_TRACE_WRITE_CHUNKS,
 } from '#types/definitions/vm-trace'
@@ -17,8 +19,11 @@ import {
 /** A probe's definition for dynamic_events, and the filter that keeps a later chunk quiet. */
 export interface TraceProbe {
   readonly name: string
+  /** VM_TRACE_GROUP when absent. */
+  readonly group?: string
   readonly definition: string
   readonly filter?: string
+  readonly triggers?: readonly string[]
 }
 
 // i386 syscall arguments in struct pt_regs: bx, cx, dx, si, di, bp.
@@ -34,7 +39,7 @@ const chunkWords = (base: string, chunk: number, user = true) =>
 
 const chunks = (count: number) => Array.from({ length: count }, (_, chunk) => chunk)
 const after = (field: string, chunk: number) => `${field} > ${chunk * VM_TRACE_CHUNK_BYTES}`
-const event = (name: string) => `${VM_TRACE_GROUP}/${name}`
+const event = (name: string, group = VM_TRACE_GROUP) => `${group}/${name}`
 
 // read() and write() at their return: the data is in the buffer (read), and its page faulted in
 // (write: a string in .rodata may not be until the kernel copies it). ksys_* get their arguments
@@ -70,6 +75,35 @@ const ttyProbes = (): TraceProbe[] =>
     ...(chunk > 0 && { filter: after('nr', chunk) }),
   }))
 
+// include/linux/uio.h: enum iter_type, the first byte of struct iov_iter.
+const ITER_BVEC = 2
+
+// sendfile() and splice() use no user buffer. A source with no page cache (/proc, /sys) is copied
+// into the pipe's pages by _copy_to_iter() from a kernel buffer, read here; it serves every read, so
+// these are on only while copy_splice_read() runs. Page cache is lent and 9p's pages are filled by
+// the virtio device, with no copy: those bytes are seen only on a terminal (n_tty_write).
+const spliceProbes = (): TraceProbe[] => {
+  const group = VM_TRACE_SPLICE_GROUP
+  const data = chunks(VM_TRACE_SPLICE_CHUNKS).map((chunk) => {
+    const name = `${TRACE_PROBES.splice}_${chunk}`
+    const bvec = `t == ${ITER_BVEC}`
+    return {
+      name,
+      group,
+      definition: `p:${event(name, group)} _copy_to_iter n=$arg2 t=+0($arg3):u8 ${chunkWords('$arg1', chunk, false)}`,
+      filter: chunk === 0 ? bvec : `${bvec} && ${after('n', chunk)}`,
+    }
+  })
+  const toggle = (action: string) => data.map(({ name }) => `${action}:${group}:${name}`)
+  const begin = `${TRACE_PROBES.splice}_begin`
+  const end = `${TRACE_PROBES.splice}_end`
+  return [
+    ...data,
+    { name: begin, group, definition: `p:${event(begin, group)} copy_splice_read`, triggers: toggle('enable_event') },
+    { name: end, group, definition: `r:${event(end, group)} copy_splice_read`, triggers: toggle('disable_event') },
+  ]
+}
+
 // Paths at return too, through the saved registers. execve stays at entry: once it succeeds, the
 // memory its arguments were in is gone.
 const pathProbes = (): TraceProbe[] =>
@@ -93,6 +127,7 @@ export const TRACE_PROBE_LIST: readonly TraceProbe[] = [
   ...bufferProbes(TRACE_PROBES.read, 'ksys_read', VM_TRACE_READ_CHUNKS),
   ...writevProbes(),
   ...ttyProbes(),
+  ...spliceProbes(),
   ...pathProbes(),
   execveProbe,
 ]

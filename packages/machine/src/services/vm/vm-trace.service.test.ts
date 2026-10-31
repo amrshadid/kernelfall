@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { LabEvent } from '#events/types'
 import { createVmTrace } from '#services/vm/vm-trace.service'
 import type { TracedCommand } from '#types/definitions/vm-trace'
+import { mergeProgress, spliceEvents } from '#utils/vm-trace/trace-progress.util'
 
 // Real trace_pipe formats from the VM's kernel; `cat` exits 1 after writing "hi\n".
 const line = (pid: number, comm: string, ts: string, payload: string) =>
@@ -132,6 +134,68 @@ describe('the VM trace', () => {
     expect(exits[2]).not.toHaveProperty('data')
   })
 
+  it('attaches what sendfile64 moved to its exit: the copy out of /proc, or what reached the terminal', () => {
+    // Real lines: BusyBox cat copying /proc/version into a file, then /etc/hostname to the terminal.
+    const commandText = [
+      '            bash-468     [000] ...1.    75.406288: tracing_mark_write: kf-start    10  cat /proc/version > /tmp/y\n',
+      '             cat-517     [000] .....    75.448191: sys_sendfile64(out_fd: 1, in_fd: 3, offset: 0, count: 0x1000000)\n',
+      '             cat-517     [000] .N...    75.448702: splice_0: (_copy_to_iter+0x0/0x6f0) n=0xa4 t=2 b0=0x756e694c b1=0x65762078 b2=0x6f697372 b3=0x2e36206e b4=0x352e3831 b5=0x2d302d39 b6=0x74726976 b7=0x75622820 b8=0x6f646c69 b9=0x4072657a b10=0x6c697562 b11=0x2d332d64 b12=0x782d3432 b13=0x20293638 b14=0x20636328 b15=0x706c4128 b16=0x20656e69 b17=0x322e3531 b18=0x2029302e b19=0x322e3531 b20=0x202c302e b21=0x20554e47 b22=0x2820646c b23=0x20554e47 b24=0x756e6942 b25=0x736c6974 b26=0x2e322029 b27=0x312e3534 b28=0x31232029 b29=0x706c412d b30=0x20656e69 b31=0x20504d53 b32=0x45455250 b33=0x5f54504d b34=0x414e5944 b35=0x2043494d b36=0x36323032 b37=0x2d30312d b38=0x31203732 b39=0x38353a34 b40=0xa36333a b41=0x0 b42=0x0 b43=0x0 b44=0x0 b45=0x0 b46=0x0 b47=0x0 b48=0x0 b49=0x0 b50=0x0 b51=0x0 b52=0x0 b53=0x0 b54=0x0 b55=0x0 b56=0x0 b57=0x0 b58=0x0 b59=0x0 b60=0x0 b61=0x0 b62=0x0 b63=0x0\n',
+      '             cat-517     [000] .....    75.450316: sys_sendfile64 -> 0xa4\n',
+      '             cat-517     [000] .....    75.450336: sys_sendfile64(out_fd: 1, in_fd: 3, offset: 0, count: 0x1000000)\n',
+      '             cat-517     [000] .....    75.450406: sys_sendfile64 -> 0x0\n',
+      '            bash-468     [000] ...1.    75.458255: tracing_mark_write: kf-end 0\n',
+      '            bash-468     [000] ...1.    75.947757: tracing_mark_write: kf-start    11  cat /etc/hostname\n',
+      '             cat-518     [000] .....    75.998343: sys_sendfile64(out_fd: 1, in_fd: 3, offset: 0, count: 0x1000000)\n',
+      '             cat-518     [000] .....    76.000939: tty_0: (n_tty_write+0x0/0x4e0) nr=0xb b0=0x6e72656b b1=0x61666c65 b2=0x200a6c6c b3=0x20202020 b4=0x32322020 b5=0x36353533 b6=0xa426b20 b7=0x466d654d b8=0x3a656572 b9=0x20202020 b10=0x20202020 b11=0x39312020 b12=0x32373131 b13=0xa426b20 b14=0x416d654d b15=0x6c696176 b16=0x656c6261 b17=0x2020203a b18=0x38312020 b19=0x36353139 b20=0xa426b20 b21=0x66667542 b22=0x3a737265 b23=0x20202020 b24=0x20202020 b25=0x20202020 b26=0x30202020 b27=0xa426b20 b28=0x68636143 b29=0x203a6465 b30=0x20202020 b31=0x20202020 b32=0x20202020 b33=0x38343832 b34=0xa426b20 b35=0x70617753 b36=0x68636143 b37=0x203a6465 b38=0x20202020 b39=0x20202020 b40=0x30202020 b41=0xa426b20 b42=0x69746341 b43=0x203a6576 b44=0x20202020 b45=0x20202020 b46=0x20202020 b47=0x30343831 b48=0xa426b20 b49=0x63616e49 b50=0x65766974 b51=0x2020203a b52=0x20202020 b53=0x20202020 b54=0x34323531 b55=0xa426b20 b56=0x69746341 b57=0x61286576 b58=0x296e6f6e b59=0x2020203a b60=0x20202020 b61=0x36312020 b62=0xa426b20 b63=0x63616e49\n',
+      '             cat-518     [000] .N...    76.003172: sys_sendfile64 -> 0xb\n',
+      '            bash-468     [000] ...1.    76.013075: tracing_mark_write: kf-end 0\n',
+    ].join('')
+    const exitsOf = (command: TracedCommand | undefined) =>
+      (command?.events ?? []).filter((e) => e.type === 'sys_exit' && e.name === 'sendfile64')
+    const [toFile, toTerminal] = run(commandText).finished.map(exitsOf)
+    const moved = (exit: LabEvent | undefined) => text(exit?.type === 'sys_exit' ? exit.data : undefined)
+    expect(moved(toFile?.[0])).toBe(
+      'Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36\n'
+    )
+    expect(toFile?.[0]).not.toHaveProperty('dataCut')
+    expect(toFile?.[1]).not.toHaveProperty('data')
+    expect(moved(toTerminal?.[0])).toBe('kernelfall\n')
+  })
+
+  it("joins a splice's copies in order, whatever order a copy's chunks come in, up to the first one cut", () => {
+    const words = (s: string) =>
+      Array.from({ length: 64 }, (_, i) => {
+        const bytes = [...s.slice(i * 4, i * 4 + 4)].map((c) => c.charCodeAt(0))
+        return `b${i}=0x${bytes.reduce((word, byte, at) => word + byte * 256 ** at, 0).toString(16)}`
+      }).join(' ')
+    const copy = (chunk: number, n: number, s: string) =>
+      line(450, 'cat', '8.1', `splice_${chunk}: (_copy_to_iter+0x0/0x6f0) n=${n} t=2 ${words(s)}`)
+    const first = 'a'.repeat(256)
+    const commandText = [
+      line(434, 'bash', '8.0', 'tracing_mark_write: kf-start     3  cat /proc/a /proc/b'),
+      line(450, 'cat', '8.1', 'sys_sendfile64(out_fd: 1, in_fd: 3, offset: 0, count: 0x1000000)'),
+      copy(1, 300, 'b'.repeat(44)),
+      copy(0, 300, first),
+      copy(0, 4, 'cdef'),
+      line(450, 'cat', '8.1', 'tty_0: (n_tty_write+0x0/0x4e0) nr=0x2 b0=0x6161 b1=0x0'),
+      line(450, 'cat', '8.2', 'sys_sendfile64 -> 0x130'),
+      line(450, 'cat', '8.3', 'sys_sendfile64(out_fd: 1, in_fd: 4, offset: 0, count: 0x1000000)'),
+      copy(0, 600, first),
+      copy(0, 4, 'cdef'),
+      line(450, 'cat', '8.4', 'sys_sendfile64 -> 0x25c'),
+      line(434, 'bash', '9.0', 'tracing_mark_write: kf-end 0'),
+    ].join('')
+    const exits = (run(commandText).finished[0]?.events ?? []).filter((e) => e.type === 'sys_exit')
+    const data = (at: number) => {
+      const exit = exits[at]
+      return exit?.type === 'sys_exit' ? text(exit.data) : ''
+    }
+    expect(data(0)).toBe(`${first}${'b'.repeat(44)}cdef`)
+    expect(exits[0]).not.toHaveProperty('dataCut')
+    expect(data(1)).toBe(first)
+    expect(exits[1]).toMatchObject({ ret: 604, dataCut: true })
+  })
+
   it('keeps a page fault only when SIGSEGV follows it', () => {
     expect(run(SESSION).finished[0]?.events.some((e) => e.type === 'page_fault_user')).toBe(false)
     const crash = SESSION.replace(
@@ -149,6 +213,29 @@ describe('the VM trace', () => {
     expect(finished[0]?.events).toEqual(run(SESSION).finished[0]?.events)
     expect(progress.length).toBeGreaterThan(0)
     expect(progress[0]?.status).toBeNull()
+  })
+
+  it('sends progress as changes: each update from the first event changed since the last one', () => {
+    const { finished, progress } = run(SESSION, 37)
+    let known: readonly LabEvent[] = []
+    let carried = 0
+    for (const update of progress) {
+      known = spliceEvents(known, update.from ?? 0, update.events) ?? []
+      carried += update.events.length
+    }
+    const events = finished[0]?.events ?? []
+    expect(known.slice(0, events.length)).toEqual(events)
+    // The probes complete a call's entry after it is sent, so a little is resent, never the whole run each time.
+    expect(carried).toBeLessThan(known.length * 2)
+    expect(progress.some((update) => (update.from ?? 0) > 0)).toBe(true)
+  })
+
+  it('merges updates waiting to be sent into one that runs to the end', () => {
+    const { finished, progress } = run(SESSION, 37)
+    const merged = progress.reduce<TracedCommand | null>((pending, next) => mergeProgress(pending, next), null)
+    const events = finished[0]?.events ?? []
+    expect(merged?.from).toBe(0)
+    expect(merged?.events.slice(0, events.length)).toEqual(events)
   })
 
   it('gives what the shell did before a command (completing a name with Tab) to that command', () => {
@@ -194,6 +281,53 @@ describe('the VM trace', () => {
     const calls = (finished[0]?.events ?? []).flatMap((e) => (e.type === 'sys_enter' ? [e.name] : []))
     // The close after the builtin's write is the command's, not the funsub's.
     expect(calls).toEqual(['writev', 'close'])
+  })
+
+  it("drops PROMPT_COMMAND's redirection to the end marker, after the command's own output", () => {
+    const pwd = [
+      line(434, 'bash', '7.0000', 'sys_write(fd: 9, buf: 0xbf9486a0, count: 0x20)'),
+      line(434, 'bash', '7.0001', 'tracing_mark_write: kf-start    10  pwd'),
+      line(434, 'bash', '7.0002', 'sys_write -> 0x20'),
+      line(434, 'bash', '7.0003', 'sys_writev(fd: 1, vec: 0xbf9486a0, vlen: 1)'),
+      line(434, 'bash', '7.0004', 'sys_writev -> 0xa'),
+      line(434, 'bash', '7.0005', 'sys_rt_sigprocmask(how: 0x0, nset: 0x0, oset: 0xbf96bcec, sigsetsize: 0x8)'),
+      line(434, 'bash', '7.0006', 'sys_rt_sigprocmask -> 0x0'),
+      line(434, 'bash', '7.0007', 'sys_fcntl64(fd: 0x1, cmd: 0x1, arg: 0x0)'),
+      line(434, 'bash', '7.0008', 'sys_fcntl64 -> 0x0'),
+      line(434, 'bash', '7.0009', 'sys_fcntl64(fd: 0x1, cmd: 0x0, arg: 0xa)'),
+      line(434, 'bash', '7.0010', 'sys_fcntl64 -> 0xa'),
+      line(434, 'bash', '7.0011', 'sys_fcntl64(fd: 0x1, cmd: 0x1, arg: 0x0)'),
+      line(434, 'bash', '7.0012', 'sys_fcntl64 -> 0x0'),
+      line(434, 'bash', '7.0013', 'sys_fcntl64(fd: 0xa, cmd: 0x2, arg: 0x1)'),
+      line(434, 'bash', '7.0014', 'sys_fcntl64 -> 0x0'),
+      line(434, 'bash', '7.0015', 'sys_dup2(oldfd: 0x9, newfd: 0x1)'),
+      line(434, 'bash', '7.0016', 'sys_dup2 -> 0x1'),
+      line(434, 'bash', '7.0017', 'sys_fcntl64(fd: 0x9, cmd: 0x1, arg: 0x0)'),
+      line(434, 'bash', '7.0018', 'sys_fcntl64 -> 0x1'),
+      line(434, 'bash', '7.0019', 'sys_write(fd: 1, buf: 0xbf9486a0, count: 0x9)'),
+      line(434, 'bash', '7.0020', 'tracing_mark_write: kf-end 0'),
+      line(434, 'bash', '7.0021', 'sys_write -> 0x9'),
+    ].join('')
+    const { finished } = run(pwd)
+    const calls = (finished[0]?.events ?? []).flatMap((e) => (e.type === 'sys_enter' ? [e.name] : []))
+    expect(calls).toEqual(['writev'])
+  })
+
+  it("keeps a builtin's own dup2 at the end when it isn't the redirection to the marker", () => {
+    const fcntl = [
+      line(434, 'bash', '8.0000', 'sys_write(fd: 9, buf: 0xbf9486a0, count: 0x20)'),
+      line(434, 'bash', '8.0001', 'tracing_mark_write: kf-start    11  cd /tmp; exec 3>&1'),
+      line(434, 'bash', '8.0002', 'sys_write -> 0x20'),
+      line(434, 'bash', '8.0003', 'sys_chdir(filename: 0x4b8b00)'),
+      line(434, 'bash', '8.0004', 'sys_chdir -> 0x0'),
+      line(434, 'bash', '8.0005', 'sys_dup2(oldfd: 0x1, newfd: 0x3)'),
+      line(434, 'bash', '8.0006', 'sys_dup2 -> 0x3'),
+      line(434, 'bash', '8.0007', 'sys_write(fd: 9, buf: 0xbf9486a0, count: 0x9)'),
+      line(434, 'bash', '8.0008', 'tracing_mark_write: kf-end 0'),
+      line(434, 'bash', '8.0009', 'sys_write -> 0x9'),
+    ].join('')
+    const calls = (run(fcntl).finished[0]?.events ?? []).flatMap((e) => (e.type === 'sys_enter' ? [e.name] : []))
+    expect(calls).toEqual(['chdir', 'dup2'])
   })
 
   it("drops the shell's start-up before its first prompt: a new shell's execs aren't the first command's", () => {

@@ -137,16 +137,32 @@ describe('validateLabSetup', () => {
     })
   })
 
-  it('reads the boot entry and the firmware', () => {
-    const boot = { args: 'root=/dev/vda3 ro quiet module_blacklist=e1000 mem=64M', firmware: 'uefi' }
+  it("reads GRUB's entry, or none to start at the menu with the Machine's own", () => {
+    const boot = { args: 'console=ttyS0 root=/dev/vda3 ro quiet' }
     expect(validateLabSetup({ boot })).toEqual({ ok: true, value: { boot } })
+    expect(validateLabSetup({ boot: {} })).toEqual({ ok: true, value: { boot: {} } })
   })
 
-  it('keeps the boot entry to one line, and the firmware to UEFI or BIOS', () => {
-    expect(errorsOf({ boot: { args: 'ro\nquiet', firmware: 'coreboot', timeout: 5 } })).toEqual([
-      'lab.boot.timeout: unknown field (expected one of: args, firmware)',
+  it('keeps the boot entry to one line, and refuses a firmware choice: the Machine is BIOS only', () => {
+    expect(errorsOf({ boot: { args: 'ro\nquiet', firmware: 'uefi', timeout: 5 } })).toEqual([
+      'lab.boot.firmware: unknown field (expected one of: args)',
+      'lab.boot.timeout: unknown field (expected one of: args)',
       'lab.boot.args: must be one line of at most 2017 characters',
-      'lab.boot.firmware: expected one of uefi, bios, got "coreboot"',
+    ])
+  })
+
+  it('refuses with a boot what the restart would lose: the session, processes and tmpfs files', () => {
+    expect(
+      errorsOf({
+        boot: {},
+        cwd: '/tmp',
+        processes: [{ argv: ['sleep', '600'] }],
+        files: [{ path: '/run/note' }, { path: '/home/you/kept' }],
+      })
+    ).toEqual([
+      "lab.cwd: doesn't survive the restart lab.boot makes",
+      "lab.processes: doesn't survive the restart lab.boot makes",
+      'lab.files[0].path: is on a tmpfs, emptied by the restart lab.boot makes',
     ])
   })
 

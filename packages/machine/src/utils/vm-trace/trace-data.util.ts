@@ -38,13 +38,16 @@ export const fieldNumber = (value: string | undefined): number =>
     ? 0
     : Number.parseInt(value, value.startsWith('0x') || value.startsWith('-0x') ? 16 : 10) | 0
 
-const CHUNKED = new Set<string>([TRACE_PROBES.write, TRACE_PROBES.read, TRACE_PROBES.tty])
+const CHUNKED = new Set<string>([TRACE_PROBES.write, TRACE_PROBES.read, TRACE_PROBES.tty, TRACE_PROBES.splice])
 
 /** The buffer probes' names, or null for a probe that reads no chunked buffer (execve, paths). */
 export function parseProbeName(probe: string): ProbeName | null {
   const parts = probe.split('_')
   const kind = parts[0] ?? ''
   const numbers = parts.slice(1).map(Number)
+  if (!numbers.every(Number.isInteger)) {
+    return null
+  }
   if (kind === TRACE_PROBES.writev && numbers.length === 2) {
     return { kind, iov: numbers[0] ?? 0, chunk: numbers[1] ?? 0 }
   }
@@ -78,7 +81,7 @@ export function joinChunks(chunks: ReadonlyMap<number, Uint8Array>, length: numb
   return { data: out.subarray(0, filled), cut: filled < wanted }
 }
 
-/** writev()'s iovecs, each from its chunks up to its length, joined as the file got them, cut at `ret`. */
+/** writev()'s iovecs (or a splice's copies), each from its chunks up to its length, cut at `ret`. */
 export function joinIovecs(
   iovecs: ReadonlyMap<number, { readonly length: number; readonly chunks: ReadonlyMap<number, Uint8Array> }>,
   count: number,

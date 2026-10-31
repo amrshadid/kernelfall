@@ -1,7 +1,7 @@
 import type { LabEvent, LabEventInit } from '#events/types'
 import type { SignalGenerateResult } from '#types/definitions/signal'
-import { VM_TRACE_AS_END, VM_TRACE_AS_START, VM_TRACE_END, VM_TRACE_START } from '#types/definitions/vm'
-import { TRACE_PROBES, type TracedCommand, type TraceRecord } from '#types/definitions/vm-trace'
+import { VM_MARKER_FD, VM_TRACE_AS_END, VM_TRACE_AS_START, VM_TRACE_END, VM_TRACE_START } from '#types/definitions/vm'
+import { TRACE_PROBES, type TracedCommand, type TraceRecord, VM_TRACE_SPLICE_BYTES } from '#types/definitions/vm-trace'
 import {
   argvOf,
   chunkBytes,
@@ -15,15 +15,17 @@ import {
 } from '#utils/vm-trace/index'
 
 export interface VmTraceCallbacks {
-  /** New events for the running command; called once per pushed chunk that added any. */
+  /** What changed in the running command since the last call (`from` on); once per pushed chunk that changed any. */
   onProgress(command: TracedCommand): void
   onFinished(command: TracedCommand): void
 }
 
 const SIGSEGV = 11
+const STDOUT = 1
 const EXIT_CODE_MASK = 0xff
 const EXIT_SYSCALLS = new Set(['exit', 'exit_group'])
 const WRITE_SYSCALLS = new Set(['write', 'writev'])
+const SPLICE_SYSCALLS = new Set(['sendfile', 'sendfile64', 'splice'])
 // trace_signal_generate's `res` (include/trace/events/signal.h: TRACE_SIGNAL_*).
 const SIGNAL_RESULTS: Readonly<Record<string, SignalGenerateResult>> = { '1': 'ignored', '2': 'already_pending' }
 // `history 1` prints the entry's number first.
@@ -61,7 +63,12 @@ interface Capture {
   ret: number
   /** writev's iovec count. */
   count: number
-  iovecs: Map<number, { length: number; chunks: Map<number, Uint8Array> }>
+  iovecs: Map<number, Part>
+}
+
+interface Part {
+  length: number
+  chunks: Map<number, Uint8Array>
 }
 
 interface Window {
@@ -75,6 +82,7 @@ interface Window {
   exitCodes: Map<number, number>
   lastSignal: Map<number, number>
   captures: Map<number, Capture>
+  copies: Map<number, Part[]>
   /** Each task's latest terminal write, which a later chunk of the same write extends. */
   lastTty: Map<number, number>
   /** Faults are kept only when a SIGSEGV follows: the model's page_fault_user is a bad access. */
@@ -82,6 +90,8 @@ interface Window {
   /** The marker's own write returns right after kf-start; it isn't the command's. */
   skipShellExit: boolean
   dirty: boolean
+  /** The first event changed since the last progress: the next one sends only from here. */
+  changedFrom: number
 }
 
 const newWindow = (commandLine: string | null, events: LabEvent[] = [], markerPid: number | null = null): Window => ({
@@ -92,11 +102,42 @@ const newWindow = (commandLine: string | null, events: LabEvent[] = [], markerPi
   exitCodes: new Map(),
   lastSignal: new Map(),
   captures: new Map(),
+  copies: new Map(),
   lastTty: new Map(),
   lastFault: new Map(),
   skipShellExit: commandLine !== null,
   dirty: false,
+  changedFrom: 0,
 })
+
+/** PROMPT_COMMAND's `>&9` before the end marker: the shell blocks signals and moves stdout aside. */
+const MARKER_REDIRECT = new Set(['rt_sigaction', 'rt_sigprocmask', 'fcntl64', 'dup2'])
+
+/** Drops that redirection, the shell's own calls ending a run, once its dup2(9, 1) shows it is the marker's. */
+function dropMarkerRedirect(events: LabEvent[], shellPid: number | null): void {
+  let start = events.length
+  for (let event = events[start - 1]; event !== undefined; event = events[start - 1]) {
+    if ((event.type !== 'sys_enter' && event.type !== 'sys_exit') || event.pid !== shellPid) {
+      break
+    }
+    if (!MARKER_REDIRECT.has(event.name)) {
+      break
+    }
+    start--
+  }
+  const redirects = events
+    .slice(start)
+    .some(
+      (event) =>
+        event.type === 'sys_enter' &&
+        event.name === 'dup2' &&
+        event.args[0] === VM_MARKER_FD &&
+        event.args[1] === STDOUT
+    )
+  if (redirects) {
+    events.splice(start)
+  }
+}
 
 /** Drops the shell's write of a marker: its last write entry in `events`. */
 function dropMarkerWrite(events: LabEvent[], shellPid: number | null): void {
@@ -169,6 +210,7 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
   const replace = (index: number, event: LabEvent) => {
     window.events[index] = event
     window.dirty = true
+    window.changedFrom = Math.min(window.changedFrom, index)
   }
 
   const finish = (text: string, marker: string) => {
@@ -179,6 +221,7 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
       return
     }
     dropMarkerWrite(done.events, done.markerPid)
+    dropMarkerRedirect(done.events, done.markerPid)
     window = stashed ?? newWindow(null)
     stashed = null
     const status = Number.parseInt(text.slice(marker.length), 10) || 0
@@ -228,6 +271,10 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
       onTty(record, name.chunk)
       return
     }
+    if (name?.kind === TRACE_PROBES.splice) {
+      onCopy(pid, name.chunk, fields)
+      return
+    }
     if (name) {
       const capture = window.captures.get(pid) ?? { ret: 0, count: 0, iovecs: new Map() }
       capture.ret = fieldNumber(fields.ret)
@@ -246,6 +293,34 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
     const data = pathData(fields)
     const argv = record.probe === TRACE_PROBES.execve ? argvOf(fields) : undefined
     replace(index, { ...enter, ...(data && { data }), ...(argv && { argv }) })
+  }
+
+  // A copy's chunk probes fire in no fixed order: a chunk the latest copy already has starts the next.
+  const onCopy = (pid: number, chunk: number, fields: Readonly<Record<string, string>>) => {
+    const copies = window.copies.get(pid) ?? []
+    let copy = copies.at(-1)
+    if (!copy || copy.chunks.has(chunk)) {
+      copy = { length: fieldNumber(fields.n), chunks: new Map() }
+      copies.push(copy)
+    }
+    copy.chunks.set(chunk, chunkBytes(fields))
+    window.copies.set(pid, copies)
+  }
+
+  // The pipe copies and the terminal writes are the same bytes from the start: keep the longer.
+  const splicedData = (run: Window, pid: number, ret: number) => {
+    const limit = Math.min(ret, VM_TRACE_SPLICE_BYTES)
+    const join = (parts: readonly Part[]) => joinIovecs(new Map(parts.entries()), parts.length, limit).data
+    const index = run.lastEnter.get(pid)
+    const shown = (index === undefined ? [] : run.events.slice(index + 1)).flatMap((event) =>
+      event.type === 'console_write' && event.pid === pid
+        ? [{ length: event.bytes.length, chunks: new Map([[0, event.bytes]]) }]
+        : []
+    )
+    const copied = join(run.copies.get(pid) ?? [])
+    const written = join(shown)
+    const data = copied.length >= written.length ? copied : written
+    return data.length > 0 ? { data, cut: data.length < ret } : undefined
   }
 
   const onTty = (record: TraceRecord & { kind: 'probe' }, chunk: number) => {
@@ -290,6 +365,7 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
         }
         const index = window.events.length
         window.captures.delete(pid)
+        window.copies.delete(pid)
         const kept = append(
           { type: 'sys_enter', pid, nr: syscallNumber(record.name), name: record.name, args: record.args, cpu },
           time
@@ -319,6 +395,9 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
           }
         }
         const read = record.name === 'read' && captured && captured.data.length > 0 ? captured : undefined
+        const moved = SPLICE_SYSCALLS.has(record.name) && record.ret > 0 ? splicedData(run, pid, record.ret) : undefined
+        run.copies.delete(pid)
+        const filled = read ?? moved
         append(
           {
             type: 'sys_exit',
@@ -326,7 +405,7 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
             nr: syscallNumber(record.name),
             name: record.name,
             ret: record.ret,
-            ...(read && { data: read.data, ...(read.cut && { dataCut: true }) }),
+            ...(filled && { data: filled.data, ...(filled.cut && { dataCut: true }) }),
             cpu,
           },
           time
@@ -400,7 +479,9 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
   const flushProgress = () => {
     if (window.dirty && window.commandLine !== null) {
       window.dirty = false
-      callbacks.onProgress({ commandLine: window.commandLine, status: null, events: window.events })
+      const from = window.changedFrom
+      window.changedFrom = window.events.length
+      callbacks.onProgress({ commandLine: window.commandLine, status: null, from, events: window.events.slice(from) })
     }
   }
 

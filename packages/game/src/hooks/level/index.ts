@@ -3,4 +3,5 @@ export { type UseLevelActionsResult, useLevelActions } from '#hooks/level/useLev
 export { type UseLevelCheckResult, useLevelCheck } from '#hooks/level/useLevelCheck.hook'
 export { type UseLevelCodeResult, useLevelCode } from '#hooks/level/useLevelCode.hook'
 export { type UseLevelStatusResult, useLevelStatus } from '#hooks/level/useLevelStatus.hook'
+export { useRunAsCues } from '#hooks/level/useRunAsCues.hook'
 export { type UseRunDispatchResult, useRunDispatch } from '#hooks/level/useRunDispatch.hook'

@@ -1,7 +1,7 @@
 import type { StringRule } from '@kernelfall/core/types'
 import { Issues, joinPath, ObjectReader, reportDuplicates } from '@kernelfall/core/utils'
 import type { LabBootSetup } from '#types/definitions/boot'
-import { BOOT_KERNEL_PATH, COMMAND_LINE_SIZE, FIRMWARE_KINDS } from '#types/definitions/boot'
+import { BOOT_KERNEL_PATH, COMMAND_LINE_SIZE } from '#types/definitions/boot'
 import type {
   Accounts,
   LabGroup,
@@ -23,7 +23,10 @@ const SETUP_FIELDS = ['users', 'groups', 'files', 'player', 'cwd', 'env', 'bin',
 const PROCESS_FIELDS = ['argv', 'pid', 'user', 'stdout'] as const
 /** init is pid 1, so a level's process starts at 2 at the lowest. */
 const MIN_PROCESS_PID = 2
-const BOOT_FIELDS = ['args', 'firmware'] as const
+const BOOT_FIELDS = ['args'] as const
+/** The session and processes live in /run and in memory; kf-rc mounts these as tmpfs. */
+const LOST_ON_REBOOT = ['player', 'cwd', 'env', 'processes'] as const
+const TMPFS_MOUNTS = ['/run', '/tmp']
 /** The bootloader puts `BOOT_IMAGE=<kernel> ` in front, and the whole line must fit COMMAND_LINE_SIZE with its NUL. */
 const MAX_BOOT_ARGS = COMMAND_LINE_SIZE - `BOOT_IMAGE=${BOOT_KERNEL_PATH} `.length - 1
 const USER_FIELDS = ['name', 'uid', 'gid', 'home', 'shell'] as const
@@ -168,13 +171,30 @@ function readEnv(reader: ObjectReader, key: string): Readonly<Record<string, str
 // The kernel reads one line: a newline or NUL would end it.
 function readBoot(reader: ObjectReader, key: string): LabBootSetup {
   const boot = reader.object(key)
+  // No `firmware`: the Machine has SeaBIOS only, so a level can't pick UEFI.
   boot.rejectUnknownKeys(BOOT_FIELDS)
   const args = boot.optional('args', (field) => boot.text(field))
   if (args !== undefined && (/[\n\0]/.test(args) || args.length > MAX_BOOT_ARGS)) {
     boot.issues.add(boot.pathOf('args'), `must be one line of at most ${MAX_BOOT_ARGS} characters`)
   }
-  const firmware = boot.optional('firmware', (field) => boot.oneOf(field, FIRMWARE_KINDS))
-  return { ...(args !== undefined && { args }), ...(firmware && { firmware }) }
+  return args === undefined ? {} : { args }
+}
+
+// A restart empties the tmpfs mounts and ends every process, so these would never reach the player.
+function checkBootSetup(setup: LabSetup, issues: Issues): void {
+  if (!setup.boot) {
+    return
+  }
+  for (const field of LOST_ON_REBOOT) {
+    if (setup[field] !== undefined) {
+      issues.add(`lab.${field}`, "doesn't survive the restart lab.boot makes")
+    }
+  }
+  setup.files?.forEach((file, i) => {
+    if (TMPFS_MOUNTS.some((mount) => file.path.startsWith(`${mount}/`))) {
+      issues.add(`lab.files[${i}].path`, 'is on a tmpfs, emptied by the restart lab.boot makes')
+    }
+  })
 }
 
 function readEntries<T>(reader: ObjectReader, key: string, read: (entry: ObjectReader) => T): readonly T[] {
@@ -280,5 +300,6 @@ export function validateLabSetup(input: unknown): LabSetupValidation {
   const accounts = resolveAccounts(setup)
   reportClashes(setup, accounts, issues)
   checkNames(setup, accounts, issues)
+  checkBootSetup(setup, issues)
   return issues.result(setup)
 }

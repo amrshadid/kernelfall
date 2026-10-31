@@ -48,6 +48,15 @@ export interface CommandChip {
   readonly explain: string
 }
 
+/** A command root runs as another user once an objective is first met (S.2's neighbour knocking), traced and judged. */
+export interface RunAsCue {
+  /** The objective's id. */
+  readonly after: string
+  /** root, `you` or one of `lab.users`. */
+  readonly user: string
+  readonly command: string
+}
+
 /** In tier order: nudge, concept, point at the spot. */
 export type LevelHints = readonly [nudge: string, concept: string, spot: string]
 
@@ -120,10 +129,14 @@ export interface LevelDefinition {
   readonly chips?: readonly CommandChip[]
   /** Empty before X-ray is unlocked (P.1). */
   readonly xray: readonly XrayView[]
+  /** Calls X-ray keeps open that no declared check names, such as the shell's fork and pipe. */
+  readonly xrayFocus?: readonly string[]
   readonly codex: readonly CodexCard[]
   readonly taint: readonly TaintRule[]
   readonly fidelity: Fidelity
   readonly story: StoryRefs
   /** The Machine the level starts on; left out, the one every level shares. */
   readonly lab?: LabSetup
+  /** Run once per play-through, in "build it". */
+  readonly runAs?: readonly RunAsCue[]
 }

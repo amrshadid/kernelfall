@@ -20,6 +20,22 @@ describe('writesTo and writtenTo', () => {
     expect(writtenTo(events, 434, 1)).toBe('hello\n')
     expect(writesTo(events, 434, 1).map(isWholeWrite)).toEqual([true])
   })
+
+  it("counts what busybox cat's sendfile64 and a splice moved to the fd, from their exits", () => {
+    const events = stamped([
+      { type: 'sys_enter', pid: 440, name: 'sendfile64', args: [1, 3, 0, 0x1000000] },
+      { type: 'sys_exit', pid: 440, name: 'sendfile64', ret: 9, data: 'Someday.\n' },
+      { type: 'sys_enter', pid: 440, name: 'sendfile64', args: [1, 3, 0, 0x1000000] },
+      { type: 'sys_exit', pid: 440, name: 'sendfile64', ret: 0 },
+      { type: 'sys_enter', pid: 440, name: 'splice', args: [3, 0, 4, 0, 0x10000, 0] },
+      { type: 'sys_exit', pid: 440, name: 'splice', ret: 3, data: 'end' },
+    ])
+
+    expect(writtenTo(events, 440, 1)).toBe('Someday.\n')
+    expect(writesTo(events, 440, 1).map(isWholeWrite)).toEqual([true, false])
+    expect(writtenTo(events, 440, 4)).toBe('end')
+    expect(writtenTo(events, 440, 3)).toBe('')
+  })
 })
 
 describe('isWholeWrite', () => {

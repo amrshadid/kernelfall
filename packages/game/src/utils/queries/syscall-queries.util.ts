@@ -8,11 +8,12 @@ const OPEN_CALLS = ['open', 'openat']
  * The calls that read an open file or folder; each answers 0 at its end. busybox's cat copies
  * with sendfile64 (the kernel moves the bytes itself), so that is a read of the file too.
  */
-const READ_CALLS = ['read', 'readv', 'pread64', 'getdents64', 'sendfile', 'sendfile64']
-/** read(fd, …), getdents64(fd, …) and close(fd) take the fd first; sendfile(out_fd, in_fd, …) second. */
+const READ_CALLS = ['read', 'readv', 'pread64', 'getdents64', 'sendfile', 'sendfile64', 'splice']
+/** read(fd, …), getdents64(fd, …), splice(fd_in, …) and close(fd) take the fd first; sendfile(out_fd, in_fd, …) second. */
 const FD_ARG = 0
 const SENDFILE_IN_FD_ARG = 1
 const SENDFILE_CALLS = new Set(['sendfile', 'sendfile64'])
+const TEXT_CALLS = new Set(['read', 'sendfile', 'sendfile64', 'splice'])
 const readFd = (call: SyscallRecord) =>
   call.enter.args[SENDFILE_CALLS.has(call.enter.name) ? SENDFILE_IN_FD_ARG : FD_ARG]
 
@@ -77,7 +78,7 @@ export function readsOf(events: readonly LabEvent[], pid: Pid, path: string): Fi
         reachedEnd: reads.some((call) => call.exit?.ret === 0),
         // getdents64() fills binary records, not text.
         text: reads
-          .filter((call) => call.enter.name === 'read' && (call.exit?.ret ?? 0) > 0)
+          .filter((call) => TEXT_CALLS.has(call.enter.name) && (call.exit?.ret ?? 0) > 0)
           .map((call) => asText(call.exit?.data))
           .join(''),
       },

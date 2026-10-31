@@ -4,7 +4,7 @@ import type { LevelLocation } from '#types/definitions/level'
 import { validateLevel } from '#utils/validate/validate-level.util'
 
 const LEVEL_FIELDS =
-  'id, title, summary, minutes, tracks, skills, prerequisites, objectives, hints, chips, xray, codex, taint, fidelity, story, lab'
+  'id, title, summary, minutes, tracks, skills, prerequisites, objectives, hints, chips, xray, xrayFocus, codex, taint, fidelity, story, lab, runAs'
 
 function errorsFor(input: unknown, location: LevelLocation = EXAMPLE_LOCATION): readonly string[] {
   const result = validateLevel(input, location)
@@ -159,5 +159,31 @@ describe('validateLevel: the lab block', () => {
     const errors = errorsFor({ ...EXAMPLE_LEVEL_YAML, lab: { bin: 'ls' } })
     expect(errors.length).toBeGreaterThan(0)
     expect(errors.every((error) => error.startsWith('lab.'))).toBe(true)
+  })
+})
+
+describe('validateLevel: xrayFocus', () => {
+  it('reads syscall names X-ray keeps open, and refuses anything else', () => {
+    const result = validateLevel({ ...EXAMPLE_LEVEL_YAML, xrayFocus: ['fork', 'pipe'] }, EXAMPLE_LOCATION)
+    expect(result.ok && result.value.xrayFocus).toEqual(['fork', 'pipe'])
+    expect(errorsFor({ ...EXAMPLE_LEVEL_YAML, xrayFocus: ['Fork()'] })).toHaveLength(1)
+  })
+})
+
+describe('validateLevel: runAs cues', () => {
+  it("keeps a cue naming one of the level's objectives and an account on its Machine", () => {
+    const runAs = [{ after: 'prints-hello', user: 'guest', command: 'cat /home/you/notes.txt' }]
+    const lab = { users: [{ name: 'guest', uid: 1001 }] }
+    const result = validateLevel({ ...EXAMPLE_LEVEL_YAML, lab, runAs }, EXAMPLE_LOCATION)
+    expect(result.ok && result.value.runAs).toEqual(runAs)
+  })
+
+  it('refuses an unknown objective or user, and a command of more than one line', () => {
+    const runAs = [{ after: 'knocked', user: 'guest', command: 'cat a\ncat b' }]
+    expect(errorsFor({ ...EXAMPLE_LEVEL_YAML, runAs })).toEqual([
+      'runAs[0].command: expected one command line, got "cat a\ncat b"',
+      'runAs[0].after: no objective "knocked"',
+      `runAs[0].user: no user named "guest" on the level's Machine`,
+    ])
   })
 })

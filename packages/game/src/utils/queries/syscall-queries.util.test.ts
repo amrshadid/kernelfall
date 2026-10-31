@@ -87,16 +87,18 @@ describe('readsOf', () => {
     expect(samePath('/bin', '/sbin')).toBe(false)
   })
 
-  it("follows busybox cat's sendfile64 from the file to its end, by its source fd", () => {
-    // As the VM's busybox cat runs `cat /etc/motd` on i386: open, sendfile64(1, 3, …) until 0.
+  it("follows busybox cat's sendfile64 from the file to its end, by its source fd, with what it moved", () => {
+    // As the VM's busybox cat runs `cat /proc/version` on i386: open, sendfile64(1, 3, …) until 0.
     const cat = stamped([
-      { type: 'sys_enter', pid: 440, name: 'open', args: [0xbff6cf17, 0x8000, 0], data: '/etc/motd' },
+      { type: 'sys_enter', pid: 440, name: 'open', args: [0xbff6cf17, 0x8000, 0], data: '/proc/version' },
       { type: 'sys_exit', pid: 440, name: 'open', ret: 3 },
       { type: 'sys_enter', pid: 440, name: 'sendfile64', args: [1, 3, 0, 0x1000000] },
-      { type: 'sys_exit', pid: 440, name: 'sendfile64', ret: 0x11c },
+      { type: 'sys_exit', pid: 440, name: 'sendfile64', ret: 14, data: 'Linux version\n' },
       { type: 'sys_enter', pid: 440, name: 'sendfile64', args: [1, 3, 0, 0x1000000] },
       { type: 'sys_exit', pid: 440, name: 'sendfile64', ret: 0 },
     ])
-    expect(readsOf(cat, 440, '/etc/motd')).toEqual([{ path: '/etc/motd', fd: 3, reachedEnd: true, text: '' }])
+    expect(readsOf(cat, 440, '/proc/version')).toEqual([
+      { path: '/proc/version', fd: 3, reachedEnd: true, text: 'Linux version\n' },
+    ])
   })
 })

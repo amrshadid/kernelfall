@@ -11,8 +11,8 @@ function handleCommandFinished(event: Event<CommandFinishedPayload>) {
 
 // A running command shows in the trace as it goes, so X-ray can follow an interactive program.
 function handleCommandProgress(event: Event<CommandProgressPayload>) {
-  const { command, events } = event.payload
-  useTraceStore.getState().follow(events, command.commandLine)
+  const { command, from, events } = event.payload
+  useTraceStore.getState().follow(from, events, command.commandLine)
 }
 
 export function setupMachineListeners() {

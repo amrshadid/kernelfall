@@ -5,7 +5,7 @@ export type TraceRecord = TraceHeader &
   (
     | { readonly kind: 'enter'; readonly name: string; readonly args: readonly number[] }
     | { readonly kind: 'exit'; readonly name: string; readonly ret: number }
-    /** A probe of the `kf` group (eprobe or return probe): user memory a syscall tracepoint doesn't print. */
+    /** A probe of the `kf` groups: memory a syscall tracepoint doesn't print. */
     | { readonly kind: 'probe'; readonly probe: string; readonly fields: Readonly<Record<string, string>> }
     | { readonly kind: 'marker'; readonly text: string }
     | { readonly kind: 'event'; readonly name: string; readonly fields: Readonly<Record<string, string>> }
@@ -36,6 +36,11 @@ export const VM_TRACE_IOV_CHUNKS = 2
 export const VM_TRACE_TTY_CHUNKS = 8
 /** execve() argv strings read. */
 export const VM_TRACE_ARGV = 8
+/** Never enabled as a whole: its probes are on only while copy_splice_read() runs. */
+export const VM_TRACE_SPLICE_GROUP = 'kf_splice'
+/** sendfile() and splice(): 2 KiB per copy, and per call. */
+export const VM_TRACE_SPLICE_CHUNKS = 8
+export const VM_TRACE_SPLICE_BYTES = VM_TRACE_SPLICE_CHUNKS * VM_TRACE_CHUNK_BYTES
 
 /** The probes' event names, by what they read: `write_<chunk>`, `writev_<iovec>_<chunk>`… */
 export const TRACE_PROBES = {
@@ -43,6 +48,7 @@ export const TRACE_PROBES = {
   writev: 'writev',
   read: 'read',
   tty: 'tty',
+  splice: 'splice',
   execve: 'execve',
   path: 'path',
 } as const
@@ -85,7 +91,10 @@ export interface TracedCommand {
   readonly commandLine: string
   /** Its exit status, once it has finished; null while it runs. */
   readonly status: number | null
+  /** While it runs, only the events from index `from` on (the rest the page already has); all of them once finished. */
   readonly events: readonly LabEvent[]
+  /** Progress only: where `events` starts in the run. A huge run must not be resent whole on every update. */
+  readonly from?: number
 }
 
 /** Progress reaches the page at most this often: a gcc run is thousands of events. */

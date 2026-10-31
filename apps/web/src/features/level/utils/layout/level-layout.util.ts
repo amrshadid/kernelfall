@@ -50,6 +50,8 @@ export interface LevelLayoutInput {
   readonly placement: GuidePlacement | null
   /** Plays the level again from its scene, on a fresh Machine. */
   readonly replay: () => void
+  /** Reboots through GRUB, keeping the level's progress. */
+  readonly restart: () => void
 }
 
 /** The level screen for a ready run: top bar, Guide, panels, card, dialogs and status bar. */
@@ -112,6 +114,7 @@ export function levelLayoutOf(input: LevelLayoutInput): LevelLayoutModel {
             askReference: () => dialogs.setReferenceOpen(true),
             heldWithTaint: check.heldTaint.length > 0,
             nextKeys: input.nextKeys,
+            restart: level.lab?.boot ? input.restart : null,
           }),
     }),
     panels: { ...input.panels, emphasis: current },

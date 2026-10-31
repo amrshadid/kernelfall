@@ -1,1 +1,1 @@
-export { clampSize, draggedSize, keyedSize } from './splitter.util'
+export { clampSize, draggedSize, keyedSize, limitsAtLeast } from './splitter.util'

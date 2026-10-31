@@ -44,6 +44,16 @@ describe('useAppStore', () => {
     expect(useAppStore.getState()).toMatchObject({ xrayDepth: 'simple', xraySeen: [], xrayGuesses: {} })
   })
 
+  it('remembers a recordings opt-out in the stored settings, and shares again after a reset', () => {
+    expect(useAppStore.getState().shareRecordings).toBe(true)
+    useAppStore.getState().setShareRecordings(false)
+    expect(useAppStore.persist.getOptions().partialize?.(useAppStore.getState())).toMatchObject({
+      shareRecordings: false,
+    })
+    useAppStore.getState().resetSettings()
+    expect(useAppStore.getState().shareRecordings).toBe(true)
+  })
+
   it('leaves the seen list as it was when a key is already there', () => {
     useAppStore.getState().markXraySeen('a')
     const before = useAppStore.getState().xraySeen

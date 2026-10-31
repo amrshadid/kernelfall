@@ -4,8 +4,8 @@
 
 /*
  * init: One file, opened, read and written out, with every answer from the
- * Kernel checked. The same three calls work on a file on the disk, in /proc
- * and in /sys: only the path changes.
+ * kernel checked. The same three calls work on the Machine's own files, in
+ * /proc and in /sys: only the path changes.
  */
 int main(void)
 {

@@ -1,8 +1,9 @@
 import { useXrayPrefs } from '@app/store'
 import { useStoryboardPlayer } from '@features/xray/hooks/player'
 import type {
+  CallFocus,
+  XrayBoardActions,
   XrayChoice,
-  XrayControlActions,
   XrayControlState,
   XrayControls,
   XrayFigure,
@@ -12,6 +13,7 @@ import type {
 } from '@features/xray/types'
 import {
   memoryKeysOf,
+  nextCallPick,
   pickCall,
   pickEpisode,
   picksOf,
@@ -19,6 +21,8 @@ import {
   xrayCaption,
   xrayEmptyText,
 } from '@features/xray/utils/board'
+import { bootViewOf } from '@features/xray/utils/boot'
+import { callGroupsOf, leadCallId, lessonCalls } from '@features/xray/utils/call-list'
 import { toXrayCalls } from '@features/xray/utils/calls'
 import { cpuLanesOf } from '@features/xray/utils/cpus'
 import { toLogRun } from '@features/xray/utils/log'
@@ -29,8 +33,11 @@ import { sectionOf } from '@features/xray/utils/section'
 import { syscallStoryboard } from '@features/xray/utils/syscalls'
 import { xrayContent } from '@kernelfall/levels/utils'
 import type { RunEvent } from '@kernelfall/machine/hooks'
-import type { TraceRun } from '@kernelfall/machine/types'
+import type { BootRecord, TraceRun } from '@kernelfall/machine/types'
 import { useMemo } from 'react'
+import { useCallList } from './useCallList.hook'
+
+const NO_FOCUS: CallFocus = []
 
 export interface XrayBoardInput {
   readonly runs: readonly TraceRun[]
@@ -43,11 +50,15 @@ export interface XrayBoardInput {
   readonly scope: { readonly levelId: string | null; readonly step: string | null }
   /** CPUs online, one lane each. */
   readonly cpus: number
+  /** How the Machine booted, once Linux has reported it. */
+  readonly boot?: BootRecord | null
+  /** The calls the level teaches: shown unfolded, and the drawing starts on them. */
+  readonly focus?: CallFocus
 }
 
 export interface XrayBoardState {
   readonly controls: XrayControls
-  readonly controlActions: XrayControlActions
+  readonly controlActions: XrayBoardActions
   readonly figure: XrayFigure | null
   readonly emptyText: string | null
   readonly caption: string
@@ -64,6 +75,8 @@ export function useXrayBoard({
   animate,
   scope,
   cpus,
+  boot = null,
+  focus = NO_FOCUS,
 }: XrayBoardInput): XrayBoardState {
   const prefs = useXrayPrefs()
   // Checked once for the whole game; a broken file throws here, where the error boundary shows it.
@@ -80,8 +93,20 @@ export function useXrayBoard({
   }, [run, events, live])
   const log = useMemo(() => (run ? toLogRun(run) : null), [run])
 
+  const groups = useMemo(() => (run ? callGroupsOf(run, calls, events, focus) : []), [run, calls, events, focus])
+  const lesson = useMemo(() => lessonCalls(groups), [groups])
+  const lead = useMemo(() => leadCallId(groups), [groups])
+
   const syscalls = state.lens === 'syscalls'
-  const call = pickCall(calls, state.pick)
+  const bootLens = state.lens === 'boot'
+  const call = pickCall(calls, state.pick, lead)
+  const callList = useCallList({
+    groups,
+    depth: state.depth,
+    live,
+    selectedId: call?.id ?? null,
+    runId: run?.id ?? null,
+  })
   const episode = pickEpisode(episodes, state.pick, live)
   const callBoard = useMemo(() => (call ? syscallStoryboard(call, content.narration) : null), [call, content])
   const episodeBoard = useMemo(
@@ -90,7 +115,12 @@ export function useXrayBoard({
   )
 
   const whole = isWholeRun(state.lens)
+  const bootView = useMemo(() => (boot ? bootViewOf(boot) : null), [boot])
   const wholeFigure = useMemo((): XrayFigure | null => {
+    // The boot needs no command: it already happened.
+    if (state.lens === 'boot') {
+      return bootView && { kind: 'boot', view: bootView }
+    }
     if (!run) {
       return null
     }
@@ -104,7 +134,7 @@ export function useXrayBoard({
       default:
         return null
     }
-  }, [state.lens, run, events, calls, cpus])
+  }, [state.lens, run, events, calls, cpus, bootView])
 
   const figure: XrayFigure | null = whole
     ? wholeFigure
@@ -114,7 +144,9 @@ export function useXrayBoard({
   const storyboard = figure?.kind === 'syscalls' || figure?.kind === 'processes' ? figure.storyboard : null
   const pickId = whole ? null : syscalls ? (call ? String(call.id) : null) : (episode?.key ?? null)
   const picks = picksOf(state.lens, calls, episodes)
-  const nextPick = picks[picks.findIndex((p) => p.id === pickId) + 1]
+  const nextPick = syscalls
+    ? nextCallPick(calls, lesson, call?.id ?? null)
+    : picks[picks.findIndex((p) => p.id === pickId) + 1]
   const { memoryKey, autoplayKey } = memoryKeysOf(scope.levelId, scope.step, state.lens, figure)
   const player = useStoryboardPlayer({
     storyboardKey: storyboard?.key ?? 'none',
@@ -136,7 +168,13 @@ export function useXrayBoard({
     run,
     lens: state.lens,
     live,
-    count: whole ? (run?.calls.length ?? 0) : syscalls ? calls.length : episodes.length,
+    count: bootLens
+      ? (bootView?.stages.length ?? 0)
+      : whole
+        ? (run?.calls.length ?? 0)
+        : syscalls
+          ? calls.length
+          : episodes.length,
     logNote: log?.note ?? null,
   })
 
@@ -149,12 +187,14 @@ export function useXrayBoard({
       lens: state.lens,
       depth: state.depth,
       predict: state.predict,
-      runs: runChoices(runs),
+      // The boot belongs to no command, so there is no run to pick.
+      runs: bootLens ? [] : runChoices(runs),
       runId: run?.id ?? null,
       picks,
       pickId,
       pickLegend: syscalls ? 'Call' : 'Child',
       log: syscalls ? log : null,
+      callList: syscalls && run ? callList.view : null,
       expanded: state.expanded,
     },
     controlActions: {
@@ -164,6 +204,7 @@ export function useXrayBoard({
       selectRun: state.selectRun,
       select: state.select,
       setExpanded: state.setExpanded,
+      toggleRow: callList.toggle,
     },
     figure,
     emptyText,

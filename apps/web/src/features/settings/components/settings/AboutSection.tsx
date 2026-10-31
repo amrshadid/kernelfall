@@ -9,12 +9,12 @@ export interface AboutSectionProps {
 export function AboutSection({ version, storage }: AboutSectionProps) {
   return (
     <section aria-labelledby="settings-about-h" className="settings__section" id="settings-about">
-      <SectionHead id="settings-about-h">5 · About</SectionHead>
+      <SectionHead id="settings-about-h">6 · About</SectionHead>
       <dl className="settings-about">
         <dt>Version</dt>
         <dd>{version}</dd>
         <dt>Your data</dt>
-        <dd>{storage}. No accounts, no tracking: nothing leaves this browser.</dd>
+        <dd>{storage}. No accounts: your progress and code never leave this browser (see Privacy).</dd>
         <dt>The Machine</dt>
         <dd>Real Linux on an emulated PC (v86), running in this browser. Your C is built by gcc inside it.</dd>
         <dt>Licence</dt>

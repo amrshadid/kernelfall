@@ -1,8 +1,33 @@
+/* Takes the room the bar leaves; its width never depends on the labels, so measuring it can't loop. */
 .kf-rail {
-  display: flex;
-  align-items: center;
+  position: relative;
   flex: 1;
   min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  /* A last resort that never triggers when the measure is right: clipped beats drawn under Taint. */
+  overflow: hidden;
+}
+
+/* Room for the current square's outline at either end, inside the clip. */
+.kf-rail__list {
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem;
+}
+
+.kf-rail__measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.kf-rail__measure .kf-rail__list {
+  width: max-content;
 }
 
 .kf-rail__step {
@@ -58,6 +83,9 @@
 }
 
 .kf-rail__step button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   border: 0;
   background: none;
   padding: 0.25rem 0;
@@ -75,21 +103,38 @@
   color: var(--red);
 }
 
-@media (max-width: 85rem) {
-  .kf-rail__step + .kf-rail__step::before {
-    width: 0.875rem;
-    margin: 0 0.5rem 0 0;
-  }
+/* Without a label the square is the target, so it carries the red too. */
+.kf-rail__step--reviewing button .kf-rail__sq {
+  background: var(--red);
+  border-color: var(--red);
 }
 
-/* On narrow laptops the rail no longer fits beside Taint and Hint: future steps keep only their square (and their names for screen readers). */
-@media (max-width: 75rem) {
-  .kf-rail__step--future > span:not(.kf-rail__sq) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+.kf-rail__step button:hover .kf-rail__sq,
+.kf-rail__step button:focus-visible .kf-rail__sq {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.kf-rail__step button:focus-visible .kf-rail__sq {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* A bare square is a small target: the padding widens what a click can hit, the margin keeps the measured width. */
+.kf-rail__step--bare button {
+  padding: 0.375rem 0.25rem;
+  margin: 0 -0.25rem;
+}
+
+.kf-rail__list--current .kf-rail__step + .kf-rail__step::before,
+.kf-rail__list--marks .kf-rail__step + .kf-rail__step::before {
+  width: 0.75rem;
+  margin: 0 0.25rem 0 0;
+}
+
+@media (max-width: 85rem) {
+  .kf-rail__list--full .kf-rail__step + .kf-rail__step::before {
+    width: 0.875rem;
+    margin: 0 0.5rem 0 0;
   }
 }

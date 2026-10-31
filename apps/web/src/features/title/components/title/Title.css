@@ -28,6 +28,20 @@
   letter-spacing: -0.01em;
 }
 
+.title__tagline blockquote a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--red);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+}
+
+.title__tagline blockquote a:hover,
+.title__tagline blockquote a:focus-visible {
+  text-decoration-thickness: 4px;
+  outline: none;
+}
+
 .title__tagline figcaption {
   margin-top: 0.25rem;
   font-size: 0.8125rem;
@@ -100,6 +114,16 @@
 }
 
 .title__shortcuts:hover {
+  color: var(--ink);
+}
+
+.title__privacy {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.title__privacy:hover {
   color: var(--ink);
 }
 

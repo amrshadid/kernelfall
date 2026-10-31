@@ -9,11 +9,18 @@ import { levelLayoutOf } from '@features/level/utils/layout'
 import { panelsFor, UNAVAILABLE_REASONS } from '@features/level/utils/view'
 import { shortcutLabelOf } from '@features/shortcuts/utils/keys'
 import { useTourScreen } from '@features/tour/hooks/tour'
-import { useActiveLevel, useLevelActions, useLevelCheck, useProgress } from '@kernelfall/game/hooks'
+import { useActiveLevel, useLevelActions, useLevelCheck, useProgress, useRunAsCues } from '@kernelfall/game/hooks'
 import type { LevelId } from '@kernelfall/game/types'
 import { placementOfferAt } from '@kernelfall/game/utils'
 import { labelOf } from '@kernelfall/levels/utils'
-import { useMachineSetup, useMachineStatus, useTerminalCommand } from '@kernelfall/machine/hooks'
+import {
+  useMachineReboot,
+  useMachineSetup,
+  useMachineStatus,
+  useRunAs,
+  useTerminalCommand,
+} from '@kernelfall/machine/hooks'
+import { useMachineLock } from '@shared/hooks/machine'
 import { useNow } from '@shared/hooks/time'
 import { hrefOf, navigateTo } from '@shared/navigation'
 import { STEPS, stepIndexOf } from '@shared/utils/level'
@@ -41,6 +48,8 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   const { openCheatSheet } = useCheatSheet()
   const machine = useMachineStatus()
   const command = useTerminalCommand()
+  const lock = useMachineLock(machine)
+  const { reboot } = useMachineReboot()
   const now = useNow()
 
   const run = opening.status === 'ready' ? opening.run : null
@@ -52,6 +61,9 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   // Every level starts from the clean Machine with its own accounts, files and cwd; a replay too.
   const [replays, setReplays] = useState(0)
   useMachineSetup(level?.lab, `${levelId}#${replays}`)
+  // A level's other users act once an objective is met (S.2's neighbour knocking).
+  const { runAs } = useRunAs()
+  useRunAsCues((cue) => void runAs(cue.user, cue.command))
   // Each new step can open a panel (X-ray, the editor), which gets its own tour stop once.
   useTourScreen('level', run ? phase : 'opening')
 
@@ -114,11 +126,17 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
         savedAgoMs: lastSavedAt === null ? null : now - lastSavedAt,
         onShortcuts: openCheatSheet,
         navigate: navigateTo,
-        runChip: command.run,
+        // A chip's keys would land in a frozen terminal; a level setup holds them for its new shell.
+        runChip: (line) => {
+          if (lock === null || lock.typing || lock.holdsKeys) {
+            command.run(line)
+          }
+        },
         replay: () => {
           void actions.replay(levelId)
           setReplays((count) => count + 1)
         },
+        restart: () => void reboot(),
         placement: offer
           ? {
               offer: offer.check.offer,

@@ -9,7 +9,8 @@ skills: [mem-virtual-memory-basics]
 prerequisites: [proc-process-basics]
 objectives:
   - id: reads-meminfo
-    text: "Read how the Machine's memory is used, in `/proc/meminfo` (`free` reads it too)."
+    # cat copies /proc/meminfo with sendfile64, whose bytes the trace doesn't carry yet; free read()s it.
+    text: "`free` reads how the Machine's memory is used from `/proc/meminfo`, and does the sums."
   - id: exits-zero
     text: "`./where` exits with status 0."
     check: { kind: exit-status, status: 0, program: where }
@@ -23,6 +24,9 @@ hints:
   - "`&global` is the address of the global. How would you get the address of a variable inside `main`?"
   - "`&name` is the address of any variable. `%p` prints an address; cast it to `(void *)` first."
   - "Inside `main`, add `int local = 0;` and `printf(\"local  at %p\\n\", (void *)&local);` before the maps are printed."
+chips:
+  - { command: cat, explain: "show a file: /proc/meminfo is the kernel's memory count, /proc/self/maps cat's own map" }
+  - { command: free, explain: "read /proc/meminfo and do the sums: total, used, free, cache" }
 xray: [memory, syscalls]
 codex:
   - id: virtual-memory
@@ -34,9 +38,13 @@ codex:
     deep: >-
       Physical memory is managed in page frames (struct page, grouped as folios). Each
       process's address space is a struct mm_struct with a list of regions (struct
-      vm_area_struct) and its page tables: four levels on most x86-64 machines (PGD,
-      PUD, PMD, PTE), five with LA57. A page fault enters handle_mm_fault().
-    sources: [include/linux/mm_types.h, mm/memory.c, arch/x86/mm/fault.c]
+      vm_area_struct) and its page tables: three levels on 32-bit x86 with PAE, the
+      Machine's (PGD, PMD, PTE), four on most x86-64 machines (PGD, PUD, PMD, PTE),
+      five with LA57. A page fault on a user address goes through do_user_addr_fault()
+      to handle_mm_fault(); one on a kernel address from user mode, like poke's, is
+      refused in do_kern_addr_fault(). The CPU's error code says which kind it was:
+      bit 0 set means the page was present and the access was forbidden.
+    sources: [include/linux/mm_types.h, mm/memory.c, arch/x86/mm/fault.c, arch/x86/include/asm/pgtable-3level_types.h]
     docs: https://docs.kernel.org/admin-guide/mm/concepts.html
     tryIt: getconf PAGESIZE
   - id: proc-maps
@@ -47,7 +55,8 @@ codex:
     deep: >-
       One line per vm_area_struct, printed by show_map_vma(): start and end address,
       permissions, file offset, device, inode and path (or [heap], [stack], [vdso]).
-      Real Linux randomizes where the stack, heap and libraries go (ASLR).
+      Linux randomizes where the program, stack, heap and libraries go (ASLR), so the
+      addresses change from run to run; /proc/sys/kernel/randomize_va_space sets it.
     sources: [fs/proc/task_mmu.c]
     docs: https://man7.org/linux/man-pages/man5/proc_pid_maps.5.html
     tryIt: cat /proc/self/maps
@@ -60,7 +69,9 @@ codex:
       MemTotal is usable RAM after firmware and kernel reservations; MemAvailable
       estimates what can be given to programs without swapping, counting reclaimable
       cache. When free memory runs low, kswapd reclaims pages in the background.
-      meminfo_proc_show() prints the file.
+      meminfo_proc_show() prints the file. The Machine's BusyBox free takes its totals
+      from sysinfo() and Cached and SReclaimable from /proc/meminfo; used is total
+      minus free minus buff/cache.
     sources: [fs/proc/meminfo.c, mm/vmscan.c, mm/page_alloc.c]
     docs: https://man7.org/linux/man-pages/man5/proc_meminfo.5.html
     tryIt: free -h
@@ -73,22 +84,24 @@ codex:
       Each file's inode has an address space (struct address_space) holding its cached
       folios; read() copies from them (filemap_read()), and a miss asks the filesystem
       to read from the disk. Clean cache pages are freed first when memory runs short.
-    sources: [mm/filemap.c, include/linux/fs.h]
+      A filesystem may skip the cache: the Machine's 9p root (cache=mmap, shown as
+      cache=0x5 in /proc/mounts) sends each read() to the host, so its Cached stays at
+      a few MiB however many files are read.
+    sources: [mm/filemap.c, include/linux/fs.h, fs/9p/vfs_file.c]
     docs: https://docs.kernel.org/admin-guide/mm/concepts.html
     tryIt: "grep -E 'MemTotal|MemAvailable|Cached' /proc/meminfo"
 # No Taint rules are live in the Prologue.
 taint: []
 fidelity:
   faithful:
-    - "4 KiB pages; the MMU, page tables and page faults as described"
-    - "the free, /proc/meminfo and /proc/<pid>/maps formats"
-    - "the page cache, and MemAvailable counting it"
+    - "4 KiB pages; three-level PAE page tables; the MMU and page faults as described"
+    - "the free, /proc/meminfo and /proc/<pid>/maps output of the Machine's kernel and BusyBox"
+    - "the 32-bit layout: program low, musl and the vdso high, the stack under 0xc0000000"
+    - "ASLR: addresses change from run to run"
+    - "the page cache, MemAvailable counting it, and the 9p root caching little"
     - "kswapd's role"
   simplified:
-    - "the lab's programs run in a wasm interpreter, so their memory is modeled: the lab produces maps with the usual x86-64 layout"
-    - "no ASLR: addresses repeat from run to run, where real Linux randomizes them"
-    - "no shared libraries (the lab's programs are static) and no [vdso]"
-    - "meminfo shows only the main fields, with the lab's own numbers"
+    - "the drawing's RAM frames and arrows are a picture; the real page tables aren't shown until Act III"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

@@ -1,5 +1,6 @@
 import type { CheckInput, OpenedFile } from '@kernelfall/game/types'
 import {
+  asText,
   basename,
   defineChecker,
   eventsOf,
@@ -11,13 +12,14 @@ import {
 } from '@kernelfall/game/utils'
 import type { LabEvent, Pid } from '@kernelfall/machine/events'
 import { EACCES, STDOUT_FILENO } from '@kernelfall/machine/types'
+import { plainText } from '#utils/terminal/index'
 
 const NOTE = 'notes.txt'
-/** The copy of /bin/echo the worked example takes the `x` bit from. */
 const COPY = 'hi'
 const BOX = 'box'
-/** How root runs a command as another user; init knocks for the neighbour with it. */
-const RUNUSER = 'runuser'
+// runuser (and a PAM su) forks for its session and runs cat in the child; BusyBox's su and setpriv exec
+// it in the same task. So the switch is in cat's task or one of its fork parents.
+const AS_ANOTHER_USER = new Set(['runuser', 'su', 'setpriv'])
 /** `-rw-------`: the read bits of owner, group and other sit at these places. */
 const OWNER_READ = 1
 const GROUP_READ = 4
@@ -25,42 +27,55 @@ const OTHER_READ = 7
 
 const parentName = (path: string) => basename(path.slice(0, Math.max(path.lastIndexOf('/'), 0)))
 
-/** `cat`'s opens, from tasks that ran it as the player (not through runuser). */
+function switchedUser(events: readonly LabEvent[], pid: Pid): boolean {
+  const parents = new Map(eventsOf(events, 'sched_process_fork').map((fork) => [fork.childPid, fork.parentPid]))
+  for (let task: Pid | undefined = pid; task !== undefined; task = parents.get(task)) {
+    if (execsOf(events, task).some((exec) => AS_ANOTHER_USER.has(basename(exec.filename)))) {
+      return true
+    }
+  }
+  return false
+}
+
+const neighbourPids = (events: readonly LabEvent[]): ReadonlySet<Pid> =>
+  new Set(programsNamed(events, 'cat').filter((pid) => switchedUser(events, pid)))
+
 function playerCatOpens(events: readonly LabEvent[], neighbours: ReadonlySet<Pid>): OpenedFile[] {
   return programsNamed(events, 'cat')
     .filter((pid) => !neighbours.has(pid))
     .flatMap((pid) => filesOpened(events, pid))
 }
 
-/** Tasks that ran `runuser`: whatever they run after it runs as the neighbour. */
-const neighbourPids = (events: readonly LabEvent[]): ReadonlySet<Pid> =>
-  new Set(
-    programsNamed(events, RUNUSER).filter((pid) => execsOf(events, pid).some((e) => basename(e.filename) === 'cat'))
-  )
-
-/** Any task's execve() the kernel refused with EACCES: the shell's, or a child's. */
+// bash's child tries the execve() first, then explains the refusal. Only hi's counts: `./notes.txt` is
+// refused too, but it was never a program.
 function execRefused(events: readonly LabEvent[]): boolean {
   const pids = new Set(
     eventsOf(events, 'sys_enter')
       .filter((event) => event.name === 'execve')
       .map((event) => event.pid)
   )
-  return [...pids].some((pid) => failedCalls(events, pid, ['execve']).some(({ errno }) => errno === EACCES))
+  return [...pids].some((pid) =>
+    failedCalls(events, pid, ['execve']).some(
+      ({ call, errno }) => errno === EACCES && basename(asText(call.enter.data)) === COPY
+    )
+  )
 }
 
-/** An `ls -l` line for the note whose read bits are on for its owner only. */
+// BusyBox's ls colours the name on a terminal.
 function showsPrivateNote(stdout: string): boolean {
-  return stdout.split('\n').some((line) => {
-    const words = line.trim().split(/\s+/)
-    const mode = words[0] ?? ''
-    return (
-      basename(words.at(-1) ?? '') === NOTE &&
-      mode.length === 10 &&
-      mode[OWNER_READ] === 'r' &&
-      mode[GROUP_READ] !== 'r' &&
-      mode[OTHER_READ] !== 'r'
-    )
-  })
+  return plainText(stdout)
+    .split('\n')
+    .some((line) => {
+      const words = line.trim().split(/\s+/)
+      const mode = words[0] ?? ''
+      return (
+        basename(words.at(-1) ?? '') === NOTE &&
+        mode.length === 10 &&
+        mode[OWNER_READ] === 'r' &&
+        mode[GROUP_READ] !== 'r' &&
+        mode[OTHER_READ] !== 'r'
+      )
+    })
 }
 
 /** level.yaml declares the chmod objective. */

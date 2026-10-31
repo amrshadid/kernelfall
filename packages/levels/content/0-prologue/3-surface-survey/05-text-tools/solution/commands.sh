@@ -11,7 +11,8 @@ grep -c dark census.txt
 grep you /etc/passwd
 sort census.txt
 sort -r census.txt
-sort -o sorted.txt census.txt
+sort census.txt > sorted.txt
 uniq sorted.txt
 uniq -c sorted.txt
 uniq census.txt
+sort census.txt | uniq -c

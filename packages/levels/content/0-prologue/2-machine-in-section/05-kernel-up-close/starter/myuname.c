@@ -2,10 +2,10 @@
 #include <sys/utsname.h>
 
 /*
- * init: The uname command asks the Kernel who it is. So can you.
+ * init: The uname command asks the kernel who it is. So can you.
  *
  * struct utsname is a record: a few named fields kept together. uname(&u)
- * asks the Kernel to fill in the record u, and answers 0 when it did.
+ * asks the kernel to fill in the record u, and answers 0 when it did.
  *
  *   u.sysname   the kernel's name
  *   u.release   its release

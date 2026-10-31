@@ -13,6 +13,9 @@ export type StepState = 'done' | 'current' | 'future'
 /** The five visible steps of the level loop. */
 export type StepId = 'scene' | 'see' | 'build' | 'watch' | 'card'
 
+/** How much of the step rail is labelled: every step, only the current one, or none (squares only). */
+export type RailMode = 'full' | 'current' | 'marks'
+
 export interface RailStep {
   readonly id: string
   readonly label: string

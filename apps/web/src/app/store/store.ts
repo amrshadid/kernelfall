@@ -42,6 +42,7 @@ interface AppState extends Settings {
   setXrayGuess: (key: string, option: string) => void
   /** Null puts the panel back to the screen's default size. */
   setPanelSize: (panel: PanelId, size: number | null) => void
+  setShareRecordings: (shareRecordings: boolean) => void
   /** Also removes the stored copy. */
   resetSettings: () => void
 
@@ -92,6 +93,7 @@ export const useAppStore = create<AppState>()(
             false,
             'setPanelSize'
           ),
+        setShareRecordings: (shareRecordings) => set({ shareRecordings }, false, 'setShareRecordings'),
         resetSettings: () => {
           set(DEFAULT_SETTINGS, false, 'resetSettings')
           useAppStore.persist.clearStorage()
@@ -160,6 +162,7 @@ export const useSettings = () => {
       setMotion: state.setMotion,
       setUiScale: state.setUiScale,
       setShowAllPanels: state.setShowAllPanels,
+      setShareRecordings: state.setShareRecordings,
       resetSettings: state.resetSettings,
     }))
   )
@@ -212,6 +215,8 @@ export const useTourState = () =>
       resetToursSeen: state.resetToursSeen,
     }))
   )
+
+export const useShareRecordings = () => useAppStore((state) => state.shareRecordings)
 
 export const useCheatSheet = () =>
   useAppStore(

@@ -1,27 +1,38 @@
 import type { CheckInput } from '@kernelfall/game/types'
-import { defineChecker, exitOf, programsNamed, writtenTo } from '@kernelfall/game/utils'
+import { callsOf, defineChecker, eventsOf, exitOf, programsNamed, writtenTo } from '@kernelfall/game/utils'
 import type { LabEvent } from '@kernelfall/machine/events'
 import { SIGSEGV, STDOUT_FILENO } from '@kernelfall/machine/types'
 
-/** uname()'s sysname, release and machine, as the Machine answers them (`Linux 6.18.59-0-virt i686`). */
+// The release only to its series, so a stable update of the image keeps passing.
 const KERNEL_WORDS = [/^Linux$/, /^6\.18\.\d+/, /^i[3-6]86$/]
+// PAGE_OFFSET under the 3G/1G split: where kernel space starts.
+const KERNEL_SPACE = 0xc0000000
 
-/** `poke` touched kernel memory and the kernel killed it with SIGSEGV. */
+// The CPU's fault on a kernel address, then the kernel's SIGSEGV: not any crash of a program named poke.
 const pokeSegfaults = (events: readonly LabEvent[]): boolean =>
-  programsNamed(events, 'poke').some((pid) => exitOf(events, pid)?.signal === SIGSEGV)
+  programsNamed(events, 'poke').some(
+    (pid) =>
+      exitOf(events, pid)?.signal === SIGSEGV &&
+      eventsOf(events, 'page_fault_user').some((fault) => fault.pid === pid && fault.address >= KERNEL_SPACE)
+  )
 
-/** One line of `myuname`'s output holds all three words, in any order. */
+// All three words on one line, in any order, written after the kernel answered uname.
+// SIMPLIFIED: the trace doesn't carry the record uname filled, so a hard-coded line written after the call passes too.
 const printsMachine = (events: readonly LabEvent[]): boolean =>
-  programsNamed(events, 'myuname').some((pid) =>
-    writtenTo(events, pid, STDOUT_FILENO)
+  programsNamed(events, 'myuname').some((pid) => {
+    const asked = callsOf(events, pid, ['uname', 'newuname']).find(({ exit }) => exit?.ret === 0)
+    if (!asked?.exit) {
+      return false
+    }
+    const after = events.filter((event) => event.seq > (asked.exit?.seq ?? 0))
+    return writtenTo(after, pid, STDOUT_FILENO)
       .split('\n')
       .some((line) => {
         const words = line.trim().split(/\s+/)
         return KERNEL_WORDS.every((word) => words.some((printed) => word.test(printed)))
       })
-  )
+  })
 
-/** level.yaml declares `asks-uname`, `exits-zero` and `compares-uname`. */
 export const checker = defineChecker({
   applies: ({ events }: CheckInput) =>
     ['poke', 'myuname', 'uname'].some((name) => programsNamed(events, name).length > 0),

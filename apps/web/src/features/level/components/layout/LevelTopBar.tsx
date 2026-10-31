@@ -19,13 +19,17 @@ export function LevelTopBar({ bar, onMenu }: LevelTopBarProps) {
         type="button"
         className="kf-btn kf-btn--quiet kf-btn--md"
         aria-label="Replay this level"
+        title="Replay this level"
         onClick={bar.onReplay}
       >
         <Icon name="replay" />
-        Replay
+        <span className="level-topbar__label">Replay</span>
       </button>
       <div className="level-topbar__name">
-        <h1 tabIndex={-1}>{bar.heading}</h1>
+        {/* Long titles wrap and clamp on narrow screens; the tooltip keeps the whole name. */}
+        <h1 tabIndex={-1} title={bar.heading}>
+          {bar.heading}
+        </h1>
         <span>{bar.subheading}</span>
       </div>
       <StepRail steps={bar.steps} currentIndex={bar.currentIndex} reviewing={bar.reviewing} onSelect={bar.onReview} />

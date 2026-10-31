@@ -1,8 +1,12 @@
+/* An absolute grid child: it covers the workspace and X-ray columns without taking a cell from them. */
 .level-card {
   position: absolute;
   inset: 0;
+  grid-column: 3 / -1;
+  grid-row: 1;
   z-index: 2;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   background: var(--sheet);
   overflow: hidden;
@@ -12,7 +16,12 @@
   padding: 1.25rem 1.75rem 1rem;
   border-bottom: var(--rule);
   display: grid;
+  grid-template-columns: minmax(0, 52rem);
   gap: 0.5rem;
+}
+
+.level-card__head h2 {
+  overflow-wrap: break-word;
 }
 
 .level-card__head h2 {
@@ -30,13 +39,16 @@
 
 .level-card__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.625rem;
 }
 
+/* Capped like a printed page, so the lines stay readable when the card spans X-ray too. */
 .level-card__cards {
   overflow: auto;
   padding: 1.25rem 1.75rem;
   display: grid;
+  grid-template-columns: minmax(0, 52rem);
   gap: 1rem;
   align-content: start;
 }

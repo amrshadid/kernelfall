@@ -5,7 +5,16 @@ import { xrayContent } from '@kernelfall/levels/utils'
 import { describe, expect, it } from 'vitest'
 import { ECHO, FORK_EXEC_WAIT, runOf, stamp } from '@/test/fixtures/trace-events.fixture'
 import { NO_RUN } from './xray-board.constants'
-import { memoryKeysOf, pickCall, pickEpisode, picksOf, runChoices, xrayCaption, xrayEmptyText } from './xray-board.util'
+import {
+  memoryKeysOf,
+  nextCallPick,
+  pickCall,
+  pickEpisode,
+  picksOf,
+  runChoices,
+  xrayCaption,
+  xrayEmptyText,
+} from './xray-board.util'
 
 const content = xrayContent()
 const echoRun = runOf(ECHO, 'echo hello')
@@ -19,6 +28,16 @@ describe('pickCall', () => {
     const [first, second] = calls
     expect(pickCall(calls, String(second?.id))).toBe(second)
     expect(pickCall(calls, null)?.name).toBe(first?.name)
+    expect(pickCall(calls, null, second?.id ?? null)).toBe(second)
+  })
+})
+
+describe('nextCallPick', () => {
+  it('runs on through the lesson when there is one, else through every call', () => {
+    const [write, exit] = calls
+    expect(nextCallPick(calls, [], write?.id ?? null)?.label).toBe('exit_group')
+    expect(nextCallPick(calls, [write as (typeof calls)[number]], write?.id ?? null)).toBeUndefined()
+    expect(nextCallPick(calls, [], exit?.id ?? null)).toBeUndefined()
   })
 })
 

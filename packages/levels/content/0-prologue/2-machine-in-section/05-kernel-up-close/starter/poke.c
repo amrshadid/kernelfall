@@ -1,15 +1,15 @@
 #include <stdio.h>
 
 /*
- * Where the kernel's own code starts on 32-bit x86 when it isn't moved at
- * boot: 16 MiB above 0xc0000000, where kernel space begins.
+ * Where kernel space starts on this 32-bit Machine: the top 1 GiB of every
+ * process's addresses, from 0xc0000000 up.
  */
-#define KERNEL_TEXT 0xc1000000UL
+#define KERNEL_SPACE 0xc0000000UL
 
 int main(void)
 {
 	volatile const unsigned char *kernel =
-		(const unsigned char *)KERNEL_TEXT;
+		(const unsigned char *)KERNEL_SPACE;
 
 	printf("the kernel's first byte: %u\n", *kernel);
 	return 0;

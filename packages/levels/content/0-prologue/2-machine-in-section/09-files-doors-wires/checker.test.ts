@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { judges, LabEventLog, levelUnderTest, metBy, verdictOf } from '#test/index'
+import { machineFacts } from '#test/machine-facts'
 
 const SHELL = 300
 const LOOK = 321
 const level = levelUnderTest('prologue-machine-in-section-09-files-doors-wires')
 
-/** One run of look on `path`: it reads `text` and writes it out, unless told not to. */
 function look(path: string, text: string, { writes = true }: { writes?: boolean } = {}) {
   const log = new LabEventLog().spawn(SHELL, LOOK, './look').readFile(LOOK, path, text)
   if (writes) {
@@ -15,27 +15,38 @@ function look(path: string, text: string, { writes = true }: { writes?: boolean 
 }
 
 const motd = look('/etc/motd', 'Welcome to the Machine.\n')
-const uptime = look('/proc/uptime', '812.47 790.10\n')
-const address = look('/sys/class/net/eth0/address', '52:54:00:12:34:56\n')
+const uptime = look('/proc/uptime', '45.38 6.46\n')
+const address = look('/sys/class/net/eth0/address', '00:22:15:76:df:a8\n')
+
+const MOUNTS = (machineFacts().outputs['cat /proc/mounts'] ?? '')
+  .split('\n')
+  .map((line) => line.split(' '))
+  .map(([, point = '', type = '']) => [point, type] as const)
+
+const OBJECTIVE_OF: Readonly<Record<string, string>> = { '9p': 'reads-9p', proc: 'reads-procfs', sysfs: 'reads-sysfs' }
 
 describe('Files, Doors and Wires', () => {
-  it('passes with look run on ext4, procfs and sysfs, with zero Taint', () => {
+  it('passes with look run on 9p, procfs and sysfs, with zero Taint', () => {
     expect(verdictOf(level, [motd, uptime, address])).toEqual({ passed: true, missing: [], taint: [] })
   })
 
-  it('shows what the starter run gives: the disk only', () => {
-    expect(metBy(level, motd)).toEqual(['exits-zero', 'reads-ext4'])
+  it('shows what the starter run gives: the 9p root only', () => {
+    expect(metBy(level, motd)).toEqual(['exits-zero', 'reads-9p'])
   })
 
-  it('tells the filesystems apart by where the path is mounted', () => {
-    expect(metBy(level, uptime)).toContain('reads-procfs')
-    expect(metBy(level, address)).toContain('reads-sysfs')
-    expect(metBy(level, look('notes.txt', 'hi\n'))).toContain('reads-ext4')
-    expect(metBy(level, look('/dev/null', 'x'))).toEqual(['exits-zero'])
+  it.each(MOUNTS)('knows which filesystem the Machine mounts at %s (%s)', (point, type) => {
+    const met = metBy(level, look(`${point === '/' ? '' : point}/a-file`, 'x\n'))
+    const expected = OBJECTIVE_OF[type]
+
+    expect(met.filter((id) => id !== 'exits-zero')).toEqual(expected === undefined ? [] : [expected])
+  })
+
+  it('takes a relative path as the home folder, on 9p', () => {
+    expect(metBy(level, look('notes.txt', 'hi\n'))).toContain('reads-9p')
   })
 
   it('needs the bytes written to standard output after the read', () => {
-    expect(metBy(level, look('/proc/uptime', '812.47 790.10\n', { writes: false }))).toEqual(['exits-zero'])
+    expect(metBy(level, look('/proc/uptime', '45.38 6.46\n', { writes: false }))).toEqual(['exits-zero'])
   })
 
   it('needs at least one byte read', () => {

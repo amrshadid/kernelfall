@@ -3,6 +3,7 @@ import type { ContinueTarget } from '@features/title/types'
 import { ManHead, ScreenFrame } from '@shared/components/layout'
 import { Dialog } from '@shared/components/modals'
 import { Button, ButtonLink, ContentsList, Wordmark } from '@shared/components/ui'
+import { APP_REPOSITORY_URL } from '@shared/constants/app'
 import type { ContentsEntry, ScreenChrome } from '@shared/types'
 import './Title.css'
 
@@ -26,6 +27,9 @@ export interface TitlePresentationProps {
   newGame: NewGameDialog
   saveText: string
   onShortcuts: () => void
+  /** Whether this build records sessions with Clarity; the footer says so. */
+  recorded: boolean
+  privacyHref: string
 }
 
 /** The cover of the service manual: the wordmark cut in section, the contents, and Fig. 1. */
@@ -39,6 +43,8 @@ export function TitlePresentation({
   newGame,
   saveText,
   onShortcuts,
+  recorded,
+  privacyHref,
 }: TitlePresentationProps) {
   return (
     <ScreenFrame
@@ -49,7 +55,15 @@ export function TitlePresentation({
         <ManHead
           kind="foot"
           left={saveText}
-          center="Everything stays in your browser. No accounts, no tracking."
+          center={
+            <>
+              Your progress stays in your browser. No accounts.
+              {recorded && ' We record how the game is played.'}{' '}
+              <a className="title__privacy" href={privacyHref}>
+                Privacy
+              </a>
+            </>
+          }
           right={
             <button type="button" className="title__shortcuts" onClick={onShortcuts}>
               Shortcuts <kbd>?</kbd>
@@ -67,7 +81,12 @@ export function TitlePresentation({
           <div className="title__tagline-row">
             <figure className="title__tagline">
               <blockquote cite="https://lkml.org/lkml/2000/8/25/132">
-                <p>Talk is cheap. Show me the code.</p>
+                <p>
+                  Talk is cheap.{' '}
+                  <a href={APP_REPOSITORY_URL} target="_blank" rel="noreferrer">
+                    Show me the code.
+                  </a>
+                </p>
               </blockquote>
               <figcaption>Linus Torvalds, on the linux-kernel list, 2000</figcaption>
             </figure>

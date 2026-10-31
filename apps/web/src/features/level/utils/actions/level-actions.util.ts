@@ -11,10 +11,12 @@ export interface GuideActionsInput {
   readonly heldWithTaint: boolean
   /** The Next shortcut as the player's OS prints it ("⌥N", "Alt+N"). */
   readonly nextKeys: string
+  /** Boot levels only: the player is `you` once bash runs, and only root may reboot. */
+  readonly restart: (() => void) | null
 }
 
 export function guideActionsOf(run: LevelRunState, input: GuideActionsInput): readonly GuideAction[] {
-  const { moves, askReference, heldWithTaint, nextKeys } = input
+  const { moves, askReference, heldWithTaint, nextKeys, restart } = input
   const next = (label: string): GuideAction => ({
     id: 'next',
     label,
@@ -46,10 +48,17 @@ export function guideActionsOf(run: LevelRunState, input: GuideActionsInput): re
             { id: 'accept-taint', label: 'Continue as is', kind: 'default', onSelect: () => void moves.acceptTaint() },
           ]
         : []
+      const restarts: GuideAction[] = restart
+        ? [{ id: 'restart', label: 'Ask the Watchdog to restart the Machine', kind: 'quiet', onSelect: restart }]
+        : []
       // After the last hint, a quiet way on: never a dead end.
       return run.hintsRevealed >= HINT_TIERS.length
-        ? [...held, { id: 'reference', label: "Continue with init's version", kind: 'default', onSelect: askReference }]
-        : held
+        ? [
+            ...held,
+            ...restarts,
+            { id: 'reference', label: "Continue with init's version", kind: 'default', onSelect: askReference },
+          ]
+        : [...held, ...restarts]
     }
     case 'oops':
       return [{ id: 'respawn', label: 'Restore and continue', kind: 'primary', onSelect: () => void moves.respawn() }]

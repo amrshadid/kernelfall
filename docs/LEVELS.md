@@ -108,6 +108,7 @@ hints: # exactly three: nudge, concept, point at the spot
 chips: # optional: commands "build it" offers; whole lines before P.3, names alone from P.3 on
   - { command: ls /bin, explain: "list the folder /bin" }
 xray: [syscalls] # syscalls | processes | files | network | modules | memory | locks | boot (Act III adds vm | sched | trace | order | buses | storage | dump); [] for none
+xrayFocus: [pipe, fork, dup2] # optional: calls X-ray keeps open beyond those the declared checks name (the shell's side)
 codex: # cards it adds (one or more)
   - id: write-syscall # unique across the game
     term: write(2)
@@ -143,7 +144,9 @@ lab: # optional: the Machine the level starts on (LabSetup); left out, the share
   bin: [lamp] # gcc builds /usr/local/src/lamp.c into /usr/local/bin/lamp at setup
   processes: # running before the player's first command
     - { argv: [sleep, "600"], pid: 412, user: you, stdout: /dev/null }
-  boot: { args: "root=/dev/sda1 ro quiet", firmware: bios } # validated, not applied yet
+  boot: { args: "console=ttyS0 rw quiet initcall_debug" } # starts at GRUB's menu (below)
+runAs: # optional: commands root runs as a user once an objective is first met
+  - { after: note-private, user: guest, command: cat /home/you/notes.txt }
 ```
 
 - Ids (objectives, skills, Taint rules) are kebab-case and unique within their list;
@@ -170,9 +173,27 @@ level's session.
 | `player`    | the user the shell runs as; left out, `you`                                                    |
 | `cwd`       | where the shell starts; left out, the player's home                                            |
 | `env`       | exported in the player's shell, after the login defaults                                       |
-| `boot`      | validated, not applied: v86 boots the kernel directly, with no bootloader yet                  |
+| `boot`      | writes GRUB's entry, then restarts the Machine: the level starts at GRUB's menu                |
 
 There is no `cpus` field: the Machine has one CPU, and a `cpus:` key is an error.
+
+**`boot`** (P.4, P.10): `boot: {}` keeps the Machine's own entry; `args` is the whole
+kernel command line written after `linux /boot/vmlinuz-virt` in `/boot/grub/grub.cfg`
+on `/dev/sda1`. Always keep `console=ttyS0` in it: without it the kernel's log and the
+initramfs's emergency shell go to a screen nobody sees. Setup applies the other fields,
+writes `grub.cfg` and reboots, so a boot level can't use `player`, `cwd`, `env`,
+`processes` or files under `/tmp` and `/run` (the restart loses them). The player
+drives GRUB with real keys (`e`, Ctrl-N, Ctrl-E, Ctrl-X); an edit lasts one boot.
+Nothing is traced before bash starts, so checks judge what the player reads after the
+boot (`/proc/cmdline`, `dmesg`). A reference run drives GRUB with `keys` lines (see
+`reference-runs.ts`).
+
+**`runAs`** (S.2, P.10): each cue `{ after, user, command }` runs `command` once, as
+`user` (root, `you` or one of `lab.users`), the first time objective `after` is met.
+Root runs it on the control channel, out of the terminal, traced apart from the
+player's shell, and its events reach the checkers: S.2's neighbour tries to read the
+note, and P.10's init raises `eth0`, which only root may do. A golden run plays the cue
+as a line with `as: <user>`.
 
 Facts about the Machine that levels must respect:
 
@@ -332,7 +353,8 @@ Players start knowing nothing, so a level ships only when:
 - Someone other than its writer has checked every fact against Linux 6.18 source, the
   man pages and the real Machine.
 - Facts about the Machine (versions, devices, paths, pids, users) come from the VM,
-  not from memory or another distribution.
+  not from memory or another distribution: `src/test/machine-facts.json` holds its
+  outputs (`pnpm vm:facts` re-records them after the image changes).
 - Output shown in the story, hints or Codex is copied from a real run on the Machine.
 - Every term is explained the first time it appears.
 - Every analogy says where it stops being true.
@@ -379,7 +401,7 @@ there use `ksh$`, no `sudo` and no quotes; real-world cards keep bash and `sudo`
 | S.1   | the filesystem tree, walked and changed          | `/tmp/survey`                              | full    | ~25 min |
 | S.2   | users, permission bits and the kernel's check    | a private `notes.txt`                      | full    | ~20 min |
 | S.3   | processes from the outside, signals              | a paused, then ended process               | full    | ~20 min |
-| S.4   | finding files, standard error                    | the lost plan, found                       | full    | ~15 min |
+| S.4   | finding files, standard error                    | the lost plan, found                       | full    | ~20 min |
 | S.5   | text tools                                       | a census, counted and sorted               | full    | ~20 min |
 | 1.0   | strings and arrays in C                          | `ksh-lite`: a word counter                 | full    | ~15 min |
 | 1.1   | pointers and the heap                            | tokenizer                                  | full    | ~20 min |

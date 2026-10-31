@@ -5,6 +5,7 @@ cd ..
 pwd
 cd home/you
 pwd
+cat ../../etc/motd
 mkdir /tmp/survey
 mkdir /tmp/survey/maps
 mkdir -p /tmp/survey/notes/old

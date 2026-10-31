@@ -8,9 +8,9 @@ Near the end, one burnt, garbled line flashes: `...fade...` and `Kernel panic - 
 
 > **The Watchdog:** Tick. Tick. Oh good, something's awake. You. You're new.
 >
-> **The Watchdog:** I'm the Watchdog. A timer, really. If nobody resets me in time, I restart the whole Machine. Last night I had to.
+> **The Watchdog:** I'm the Watchdog. A timer, really. If nobody resets me in time, I restart the whole Machine. Tonight I had to.
 >
-> **The Watchdog:** The core of the Machine crashed. Everything stopped mid-step. We call that night the Kernelfall. I restarted us, and... well. Look around.
+> **The Watchdog:** The core of the Machine crashed. Everything stopped mid-step. We call it the Kernelfall. I restarted us, and... well. Look around.
 >
 > **init:** Easy, old dog. Hello, little one. I'm init. I'm the first program the Machine ran today, and I look after everyone who runs after me. Including you.
 >

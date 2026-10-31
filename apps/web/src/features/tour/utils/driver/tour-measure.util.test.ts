@@ -79,4 +79,33 @@ describe('measureStage', () => {
     expect(measured.frame).toBeNull()
     expect(stageBox(measured)).toEqual({ top: 734, left: 0, width: 1024, height: 34 })
   })
+
+  it('stops the editor and the terminal on the splitters beside them, never past them', () => {
+    document.body.innerHTML = `
+      <main class="kf-sheet" style="border: 2px solid black">
+        <aside id="guide"></aside>
+        <div id="split-guide" role="separator"></div>
+        <section id="workspace">
+          <div id="editor"></div>
+          <div id="split-editor" role="separator"></div>
+          <div id="terminal"></div>
+        </section>
+        <div id="split-xray" role="separator"></div>
+        <div id="xray"></div>
+      </main>`
+    const $ = (id: string) => document.getElementById(id) as Element
+    at(document.querySelector('main') as Element, { top: 92, left: 16, width: 1008, height: 676 })
+    at($('guide'), { top: 94, left: 18, width: 300, height: 672 })
+    at($('split-guide'), { top: 94, left: 318, width: 2, height: 672 })
+    at($('workspace'), { top: 94, left: 320, width: 400, height: 672 })
+    at($('editor'), { top: 94, left: 320, width: 400, height: 400 })
+    at($('split-editor'), { top: 494, left: 320, width: 400, height: 2 })
+    at($('terminal'), { top: 496, left: 320, width: 400, height: 270 })
+    at($('split-xray'), { top: 94, left: 720, width: 2, height: 672 })
+    at($('xray'), { top: 94, left: 722, width: 300, height: 672 })
+    expect(stageBox(measureStage($('editor')))).toEqual({ top: 92, left: 318, width: 404, height: 404 })
+    expect(stageBox(measureStage($('terminal')))).toEqual({ top: 494, left: 318, width: 404, height: 274 })
+    expect(stageBox(measureStage($('guide')))).toEqual({ top: 92, left: 16, width: 304, height: 676 })
+    expect(stageBox(measureStage($('xray')))).toEqual({ top: 92, left: 720, width: 304, height: 676 })
+  })
 })

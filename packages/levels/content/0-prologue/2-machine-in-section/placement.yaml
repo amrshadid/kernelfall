@@ -21,18 +21,18 @@ tasks:
     files: [myuname.c]
     objectives: [asks-uname, exits-zero, prints-machine]
   - level: 06-finding-the-hardware
-    task: "Read the disk's `driver` link in `/sys`, then fix the lighthouse board's `.dts` so its lamp binds in the board panel."
+    task: "Read the disk controller's `driver` link in `/sys`, then fix the lighthouse board's `.dts` so its lamp binds when `board` boots it."
     files: [lighthouse.dts]
     objectives: [reads-disk-driver, compiles-dts, lamp-binds]
   - level: 07-who-runs
-    task: "Complete `whoami.c` so it prints its own PID and its parent's, and run it twice."
-    files: [whoami.c]
+    task: "Complete `mypid.c` so it prints its own PID and its parent's, and run it twice."
+    files: [mypid.c]
     objectives: [exits-zero, prints-own-pid, prints-parent-pid]
   - level: 08-pages-and-maps
     task: "Complete `where.c` so it prints a local variable's address, and point at the `[stack]` line of its map that holds it."
     files: [where.c]
     objectives: [exits-zero, prints-maps, local-on-stack]
   - level: 09-files-doors-wires
-    task: "With `look.c`, read one file each from ext4, procfs and sysfs."
+    task: "With `look.c`, read one file each from the 9p root, procfs and sysfs."
     files: [look.c]
-    objectives: [reads-ext4, reads-procfs, reads-sysfs]
+    objectives: [reads-9p, reads-procfs, reads-sysfs]

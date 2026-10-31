@@ -1,82 +1,86 @@
 import type { CheckInput, SyscallRecord } from '@kernelfall/game/types'
-import { callsOf, defineChecker, exitOf, filesOpened, programsNamed, writtenTo } from '@kernelfall/game/utils'
+import { asText, callsOf, defineChecker, eventsOf, filesOpened, programsNamed, writtenTo } from '@kernelfall/game/utils'
 import type { LabEvent, Pid } from '@kernelfall/machine/events'
-import { EPERM, SIGKILL, SIGSTOP, SIGTERM, STDOUT_FILENO } from '@kernelfall/machine/types'
+import { EPERM, SIGTERM, STDOUT_FILENO } from '@kernelfall/machine/types'
 
-/** The processes init starts for the level (see level.yaml). */
-const INIT_PID = 1
-const SLEEP_PID = 401
-const YES_PID = 402
-/** /proc/<pid>/status's line for a stopped task, as fs/proc/array.c prints it. */
-const STOPPED_STATUS = 'State:\tT (stopped)'
+export const INIT_PID = 1
+const SLEEP = 'sleep'
+const YES = 'yes'
 const STATUS_PATH = /^\/proc\/(\d+)\/status$/
+const COMMAND_COLUMN = 'COMMAND'
+export const STOPPED_LINE = 'State:\tT (stopped)'
+export const PENDING_FIELD = 'ShdPnd:'
+// A process-wide pending signal is bit (signal - 1) of ShdPnd, printed as 16 hex digits.
+const TERM_PENDING = `${PENDING_FIELD}\t${(1 << (SIGTERM - 1)).toString(16).padStart(16, '0')}`
 
-/** Every kill() of the command, with its target and signal: bash's builtin `kill` makes it itself. */
+// bash's builtin kill makes the call itself, so any task's kill() counts.
 const killCalls = (events: readonly LabEvent[]): SyscallRecord[] =>
-  [...new Set(events.flatMap((event) => ('pid' in event ? [event.pid] : [])))].flatMap((pid) =>
-    callsOf(events, pid, ['kill'])
+  [...new Set(eventsOf(events, 'sys_enter').map((event) => event.pid))].flatMap((pid) => callsOf(events, pid, ['kill']))
+
+// cat's sendfile64 text may be missing from the trace; what reached the terminal never is.
+const printed = (events: readonly LabEvent[], pid: Pid): string =>
+  writtenTo(events, pid, STDOUT_FILENO) ||
+  eventsOf(events, 'console_write')
+    .filter((event) => event.pid === pid)
+    .map((event) => asText(event.bytes))
+    .join('')
+
+function psListings(events: readonly LabEvent[]) {
+  return programsNamed(events, 'ps').flatMap((pid) => {
+    const [header = '', ...lines] = printed(events, pid).split('\n').filter(Boolean)
+    const columns = header.trim().split(/\s+/)
+    if (columns[0] !== 'PID') {
+      return []
+    }
+    const rows = lines.map((line) => line.trim().split(/\s+/))
+    return [{ rows, stat: columns.indexOf('STAT'), named: columns.includes(COMMAND_COLUMN) }]
+  })
+}
+
+type Listing = ReturnType<typeof psListings>[number]
+
+// Without -o, BusyBox's ps shows the whole command line, so the name is any word after the pid.
+const rowsOf = ({ rows }: Listing, name: string) => rows.filter((row) => row.slice(1).includes(name))
+const stateOf = (listing: Listing, row: readonly string[]) => (listing.stat < 0 ? '' : (row[listing.stat] ?? ''))
+
+// Setup's processes aren't traced, so a full listing without one, or with it a zombie, shows it ended.
+// Only a listing with names can show a name missing: `ps -o pid` lists no one by name.
+const endedIn = (listing: Listing, name: string) =>
+  listing.named &&
+  listing.rows.some((row) => row[0] === String(INIT_PID)) &&
+  rowsOf(listing, name).every((row) => stateOf(listing, row).startsWith('Z'))
+
+function statusReads(events: readonly LabEvent[]): string[] {
+  return [...new Set(eventsOf(events, 'sys_enter').map((event) => event.pid))].flatMap((pid) =>
+    filesOpened(events, pid).some(({ path, ret }) => {
+      const target = STATUS_PATH.exec(path)?.[1]
+      return target !== undefined && Number(target) !== pid && ret !== undefined && ret >= 0
+    })
+      ? [printed(events, pid)]
+      : []
   )
-
-const sent = (call: SyscallRecord, target: Pid, sig: number) =>
-  call.enter.args[0] === target && call.enter.args[1] === sig && call.exit?.ret === 0
-
-/** A `ps` line for `pid` whose STAT column starts with T. */
-function psShowsStopped(stdout: string, pid: Pid): boolean {
-  return stdout.split('\n').some((line) => {
-    const words = line.trim().split(/\s+/)
-    return words[0] === String(pid) && words.some((word) => /^T[a-zA-Z+<]*$/.test(word))
-  })
 }
-
-/** `cat` read /proc/<pid>/status of a process other than itself, and printed it. */
-const readOthersStatus = (events: readonly LabEvent[], pid: Pid): boolean =>
-  filesOpened(events, pid).some(({ path, ret }) => {
-    const target = STATUS_PATH.exec(path)?.[1]
-    return target !== undefined && Number(target) !== pid && ret !== undefined && ret >= 0
-  })
-
-const killedBy = (events: readonly LabEvent[], pid: Pid, signals: readonly number[]): boolean => {
-  const signal = exitOf(events, pid)?.signal
-  return signal !== undefined && signals.includes(signal)
-}
-
-// init started these outside the player's shell, so their own events aren't traced. Neither ends
-// by itself during the level (sleep 600, yes), so a `ps` that no longer lists one, or lists it as
-// a zombie (Z: exited, not yet reaped by init), shows it ended.
-const psShowsEnded = (events: readonly LabEvent[], pid: Pid): boolean =>
-  programsNamed(events, 'ps').some((ps) => {
-    const lines = writtenTo(events, ps, STDOUT_FILENO).trim().split('\n')
-    const row = lines.find((line) => line.trim().split(/\s+/)[0] === String(pid))
-    return (
-      lines.length > 1 &&
-      (row === undefined ||
-        row
-          .trim()
-          .split(/\s+/)
-          .some((word) => /^Z/.test(word)))
-    )
-  })
 
 export const checker = defineChecker({
   // Every command is judged: the Survey uses the Machine's own programs, never the player's.
   applies: ({ events }: CheckInput) => events.length > 0,
 
   check({ events }) {
-    const kills = killCalls(events)
-    const cats = programsNamed(events, 'cat')
+    const listings = psListings(events)
+    const statuses = statusReads(events)
+    const yesStatus = statuses.filter((text) => text.includes(`Name:\t${YES}\n`))
     const judged: Readonly<Record<string, boolean>> = {
-      'paused-yes': kills.some((call) => sent(call, YES_PID, SIGSTOP)),
-      'saw-stopped':
-        programsNamed(events, 'ps').some((pid) => psShowsStopped(writtenTo(events, pid, STDOUT_FILENO), YES_PID)) ||
-        cats.some(
-          (pid) =>
-            filesOpened(events, pid).some(({ path }) => path === `/proc/${YES_PID}/status`) &&
-            writtenTo(events, pid, STDOUT_FILENO).includes(STOPPED_STATUS)
-        ),
-      'read-status': cats.some((pid) => readOthersStatus(events, pid)),
-      'yes-ended': killedBy(events, YES_PID, [SIGTERM, SIGKILL]) || psShowsEnded(events, YES_PID),
-      'sleep-ended': killedBy(events, SLEEP_PID, [SIGTERM]) || psShowsEnded(events, SLEEP_PID),
-      'kill-init-denied': kills.some((call) => call.enter.args[0] === INIT_PID && call.exit?.ret === -EPERM),
+      'listed-both': listings.some((listing) => rowsOf(listing, SLEEP).length > 0 && rowsOf(listing, YES).length > 0),
+      'read-status': statuses.some((text) => [SLEEP, YES].some((name) => text.includes(`Name:\t${name}\n`))),
+      'paused-yes':
+        listings.some((listing) => rowsOf(listing, YES).some((row) => stateOf(listing, row).startsWith('T'))) ||
+        yesStatus.some((text) => text.includes(STOPPED_LINE)),
+      'saw-pending': yesStatus.some((text) => text.includes(STOPPED_LINE) && text.includes(TERM_PENDING)),
+      'yes-ended': listings.some((listing) => endedIn(listing, YES)),
+      'sleep-ended': listings.some((listing) => endedIn(listing, SLEEP)),
+      'kill-init-denied': killCalls(events).some(
+        (call) => call.enter.args[0] === INIT_PID && call.exit?.ret === -EPERM
+      ),
     }
     return { objectivesMet: Object.keys(judged).filter((id) => judged[id]), taint: [] }
   },

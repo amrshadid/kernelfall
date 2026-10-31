@@ -4,7 +4,7 @@
 
 > **init:** Your survey's done. I wrote it all down in `census.txt`: one line per house you passed, the district and whether its lamp is lit or dark.
 >
-> **init:** A _line_ is text up to a newline. Most tools here work one line at a time: count them, pick some, sort them, squash the repeats.
+> **init:** A _line_ is text up to a newline, an invisible character that ends it. (Enter sends a different one, a carriage return; the kernel's terminal driver turns it into a newline before bash reads it.) Most tools here work one line at a time: count them, pick some, sort them, squash the repeats.
 
 ## See it
 
@@ -40,7 +40,7 @@ compilers-quarter dark
 
 > **init:** `wc` counts, `head` and `tail` print the first and last lines, `grep` prints the lines that contain a word (`-c`: just how many), `sort` prints them in order.
 >
-> **init:** In X-ray they all look the same: `openat`, `read` the whole file, then `write` what's left. The Kernel only moves bytes. The idea of a "line" lives in the tools.
+> **init:** In X-ray they all look alike: `open` the file, `read` it in pieces of up to 1,024 bytes, then `writev` what's left. The kernel only moves bytes. The idea of a "line" lives in the tools.
 
 ## Build it
 
@@ -76,15 +76,15 @@ $ grep -n lit census.txt
 
 ```
 $ grep you /etc/passwd
-you:x:1000:1000:you:/home/you:/bin/sh
+you:x:1000:1000:you:/home/you:/bin/bash
 ```
 
 > **init:** Then `sort census.txt`, and `sort -r census.txt` for the reverse.
 >
-> **init:** Now the errand: how many houses per district? `uniq` drops a line only if it repeats the line just above it. So first put the same lines next to each other.
+> **init:** Now the errand: how many houses per district? `uniq` drops a line only if it repeats the line just above it. So first put the same lines next to each other, and keep them in a file with `>`, as you did in the attic.
 
 ```
-$ sort -o sorted.txt census.txt
+$ sort census.txt > sorted.txt
 $ uniq sorted.txt
 compilers-quarter dark
 process-district dark
@@ -101,7 +101,7 @@ $ uniq -c sorted.txt
       9 userland lit
 ```
 
-> **init:** `-o sorted.txt` is `sort`'s own option: it writes into that file. My shell can't send output into a file for you; `sort` does it itself.
+> **init:** Thirty-one dark, nine lit, and only Userland has any light at all.
 
 ## Watch it
 
@@ -117,45 +117,69 @@ compilers-quarter dark
 process-district dark
 userland dark
 ...
+$ uniq census.txt | wc -l
+37
 ```
 
-> **init:** Thirty-seven lines, against six from `sorted.txt`. Only three lines repeated the one just above them, like the second `process-district dark` here, and only those were squashed. Repeats that aren't neighbours survive.
+> **init:** Thirty-seven lines, against six from `sorted.txt`. Only three lines repeated the one just above them, like the second `process-district dark`, and only those were squashed. Repeats that aren't neighbours survive.
 >
-> **init:** You'd like to skip the file in between. In a real shell you'd type this:
+> **init:** And that `|` you just used is a _pipe_: it hands one program's output straight to the next. The file in between, `sorted.txt`, was only a waiting room. Skip it:
 
 ```
 $ sort census.txt | uniq -c
-rescue: pipes not supported
+      8 compilers-quarter dark
+      8 process-district dark
+      7 socket-harbor dark
+      5 syscall-gate dark
+      3 userland dark
+      9 userland lit
 ```
 
-> **init:** My shell can't hand one program's output to another. That `|` is a _pipe_, and the city lost them. Here's an old recording, from before the Kernelfall:
+What X-ray shows bash doing for that line (trimmed):
 
 ```
-pipe2([3, 4], 0)                                       = 0
-clone(...)                                             = 512
-clone(...)                                             = 513
-[pid 512] write(1, "compilers-quarter dark\ncompil"..., 742)  = 742
-[pid 513] read(0, "compilers-quarter dark\ncompil"..., 4096)  = 742
-[pid 513] write(1, "      8 compilers-quarter dark\n"..., 157) = 157
+pipe([3, 4])                                            = 0
+pipe([5, 6])                                            = 0
+fork()                                                  = 488
+fork()                                                  = 489
+[pid 488] dup2(4, 1)                                    = 1
+[pid 488] execve("/usr/bin/sort", ...)                  = 0
+[pid 489] dup2(3, 0)                                    = 0
+[pid 489] execve("/usr/bin/uniq", ...)                  = 0
+[pid 488] writev(1, "compilers-quarter dark\n", ...)       = 23
+[pid 489] read(0, "compilers-quarter dark\n", 1024)      = 23
+[pid 488] writev(1, "compilers-quarter dark\ncomp"..., ...) = 719
+[pid 489] read(0, "compilers-quarter dark\ncomp"..., 1024) = 719
+[pid 489] writev(1, "      8 compilers-quarter dark\n", ...) = 31
+...
+wait4(-1, ...)                                          = 488
+wait4(-1, ...)                                          = 489
 ```
 
-> **init:** One `pipe2`, two `clone`s, and bytes flowing from `sort` straight into `uniq`, with no file in between.
+> **init:** `pipe` asks the kernel for a pipe: a buffer inside the kernel with two ends, fd 3 to read from and fd 4 to write into. Bash forks one child per program. The `sort` child moves the write end onto its fd 1 with `dup2`, the `uniq` child moves the read end onto its fd 0, and each becomes its program with `execve`. Bash waits for both.
+>
+> **init:** `sort` writes to fd 1 as always, and `uniq` reads fd 0 as always. Neither knows a pipe is there. `sort` wrote its 742 bytes in two pieces, 23 and 719, and each `read` of `uniq` took what was waiting. The second `pipe`, fds 5 and 6, is bash's own, made before every command it starts: it holds `sort` back until `uniq` exists too, and carries no data.
+
+Where the "waiting room" stops being true: a pipe isn't a file. Nothing is stored on any disk, and the kernel holds only 64 KiB in it at a time (the default size); a writer with more waits until the reader takes some.
+
+> **The Watchdog:** Counted, sorted, and the lamps tallied. The surface is surveyed.
 
 ## Debrief
 
-> **init:** One program's output, another's input, no file in between. That's what the city lost. Your shell will bring it back.
+> **init:** You walked every street of the surface. You know the folders, the locks, the processes, how to find things, and how to count them. And every tool you used is just a program asking the kernel for help, through the same few calls.
 >
-> **init:** But every shell starts small. Before it can run anything, it reads the line you typed and cuts it into words: `sort`, `census.txt`. You watched mine do it all day.
+> **init:** That's the end of the Surface. Next comes Act I: down into Userland's workshops, where you stop using programs and start writing them, starting with a shell of your own. Before it can run anything, a shell reads the line you typed and cuts it into words: `sort`, `census.txt`. You watched bash do that all day.
 >
-> **init:** In C, a line of text is just bytes in a row, ending in a zero. Go see the Compiler Smith. First, learn how C holds text.
+> **init:** The Compiler's Quarter opens in the next release, with 1.0, Letters in a Row. Until then, one door down there is already open: 1.4, Run Anything, where your own shell starts its first program. Go and have a look.
 
 ## Real world
 
-The errand in one go, with pipes, as your own shell will run it in 1.7:
+The errand in one go on any Linux, with a pipe:
 
 ```sh
-wc -l /etc/passwd                    # how many users
-grep -c bash /etc/passwd             # how many use bash
-cut -d: -f7 /etc/passwd | sort | uniq -c    # shells, counted (pipes!)
+wc -l /etc/passwd                            # how many users
+grep -c bash /etc/passwd                     # how many use bash
+cut -d: -f7 /etc/passwd | sort | uniq -c     # shells, counted: two pipes
 head -n 3 /etc/passwd; tail -n 3 /etc/passwd
+sort -o sorted.txt sorted.txt                # sort's own -o can write over its input; > would empty it first
 ```

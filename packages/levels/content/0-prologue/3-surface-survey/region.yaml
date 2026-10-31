@@ -1,10 +1,10 @@
 # The Surface Survey (docs/levels/surface-survey.md) sits between the Prologue and
-# Act I. It is a region of the prologue act: the act ids are fixed, and the player
-# works in the Machine's bash here. The map draws it in Userland, where it walks.
+# Act I. It is a region of the prologue act: the act ids are fixed. The player works in
+# the Machine's real bash; the map draws the region in Userland, where it walks.
 id: surface-survey
 name: Surface Survey
-caption: the filesystem tree, permissions, processes from outside, finding and counting
-source: fs/, fs/namei.c, fs/proc/
+caption: the filesystem tree, permissions, processes from outside, finding, counting, redirection and pipes
+source: fs/, fs/namei.c, fs/proc/, fs/pipe.c
 guide: init
 inLayer: userland
 slots:

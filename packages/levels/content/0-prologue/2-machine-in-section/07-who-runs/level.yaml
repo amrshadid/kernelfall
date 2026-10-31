@@ -2,25 +2,33 @@
 # are judged in checker.ts.
 id: prologue-machine-in-section-07-who-runs
 title: Who Runs
-summary: "List every process, read one's status in /proc, and write a program that prints its own PID and its parent's. You learn what a process is and how the kernel shares two CPUs between them."
+summary: "List every process, read one's status in /proc, watch three programs share the one CPU, and write a program that prints its own PID and its parent's. You learn what a process is and how the kernel takes turns on a CPU."
 minutes: 20
 tracks: [userland, kernel]
 skills: [proc-process-basics]
 prerequisites: [sys-kernel-role]
 objectives:
   - id: reads-proc-status
-    text: "Read what the Kernel keeps about a process, in `/proc/<pid>/status`."
+    text: "Read what the kernel keeps about a process, in `/proc/<pid>/status`."
+  - id: shares-one-cpu
+    text: "`top` or `ps` shows three `yes` ready to run at once, taking turns on the one CPU."
   - id: exits-zero
-    text: "`./whoami` exits with status 0."
-    check: { kind: exit-status, status: 0, program: whoami }
+    text: "`./mypid` exits with status 0."
+    check: { kind: exit-status, status: 0, program: mypid }
   - id: prints-own-pid
-    text: "`./whoami` asks the Kernel for its own PID with `getpid` and prints it."
+    text: "`./mypid` asks the kernel for its own PID with `getpid` and prints it."
   - id: prints-parent-pid
-    text: "`./whoami` asks for its parent's PID with `getppid` and prints it: the rescue shell's PID."
+    text: "`./mypid` asks for its parent's PID with `getppid` and prints it: your shell's PID."
 hints:
   - "`getpid()` gives your own number. Is there a function for your parent's?"
   - "`getppid()` returns the parent's PID. `printf` with `%d` prints a whole number."
   - "After the first `printf`, add `printf(\"My parent is %d\\n\", (int)getppid());`."
+chips:
+  - { command: ps, explain: "list every process: PID, user, CPU time and command" }
+  - { command: cat, explain: "cat /proc/$$/status shows what the kernel keeps about your shell" }
+  - { command: nproc, explain: "how many CPUs the kernel can use" }
+  - { command: top, explain: "top -b -n 1 takes one look at who is using the CPU" }
+  - { command: kill, explain: "send a signal: kill %1 stops the shell's first background job" }
 xray: [processes, syscalls]
 codex:
   - id: process
@@ -34,7 +42,7 @@ codex:
       it, in proc_pid_status().
     sources: [include/linux/sched.h, kernel/fork.c, kernel/kthread.c, fs/proc/array.c]
     docs: https://man7.org/linux/man-pages/man5/proc_pid_status.5.html
-    tryIt: "ps -o pid,ppid,stat,comm -p $$"
+    tryIt: "grep -E '^(Name|State|Pid|PPid)' /proc/$$/status"
   - id: scheduler
     term: the scheduler
     simple: >-
@@ -44,35 +52,37 @@ codex:
       Ready tasks wait on a per-CPU run queue. Since 6.6 the default policy is EEVDF
       (it replaced CFS): each task earns a fair share of CPU time, and the one with
       the earliest virtual deadline runs next. A context switch, in __schedule(),
-      saves one task's registers and loads another's.
+      saves one task's registers and loads another's. On one CPU, as on the Machine,
+      every task that is ready waits on the same run queue.
     sources: [kernel/sched/core.c, kernel/sched/fair.c, Documentation/scheduler/sched-eevdf.rst]
     docs: https://man7.org/linux/man-pages/man7/sched.7.html
     tryIt: "grep ctxt /proc/$$/status"
   - id: kernel-threads
     term: kernel threads
     simple: >-
-      The kernel's own workers. They show in ps under their own names but run only
-      kernel code.
+      The kernel's own workers. They show in ps under their own names, in square
+      brackets, but run only kernel code.
     deep: >-
       Created with kthread_create() or kthread_run() by kthreadd (PID 2). ksoftirqd/N
       finishes deferred interrupt work on CPU N; kswapd0 frees memory when it runs
-      low; kworker threads run workqueues.
+      low; kworker threads run workqueues. ps shows a task with no command line, as
+      kernel threads are, by its name in brackets.
     sources: [kernel/kthread.c, kernel/softirq.c, mm/vmscan.c]
     docs: https://man7.org/linux/man-pages/man1/ps.1.html
-    tryIt: ps -e --forest | head -n 30
+    tryIt: ps -e | head -n 30
 # No Taint rules are live in the Prologue.
 taint: []
 fidelity:
   faithful:
-    - "ps columns, PID 1 and PID 2, and the kernel threads' names"
+    - "BusyBox ps and top output, PID 1 and PID 2, and the Machine's kernel threads"
     - "the /proc/<pid>/status field names and formats"
     - "the R and S states"
+    - "one CPU: three busy programs take turns on one run queue"
     - getpid and getppid
     - EEVDF as the 6.18 default scheduler
   simplified:
-    - "the Machine has few processes and kernel threads; a real system has dozens of kernel threads"
-    - "the CPU lanes show the lab's own time slices, not EEVDF's real arithmetic, and no task moves between the two CPUs (real Linux balances load across them)"
-    - "/proc/<pid>/status shows only the fields the levels use"
+    - "X-ray's CPU lane draws the turns; it doesn't show EEVDF's arithmetic"
+    - "tracing every syscall for X-ray takes CPU time of its own, which a Machine nobody watches wouldn't spend"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

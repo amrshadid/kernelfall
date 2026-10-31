@@ -98,6 +98,30 @@ describe('LevelLayout', () => {
     expect(work?.style.getPropertyValue('--editor-share')).toBe('45%')
   })
 
+  it('lays the level-complete card over the workspace and X-ray, and takes X-ray out of reach under it', () => {
+    const card = {
+      cards: [],
+      simplified: [],
+      seenIn: 'P.3',
+      headline: 'Now you can speak to a shell',
+      result: 'Level complete',
+      next: null,
+      onMap: noop,
+      onReplay: noop,
+    }
+    render(<LevelLayout {...props({ card })} />)
+    const overlay = screen.getByRole('region', { name: 'Now you can speak to a shell' })
+    expect(overlay.parentElement?.classList.contains('level-work')).toBe(true)
+    expect(document.getElementById('level-workspace')?.contains(overlay)).toBe(false)
+    expect(document.getElementById('level-xray')?.hasAttribute('inert')).toBe(true)
+    expect(screen.getByRole('separator', { name: 'Resize X-ray', hidden: true }).hasAttribute('inert')).toBe(true)
+  })
+
+  it('keeps X-ray in reach while no card covers it', () => {
+    render(<LevelLayout {...props()} />)
+    expect(document.getElementById('level-xray')?.hasAttribute('inert')).toBe(false)
+  })
+
   it('puts a panel back to its default size when its divider is reset', () => {
     const onResize = vi.fn()
     render(<LevelLayout {...props({ panelSizes: { sizes: { guide: 24, xray: null, editor: null }, onResize } })} />)

@@ -48,7 +48,34 @@ describe('useEditorWorkspace', () => {
     machine.status = { phase: 'booting', detail: null }
     const { result } = workspace()
     expect(machine.writeFiles).not.toHaveBeenCalled()
-    expect(result.current.run).toEqual({ kind: 'busy', label: 'Starting Linux…' })
+    expect(result.current.run).toEqual({
+      kind: 'busy',
+      label: 'Starting Linux…',
+      reason: 'Booting Linux. Run works once Linux is running.',
+    })
+  })
+
+  it.each(['loading', 'booting', 'restoring', 'failed'] as const)(
+    'keeps Run and its shortcut off while %s',
+    (phase) => {
+      machine.status = { phase, detail: null }
+      const { result } = workspace()
+      expect(result.current.run.kind).toBe('busy')
+      act(() => result.current.onRun())
+      act(() => vi.runAllTimers())
+      expect(machine.run).not.toHaveBeenCalled()
+    }
+  )
+
+  it('says why Run is off when the Machine failed', () => {
+    machine.status = { phase: 'failed', detail: 'no wasm' }
+    const { result } = workspace()
+    expect(result.current.run).toEqual({
+      kind: 'busy',
+      label: 'Run',
+      reason: 'Run needs a running Machine. Reload the page to try again.',
+    })
+    expect(result.current.status).toBe('no wasm')
   })
 
   it("starts from the player's drafts and marks what differs from the starter", () => {

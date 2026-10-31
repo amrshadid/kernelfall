@@ -1,6 +1,7 @@
 export * from './codex'
 export * from './dialogue'
 export * from './keys'
+export * from './machine-lock'
 export * from './map'
 export * from './marks'
 export * from './route'

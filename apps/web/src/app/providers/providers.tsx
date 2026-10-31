@@ -1,5 +1,8 @@
+import { appConfig } from '@app/config'
 import { AppRouter } from '@app/routing'
+import { useShareRecordings } from '@app/store'
 import { ThemeSync } from '@app/theme'
+import { useClarity } from '@features/analytics/hooks/clarity'
 import { NoticesContainer } from '@features/notices'
 import { useShortcutListener } from '@features/shortcuts/hooks/keys'
 import { cleanupGameListeners, setupGameListeners } from '@kernelfall/game'
@@ -41,6 +44,7 @@ export const AppProviders = () => {
   }, [saveNow, recordActivity])
 
   useShortcutListener()
+  useClarity(appConfig().clarityId, useShareRecordings())
 
   return (
     <>

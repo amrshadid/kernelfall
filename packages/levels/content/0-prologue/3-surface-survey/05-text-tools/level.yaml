@@ -2,7 +2,7 @@
 # Objectives without a `check` are judged in checker.ts.
 id: prologue-surface-survey-05-text-tools
 title: Counting and Sorting
-summary: "Count, search and sort init's census of the city with wc, grep, sort and uniq. You learn the small text tools every Linux user reaches for, and why uniq only sees neighbouring lines."
+summary: "Count, search and sort init's census of the city with wc, grep, sort and uniq, then join two of them with a pipe. You learn the small text tools every Linux user reaches for, why uniq only sees neighbouring lines, and how a pipe hands one program's output to another."
 minutes: 20
 tracks: [userland]
 skills: [sys-text-tools]
@@ -11,20 +11,23 @@ objectives:
   - id: counted-lines
     text: "`wc -l census.txt` counts the census: 40 lines."
   - id: counted-dark
-    text: "`grep -c dark census.txt` counts the dark houses."
-    check: { kind: wrote, fd: 1, program: grep, text: { equals: "31\n" } }
+    text: "`grep -c dark census.txt` counts the dark houses: 31. (`grep dark census.txt | wc -l` counts them too.)"
   - id: own-passwd-line
     text: "`grep` finds your own line in `/etc/passwd`."
     check: { kind: wrote, fd: 1, program: grep, text: { contains: "you:x:1000:1000:" } }
   - id: sorted-file
-    text: "`sort -o sorted.txt census.txt` writes the census, sorted, into `sorted.txt`."
+    text: "`sort census.txt > sorted.txt` writes the census, sorted, into `sorted.txt`."
   - id: counted-kinds
     text: "`uniq -c sorted.txt` counts the houses of each kind."
+  - id: piped-counts
+    text: "`sort census.txt | uniq -c` counts them again, with no file in between."
 hints:
   - "`uniq` only squashes repeats that sit next to each other. How do you put all the same lines next to each other?"
-  - "`sort -o out in` writes the sorted lines into the file `out`. Then `uniq -c out` counts each run of equal lines."
-  - "`sort -o sorted.txt census.txt`, then `uniq -c sorted.txt`."
+  - "`>` sends a command's output into a file, as in Finding Things. `|` sends it straight into the next command instead."
+  - "`sort census.txt > sorted.txt`, then `uniq -c sorted.txt`; then `sort census.txt | uniq -c`."
 xray: [syscalls, files]
+# A pipeline is a pipe, a fork per side and each side's dup2.
+xrayFocus: [pipe, fork, dup2]
 codex:
   - id: text-tools
     term: lines and text tools
@@ -33,12 +36,30 @@ codex:
       or squash those lines.
     deep: >-
       The kernel knows nothing of lines: read() returns bytes. Each tool splits at \n
-      itself. wc, head, tail, sort and uniq (GNU coreutils) and grep (GNU grep) are
-      separate programs, each doing one job, made to be joined with pipes. uniq
-      merges only neighbouring lines, so its input is sorted first.
+      itself. wc, head, tail, sort, uniq and grep are separate programs, each doing
+      one job, made to be joined with pipes: BusyBox applets on the Machine, GNU
+      coreutils and GNU grep on most distributions. uniq merges only neighbouring
+      lines, so its input is sorted first.
     sources: [fs/read_write.c]
     docs: https://man7.org/linux/man-pages/man1/uniq.1.html
     tryIt: "cut -d: -f7 /etc/passwd | sort | uniq -c"
+  - id: shell-pipeline
+    term: a pipeline (|)
+    simple: >-
+      `a | b` runs both programs at once and hands everything a writes on standard
+      output to b's standard input, through the kernel, with no file in between.
+    deep: >-
+      bash calls pipe(), which gives two fds: a read end and a write end of a buffer
+      in the kernel. It forks a child per command; the left one dup2()s the write end
+      onto fd 1, the right one the read end onto fd 0, each closes the rest and calls
+      execve(). bash closes its copies and waits for both with wait4(). A read of an
+      empty pipe sleeps until data comes, and answers 0 once no writer is left. Right
+      after the data pipe, bash makes a second pipe of its own, as it does before
+      starting any command: it holds the first child back until the whole pipeline
+      exists, and carries no data.
+    sources: [fs/pipe.c, fs/file.c]
+    docs: https://man7.org/linux/man-pages/man7/pipe.7.html
+    tryIt: "strace -f -e trace=pipe,pipe2,dup2,execve bash -c 'ls / | wc -l'"
   - id: passwd-file
     term: the user list (/etc/passwd)
     deepens: users-and-ids
@@ -46,22 +67,23 @@ codex:
       /etc/passwd has one line per user: name, uid, group, home folder and shell,
       separated by colons.
     deep: >-
-      The kernel never reads it; it only knows numbers. The C library's getpwnam()
-      reads it (through NSS) to turn names into numbers for programs like id and ls.
-      The x in the second field says the password lives in /etc/shadow.
+      The kernel never reads it; it only knows numbers. The C library reads it for
+      programs: getpwuid() turns a number into a name for id and ls, getpwnam() a
+      name into a number for programs like chown. The Machine's musl reads the file
+      itself; glibc goes through NSS, which can also ask a network directory. The x in the second field says the password lives in
+      /etc/shadow.
     sources: [include/linux/cred.h]
     docs: https://man7.org/linux/man-pages/man5/passwd.5.html
     tryIt: grep "$USER" /etc/passwd
 taint: []
 fidelity:
   faithful:
-    - "the output formats of wc, head, tail, grep (-c, -n, -v, -i), sort (-r, -o) and uniq (-c)"
+    - "BusyBox's wc, head, tail, grep, sort and uniq on the real kernel, with their real output"
     - uniq merging only adjacent lines
-    - sort -o safe on its own input
+    - "bash's real pipeline: pipe, a fork per side, dup2, execve, wait4"
     - the /etc/passwd format
   simplified:
-    - "the lab's tools support only the options the levels use, and sort bytes in the C locale (real sort follows the locale's order)"
-    - the pipe recording is replayed, not run
+    - "the census is a level's setup; the Machine's sort orders bytes (the C locale), where many desktops sort by the language's rules"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

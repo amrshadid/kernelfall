@@ -1,6 +1,6 @@
 # init's version, one command per line, typed into bash from /home/you.
 # The neighbour's reads are init's knocks: runuser -u guest -- cat /home/you/notes.txt
-cp /bin/echo hi
+cp /usr/local/bin/say hi
 chmod -x hi
 ./hi hello, Machine
 chmod u+x hi

@@ -2,28 +2,30 @@
 # Every objective is judged in checker.ts.
 id: prologue-surface-survey-03-processes
 title: Processes from Outside
-summary: "Watch two running programs with ps and /proc, pause and resume one with signals, then end both, and find out why you may not signal init. You learn process states and how kill decides who may signal whom."
+summary: "Find two running programs with ps and /proc, pause and resume one with signals, then end both, and find out why you may not signal init. You learn process states and how kill decides who may signal whom."
 minutes: 20
 tracks: [userland]
 skills: [proc-observe]
 prerequisites: [io-permissions, proc-process-basics]
 objectives:
-  - id: paused-yes
-    text: "`kill -STOP 402` pauses `yes`."
-  - id: saw-stopped
-    text: "`ps` or `/proc/402/status` shows `yes` in state `T`: stopped."
+  - id: listed-both
+    text: "`ps` lists init's two processes, `sleep` and `yes`, each with its PID."
   - id: read-status
-    text: "You read `/proc/<pid>/status` of a process you didn't start."
+    text: "You read the `/proc/<pid>/status` of `sleep` or `yes`, a process you didn't start."
+  - id: paused-yes
+    text: "`kill -STOP` pauses `yes`: `ps` or its `/proc/<pid>/status` shows state `T`, stopped."
+  - id: saw-pending
+    text: "`SIGTERM` sent to paused `yes` waits: its status shows `ShdPnd` as `0000000000004000`."
   - id: yes-ended
-    text: "`yes` ends by a signal: `SIGTERM` (acted on once it's continued), or `SIGKILL`."
+    text: "`yes` ends: `ps`, with its `COMMAND` column, shows it as a zombie, `Z`, or no longer lists it."
   - id: sleep-ended
-    text: "`kill 401` ends `sleep` with `SIGTERM`."
+    text: "`sleep` ends: `ps`, with its `COMMAND` column, no longer lists it."
   - id: kill-init-denied
     text: "`kill 1` fails with `Operation not permitted`: you may signal only your own processes."
 hints:
-  - Which column of `ps` says whether a process is paused?
+  - Which column of `ps` says whether a process is paused? And which one gives the number `kill` needs?
   - "`kill -STOP PID` pauses, `kill -CONT PID` resumes, `kill PID` asks it to end. A paused process acts on signals only once it's resumed, except `SIGKILL`."
-  - "`yes` is PID 402. `kill -STOP 402`, check, then `kill 402` and `kill -CONT 402`."
+  - "Find `yes`'s PID in `ps -o pid,stat,comm`. `kill -STOP` it, `kill` it, `cat` its `/proc/<pid>/status`, then `kill -CONT` it."
 xray: [processes, syscalls]
 codex:
   - id: process-states
@@ -35,11 +37,15 @@ codex:
     deep: >-
       The state lives in task_struct->__state; /proc prints it from a fixed table of
       letters, task_state_array. D is an uninterruptible sleep (waiting on I/O),
-      which even SIGKILL can't end until it wakes. ps adds detail letters after the
-      state: s for a session leader, + for the terminal's foreground.
+      which even SIGKILL can't end until it wakes. A zombie has exited and waits for
+      its parent to collect its exit status. I is an idle kernel thread, waiting for
+      work (TASK_IDLE), which isn't counted in the load average. ps may add detail
+      letters after the state: BusyBox's W marks a task with no user address space at
+      all (its VSZ is 0), like the kernel's threads; < a raised priority (a negative
+      nice value), N a lowered one.
     sources: [fs/proc/array.c, include/linux/sched.h]
     docs: https://man7.org/linux/man-pages/man5/proc_pid_status.5.html
-    tryIt: ps -e -o pid,ppid,user,stat,time,comm
+    tryIt: ps -o pid,ppid,user,stat,time,comm
   - id: sending-signals
     term: sending signals (kill)
     deepens: signals
@@ -50,30 +56,28 @@ codex:
       kill(2) checks that the sender may signal the target, check_kill_permission():
       the same user, or the CAP_KILL capability; otherwise EPERM. SIGKILL and
       SIGSTOP can't be caught or ignored. A stopped task keeps other signals pending
-      until SIGCONT; SIGKILL wakes it. On x86-64: SIGKILL 9, SIGTERM 15, SIGCONT 18,
-      SIGSTOP 19.
+      (ShdPnd in its status, one bit per signal) until SIGCONT; SIGKILL wakes it. On
+      x86, 32- and 64-bit alike: SIGKILL 9, SIGTERM 15, SIGCONT 18, SIGSTOP 19.
     sources: [kernel/signal.c, arch/x86/include/uapi/asm/signal.h]
     docs: https://man7.org/linux/man-pages/man7/signal.7.html
     tryIt: "sleep 600 & kill -STOP $!; ps -o pid,stat,comm; kill -CONT $!; kill $!"
 taint: []
 fidelity:
   faithful:
-    - ps columns and state letters
-    - signal numbers on x86-64 and their default actions
+    - "BusyBox's ps and bash's kill on the real kernel: states, PIDs and errors as the Machine prints them"
+    - "signal numbers on x86 and their default actions"
     - SIGKILL and SIGSTOP can't be caught
-    - pending signals on a stopped task, acted on after SIGCONT; SIGKILL waking it
+    - "a pending SIGTERM on a stopped task (ShdPnd), acted on after SIGCONT"
     - EPERM when signalling another user's process
-    - the kill syscall
-    - "/proc/<pid>/status's State and PPid lines"
+    - "/proc/<pid>/status's State, PPid and ShdPnd lines"
   simplified:
-    - the lab's ps accepts only the options the levels use
-    - "the killed by SIGTERM line is the lab's wording"
+    - "setup starts sleep and yes as you and leaves them to init, as if init had started them"
 story:
   scene: story.md#scene
   debrief: story.md#debrief
   realWorld: story.md#real-world
 lab:
-  # init starts both as you before the scene; the story names them by these pids.
+  # No fixed pids: the player reads them from ps. A day's sleep never ends by itself.
   processes:
-    - { argv: [sleep, "600"], pid: 401 }
-    - { argv: ["yes"], pid: 402, stdout: /dev/null }
+    - { argv: [sleep, "86400"] }
+    - { argv: ["yes"], stdout: /dev/null }

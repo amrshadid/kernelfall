@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import '@shared/styles/theme.css'
+import { configureApp } from '@app/config'
+import { registerServiceWorker } from '@app/offline'
 import { configureCore } from '@kernelfall/core'
 import { configureGame } from '@kernelfall/game'
 import { appContent } from '@kernelfall/levels/utils'
@@ -14,6 +16,7 @@ import { App } from './App'
 configureCore({ logEvents: import.meta.env.DEV ? {} : false })
 configureMachine({ vmBaseUrl: `${import.meta.env.BASE_URL}vm/` })
 configureTheme()
+configureApp({ clarityId: import.meta.env.VITE_CLARITY_ID })
 const content = appContent()
 // Invalid content never reaches the game: the router shows its errors instead.
 if (content.ok) {
@@ -30,3 +33,8 @@ createRoot(root).render(
     <App />
   </StrictMode>
 )
+
+// Only a build has the worker; after the page has loaded, so it never competes with the first paint.
+if (import.meta.env.PROD) {
+  window.addEventListener('load', () => void registerServiceWorker(import.meta.env.BASE_URL))
+}

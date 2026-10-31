@@ -5,28 +5,13 @@ import { loadedContent, recordedRun, recordedRunNames } from '#test/index'
 
 const RUN_ANYTHING = 'act1-process-district-04-run-anything'
 const FIRST_WORDS = 'prologue-boot-path-02-first-words'
+const SPEAK_TO_SHELL = 'prologue-boot-path-03-speak-to-shell'
 
 /** Built levels the real Machine can't play yet, and why; every other one has recorded runs. */
-const NOT_ON_THE_VM: Readonly<Record<LevelId, string>> = {
-  'prologue-boot-path-04-the-boot-path':
-    'boots through GRUB with arguments of its own (lab.boot); the VM has no disk to boot from',
-  'prologue-machine-in-section-06-finding-the-hardware':
-    'needs dtc and the lighthouse board program, which the image lacks',
-  'prologue-machine-in-section-10-bring-it-up': 'needs GRUB, lab.boot and an e1000 card; v86 has none of them',
-}
+const NOT_ON_THE_VM: Readonly<Record<LevelId, string>> = {}
 
-// sendfile64 (BusyBox cat into a file or pipe) carries no data in the trace; what cat prints to the
-// terminal does, as console_write.
-const SENDFILE = 'BusyBox cat copies with sendfile64, which carries no data'
 /** Objectives a reference run can't meet on the real Machine yet, and why; each must stay missing until fixed. */
-const KNOWN_GAPS: Readonly<Record<LevelId, Readonly<Record<string, string>>>> = {
-  'prologue-machine-in-section-08-pages-and-maps': { 'reads-meminfo': SENDFILE },
-  'prologue-surface-survey-02-who-may-enter': {
-    'note-private': 'unexplained since the trace rework: investigate before the content pass',
-    'neighbour-denied': "init's knock as guest (useRunAs) isn't in the reference run yet",
-  },
-  'prologue-surface-survey-04-finding-things': { 'read-plan': SENDFILE },
-}
+const KNOWN_GAPS: Readonly<Record<LevelId, Readonly<Record<string, string>>>> = {}
 
 /** The build history the app passes: P.2's player broke the build and fixed it. */
 const BUILDS: Readonly<Record<LevelId, BuildHistory>> = {
@@ -109,12 +94,86 @@ describe('First Words', () => {
     expect(missing).toEqual(expect.arrayContaining(['compiles', 'exits-zero', 'writes-stdout']))
   })
 
+  it('builds and exits 0 with the starter, but writes nothing', () => {
+    const missing = verdictOf(FIRST_WORDS, ['silent'])?.missing.map(({ id }) => id)
+
+    expect(missing).toEqual(['writes-stdout', 'ends-in-newline'])
+  })
+
+  it('misses only the newline when the line has none', () => {
+    expect(verdictOf(FIRST_WORDS, ['no-newline'])?.missing.map(({ id }) => id)).toEqual(['ends-in-newline'])
+  })
+
+  it("passes with printf(), which musl's stdio sends as a writev", () => {
+    expect(verdictOf(FIRST_WORDS, ['solution-printf'])?.missing).toEqual([])
+  })
+
   it("reads the real gcc's error from the broken build, and none from the fixed one", () => {
     const broken = recordedRun(FIRST_WORDS, 'broken').map(compileReport)
     const fixed = recordedRun(FIRST_WORDS, 'solution').map(compileReport)
 
     expect(broken.find((report) => report !== null)?.errors).toBeGreaterThan(0)
     expect(fixed.find((report) => report !== null)).toEqual({ errors: 0, warnings: [] })
+  })
+})
+
+describe('Speak to the Shell', () => {
+  it('meets what happens inside the shell: Tab, env and a command not found', () => {
+    expect(report(SPEAK_TO_SHELL, 'solution').met).toEqual(
+      expect.arrayContaining(['completes-a-command', 'completes-a-file', 'env-adds-a-setting', 'not-found'])
+    )
+  })
+
+  it('meets nothing with each errand almost done', () => {
+    expect(verdictOf(SPEAK_TO_SHELL, ['near-misses'])?.missing.map(({ id }) => id)).toEqual(
+      content.game.level(SPEAK_TO_SHELL)?.objectives.map(({ id }) => id)
+    )
+  })
+})
+
+describe('The Boot Path', () => {
+  const missing = (run: string) =>
+    verdictOf('prologue-boot-path-04-the-boot-path', [run])
+      ?.missing.map(({ id }) => id)
+      .sort()
+
+  it('misses only the quiet boot when quiet stays on the line: dmesg still holds every line', () => {
+    expect(missing('kept-quiet')).toEqual(['booted-your-way'])
+  })
+
+  it("meets only the BIOS check with GRUB's entry booted as it is", () => {
+    expect(missing('plain-boot')).toEqual(['booted-your-way', 'initcalls-logged', 'passed-to-init'])
+  })
+})
+
+describe('The Machine in Section', () => {
+  const missing = (level: string, run: string) =>
+    verdictOf(`prologue-machine-in-section-${level}`, [run])
+      ?.missing.map(({ id }) => id)
+      .sort()
+
+  it("rejects the starters' runs for what each still lacks", () => {
+    expect(missing('05-kernel-up-close', 'starter')).toEqual(['compares-uname', 'poke-segfaults', 'prints-machine'])
+    expect(missing('06-finding-the-hardware', 'starter')).toEqual(['lamp-binds', 'reads-disk-driver'])
+    expect(missing('07-who-runs', 'starter')).toEqual(['prints-parent-pid', 'reads-proc-status', 'shares-one-cpu'])
+    expect(missing('08-pages-and-maps', 'starter')).toEqual(['local-on-stack', 'prints-maps', 'reads-meminfo'])
+  })
+
+  it('rejects a crash on a user address and a line typed in without asking the kernel', () => {
+    expect(missing('05-kernel-up-close', 'impostors')).toEqual([
+      'asks-uname',
+      'compares-uname',
+      'poke-segfaults',
+      'prints-machine',
+    ])
+  })
+
+  it('takes nothing from /dev/null, which answers end of file at once', () => {
+    expect(missing('09-files-doors-wires', 'dev-null')).toEqual(['reads-9p', 'reads-procfs', 'reads-sysfs'])
+  })
+
+  it('comes up without its network driver and with 64 MiB when only root= is fixed', () => {
+    expect(missing('10-bring-it-up', 'root-only')).toEqual(['card-bound', 'full-memory', 'operstate-up'])
   })
 })
 

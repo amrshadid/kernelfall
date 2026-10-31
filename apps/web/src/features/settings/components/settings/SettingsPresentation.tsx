@@ -10,6 +10,7 @@ import { AboutSection } from './AboutSection'
 import { DisplaySection } from './DisplaySection'
 import { GameplaySection } from './GameplaySection'
 import { KeyboardSection } from './KeyboardSection'
+import { PrivacySection } from './PrivacySection'
 import { ResetDialog } from './ResetDialog'
 import { SavesSection } from './SavesSection'
 import './Settings.css'
@@ -19,6 +20,7 @@ const CONTENTS_LABELS: Readonly<Record<SettingsSectionId, string>> = {
   gameplay: 'Gameplay',
   keyboard: 'Keyboard',
   saves: 'Saves',
+  privacy: 'Privacy',
   about: 'About',
 }
 
@@ -42,6 +44,8 @@ export interface SettingsPresentationProps {
   onReplayTours: () => void
   cheatSheetKeys: readonly string[]
   onOpenShortcuts: () => void
+  /** Whether this build records sessions with Clarity, so there is something to turn off. */
+  clarityConfigured: boolean
   message: string | null
 }
 
@@ -75,7 +79,11 @@ export function SettingsPresentation(props: SettingsPresentationProps) {
         <ManHead
           kind="foot"
           left="Changes apply at once."
-          center="Everything stays in your browser. No accounts, no tracking."
+          center={
+            props.clarityConfigured
+              ? 'Your progress stays in your browser. No accounts. We record how the game is played.'
+              : 'Your progress stays in your browser. No accounts.'
+          }
           right={APP_VERSION_LABEL}
         />
       }
@@ -114,6 +122,13 @@ export function SettingsPresentation(props: SettingsPresentationProps) {
               onExport={props.onExport}
               onImportFile={props.onImportFile}
               onResetRequest={() => setResetOpen(true)}
+            />
+          )}
+          {props.section === 'privacy' && (
+            <PrivacySection
+              clarityConfigured={props.clarityConfigured}
+              shareRecordings={values.shareRecordings}
+              onChange={onChange}
             />
           )}
           {props.section === 'about' && <AboutSection version={APP_VERSION_LABEL} storage={props.storage} />}

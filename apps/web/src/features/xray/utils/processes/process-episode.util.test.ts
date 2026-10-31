@@ -46,4 +46,18 @@ describe('processEpisodes', () => {
     expect(running && isEpisodeOver(running)).toBe(false)
     expect(done && isEpisodeOver(done)).toBe(true)
   })
+
+  // `find /` is one child making ~47k calls: copying its list per call took seconds.
+  it("counts a busy child's calls in linear time", () => {
+    const exec = FORK_EXEC_WAIT.findIndex((init) => init.type === 'sched_process_exec')
+    const busy: EventInit[] = Array.from({ length: 100_000 }, (_, i) =>
+      i % 2 === 0
+        ? { type: 'sys_enter', pid: 3, nr: 383, name: 'statx', args: [0, 0, 0, 0, 0] }
+        : { type: 'sys_exit', pid: 3, nr: 383, name: 'statx', ret: 0 }
+    )
+    const started = performance.now()
+    const [episode] = episodesOf([...FORK_EXEC_WAIT.slice(0, exec + 2), ...busy])
+    expect(episode?.work).toHaveLength(50_000)
+    expect(performance.now() - started).toBeLessThan(500)
+  })
 })

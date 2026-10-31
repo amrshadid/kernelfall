@@ -20,6 +20,8 @@
   /* Defaults per screen width; a size the player dragged to (--guide-w, --xray-w) wins over them. */
   --guide-default: 21.25rem;
   --xray-default: 25.625rem;
+  /* The containing block for the level-complete card, placed by grid lines. */
+  position: relative;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
 }
@@ -32,12 +34,12 @@
 /* The 2px tracks are the dividers: the only rules between panels. */
 .level-work--with-xray {
   grid-template-columns:
-    var(--guide-w, var(--guide-default)) 2px minmax(0, 1fr) 2px
+    max(var(--guide-min, 0rem), var(--guide-w, var(--guide-default))) 2px minmax(0, 1fr) 2px
     var(--xray-w, var(--xray-default));
 }
 
 .level-work--no-xray {
-  grid-template-columns: var(--guide-w, var(--guide-default)) 2px minmax(0, 1fr);
+  grid-template-columns: max(var(--guide-min, 0rem), var(--guide-w, var(--guide-default))) 2px minmax(0, 1fr);
 }
 
 .level-workspace {

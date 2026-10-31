@@ -1,3 +1,6 @@
+/** The player's shell on the Machine: busybox init starts bash on the console. */
+export const SHELL_PROGRAM = 'bash'
+
 /** Byte cells the drawing has room for. */
 export const MAX_BUFFER_CELLS = 12
 

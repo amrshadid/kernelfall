@@ -2,6 +2,7 @@ import type { CodeEditorPresentationProps } from '@features/editor/components/ed
 import type { EditorFile, FileContents, RunState } from '@features/editor/types'
 import { isSourceFile } from '@features/editor/utils/workspace'
 import { useMachineFiles, useMachineStatus, useTerminalCommand } from '@kernelfall/machine/hooks'
+import { useMachineLock } from '@shared/hooks/machine'
 import { defaultRunCommand } from '@shared/utils/workspace'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDraftAutosave } from './useDraftAutosave.hook'
@@ -9,7 +10,6 @@ import { useEditorReveal } from './useEditorReveal.hook'
 import { useVmFileSync } from './useVmFileSync.hook'
 
 const IDLE: RunState = { kind: 'idle' }
-const STARTING: RunState = { kind: 'busy', label: 'Starting Linux…' }
 
 export interface EditorWorkspaceOptions {
   /** Reset restores these. */
@@ -38,6 +38,7 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
   const [notice, setNotice] = useState<string | null>(null)
   const { saveNow, scheduleSave, cancelSave } = useDraftAutosave(contents, options.onDraftsChange)
   const reveal = useEditorReveal(contents, setActivePath)
+  const lock = useMachineLock(machine)
   const ready = machine.phase === 'ready'
   const { flush } = useVmFileSync(contents, ready, writeFiles)
 
@@ -77,10 +78,14 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
 
   const onRun = useCallback(() => {
     saveNow()
+    // The shortcut reaches here even while the button is off.
+    if (!ready) {
+      return
+    }
     setNotice(null)
     // The files reach the guest before the command does, so gcc builds what is on screen.
     void flush().then(() => terminal.run(runCommand ?? defaultRunCommand(Object.keys(contents), activePath)))
-  }, [flush, terminal, runCommand, contents, activePath, saveNow])
+  }, [ready, flush, terminal, runCommand, contents, activePath, saveNow])
 
   const onReset = useCallback(() => {
     setContents({ ...starter })
@@ -97,7 +102,7 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
     activePath,
     modified,
     reveal,
-    run: ready ? IDLE : STARTING,
+    run: lock ? { kind: 'busy', label: lock.failed ? 'Run' : 'Starting Linux…', reason: lock.runReason } : IDLE,
     status: notice ?? machine.detail,
     onSelectFile: setActivePath,
     onChange,

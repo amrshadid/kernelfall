@@ -1,3 +1,5 @@
+export * from './config'
+export * from './offline'
 export * from './providers'
 export * from './routing'
 export * from './store'

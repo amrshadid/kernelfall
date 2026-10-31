@@ -1,6 +1,6 @@
 # The Survey's placement check (docs/levels/surface-survey.md#placement-check), offered
-# at the edge of init's street after P.10: one errand per level, done in the rescue
-# shell, each judged by its level's own objectives.
+# at the edge of init's street after P.10: one errand per level, done in bash, each
+# judged by its level's own objectives.
 offer: Know your way around? Show me, and walk on.
 minutes: 7
 tasks:
@@ -8,10 +8,10 @@ tasks:
     task: "Make `/tmp/survey/maps` with one `mkdir`, copy `/etc/motd` into it, show with `ls -i` that the copy is a new file, and rename the copy `motd.old`."
     objectives: [mkdir-parents, copy-new-inode, rename-no-bytes]
   - level: 02-who-may-enter
-    task: "Make `notes.txt` readable by you only, and keep it readable by you."
+    task: "Make `notes.txt` readable by you only, and show it with `ls -l`."
     objectives: [note-private]
   - level: 03-processes
-    task: "Pause init's `yes` process (PID 402), then end it."
+    task: "Find init's `yes` process, pause it and show it paused, then end it."
     objectives: [paused-yes, yes-ended]
   - level: 04-finding-things
     task: "Find the file `lantern-plan.txt` somewhere under `/home/you/attic`."

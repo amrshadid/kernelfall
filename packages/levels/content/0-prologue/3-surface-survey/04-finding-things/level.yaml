@@ -1,9 +1,9 @@
 # Surface Survey S.4, Finding Things (docs/levels/surface-survey.md).
-# Objectives without a `check` are judged in checker.ts.
+# Every objective is judged in checker.ts.
 id: prologue-surface-survey-04-finding-things
 title: Finding Things
-summary: "Search init's attic with find by name, type and owner, and see one search write its results and its complaints on two different streams. You learn how find walks a tree and what standard output and standard error are."
-minutes: 15
+summary: "Search init's attic with find by name, type and owner, see one search write its results and its complaints on two different streams, and send each stream where you want it with > and 2>. You learn how find walks a tree, what standard output and standard error are, and how bash redirects them."
+minutes: 20
 tracks: [userland]
 skills: [io-find-files]
 prerequisites: [io-fs-hierarchy]
@@ -12,18 +12,23 @@ objectives:
     text: "`find` with `-name` prints the one path of `lantern-plan.txt`."
   - id: read-plan
     text: "`cat` shows the plan."
-    check: { kind: wrote, fd: 1, program: cat, text: { contains: "Someday." } }
   - id: attic-folders
     text: "`find attic -type d` lists every folder in the attic, and nothing else."
   - id: guest-files
     text: "`find /tmp -user guest` lists exactly the files in `/tmp` that belong to `guest`."
   - id: two-streams
-    text: "`find / -name passwd` prints its result on standard output and its complaint on standard error."
+    text: "`find / -name passwd` prints its results on standard output and its complaints on standard error."
+  - id: errors-away
+    text: "`find / -name passwd 2>/dev/null` shows only the results: bash sent standard error to `/dev/null`, where it's thrown away."
+  - id: saved-folders
+    text: "`find attic -type d > folders.txt` saves the folder list in a file instead of showing it."
 hints:
   - You know the file's name but not its folder. Which command walks a whole tree?
-  - "`find` takes a starting folder, then tests: `-name` for the name, `-type d` for folders, `-user` for the owner."
-  - "`find attic -name lantern-plan.txt`."
+  - "`find` takes a starting folder, then tests: `-name` for the name, `-type d` for folders, `-user` for the owner. After the command, `> file` sends standard output into a file and `2> file` standard error."
+  - "`find attic -name lantern-plan.txt`; `find / -name passwd 2>/dev/null`; `find attic -type d > folders.txt`."
 xray: [syscalls, files]
+# A redirection is the forked child's open and dup2 before its execve.
+xrayFocus: [fork, open, dup2, execve]
 codex:
   - id: finding-files
     term: finding files (find)
@@ -32,11 +37,12 @@ codex:
       find walks a folder tree and prints every path that matches its tests: name,
       type, owner and more.
     deep: >-
-      find opens each folder, reads it with getdents64, checks each entry (often
-      with a stat call for its type, size and owner) and goes down into each
-      subfolder. The kernel just answers the reads; the walking is all user space.
-      GNU find walks with gnulib's fts. A folder it may not read is reported on
-      standard error, and the walk goes on.
+      find opens each folder, reads it with getdents64, checks each entry with a
+      stat call (statx on the Machine) for its type and owner, and goes down into
+      each subfolder. The kernel just answers the reads; the walking is all user
+      space. A folder it may not read is reported on standard error, and the walk
+      goes on. The Machine's find is BusyBox's; most distributions ship GNU find,
+      which walks with gnulib's fts and quotes the paths in its errors.
     sources: [fs/readdir.c, fs/stat.c]
     docs: https://man7.org/linux/man-pages/man1/find.1.html
     tryIt: find /etc -name hostname
@@ -45,23 +51,35 @@ codex:
     deepens: file-descriptors
     simple: fd 2, where programs write error messages, so they stay apart from normal output (fd 1).
     deep: >-
-      Both usually lead to the same terminal, so they look mixed; a shell can send
-      them to different places (2> in bash). The C library's stderr is unbuffered,
-      so errors appear at once, while stdout to a file or pipe is buffered. To the
-      kernel both are just write() on a file descriptor.
+      Both usually lead to the same terminal, so they look mixed; the shell can send
+      them to different places. The C library's stderr is unbuffered, so errors
+      appear at once, while stdout to a file or pipe is buffered. To the kernel both
+      are just writes on a file descriptor.
     sources: [fs/read_write.c]
     docs: https://man7.org/linux/man-pages/man3/stderr.3.html
     tryIt: find / -name passwd 2>/dev/null
+  - id: redirection
+    term: redirection (> and 2>)
+    simple: >-
+      `> file` sends a command's standard output into a file, `2> file` its standard
+      error. The shell sets it up before the program starts.
+    deep: >-
+      bash forks a child, and the child opens the file (O_WRONLY|O_CREAT|O_TRUNC:
+      write, create it if missing, empty it if not), gets the lowest free fd, moves
+      it onto fd 1 or 2 with dup2(), closes the spare, and only then calls execve().
+      execve() keeps the open files, so the program writes to fd 1 as always and
+      never knows. dup2() makes both fds point at the same struct file.
+    sources: [fs/file.c, fs/open.c]
+    docs: https://man7.org/linux/man-pages/man2/dup.2.html
+    tryIt: "strace -f -e trace=open,openat,dup2,execve bash -c 'ls > /tmp/out'"
 taint: []
 fidelity:
   faithful:
-    - "find's -name, -type, -user and -maxdepth tests and its output format"
-    - "the Permission denied error format: find: '/root': Permission denied"
+    - "BusyBox's find on the real kernel: its output, its order and every refusal as the Machine prints them"
     - results on fd 1 and errors on fd 2
+    - "bash's real redirection: open, dup2 and close in the child before execve"
   simplified:
-    - "the lab's find supports only -name, -iname, -type, -user, -maxdepth, -mindepth and !: no -o and no parentheses"
-    - "find lists a folder's entries in the order the lab's filesystem keeps them; ext4 returns them in hash order"
-    - "on the Machine, find / is refused only /root and the fd folders of root's processes; on real Linux it is also refused other parts of /proc (fdinfo, ns, map_files, each thread's fd) and folders such as /etc/ssl/private"
+    - "the attic is a level's setup, not a real attic: its files are made by root before the scene"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

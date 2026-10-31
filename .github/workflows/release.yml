@@ -69,5 +69,5 @@ jobs:
         run: |
           gh release view vm-mirror --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
             gh release create vm-mirror --repo "$GITHUB_REPOSITORY" --title "VM image mirror" \
-              --notes "Pinned Alpine packages, minirootfs and BIOS for the VM image build." --latest=false
+              --notes "Pinned Alpine packages, minirootfs and BIOS for the VM image build." --latest=false --prerelease
           gh release upload vm-mirror "$MIRROR_DIR"/* --repo "$GITHUB_REPOSITORY" --clobber

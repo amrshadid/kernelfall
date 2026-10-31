@@ -1,0 +1,45 @@
+name: Level proposal
+description: Propose a new level or changes to a planned one.
+labels: [level]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read docs/LEVELS.md first. Every level teaches one new concept
+        and adds a real piece to the act's project (the shell or the Lantern driver).
+  - type: input
+    id: placement
+    attributes:
+      label: Act and region
+      placeholder: "Act II, Device Quarter"
+    validations:
+      required: true
+  - type: input
+    id: concept
+    attributes:
+      label: The one concept it teaches
+      placeholder: "ioctl"
+    validations:
+      required: true
+  - type: textarea
+    id: build
+    attributes:
+      label: What the player builds
+      description: What does the shell or the Lantern gain in this level?
+    validations:
+      required: true
+  - type: textarea
+    id: world
+    attributes:
+      label: How the world reacts
+      description: What visibly changes in the Machine when the player's code works?
+  - type: textarea
+    id: xray
+    attributes:
+      label: X-ray moment
+      description: What does X-ray show to explain the concept?
+  - type: textarea
+    id: sources
+    attributes:
+      label: Kernel sources and docs
+      description: Upstream files, functions and docs the level's Codex card links to.

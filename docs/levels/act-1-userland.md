@@ -915,7 +915,7 @@ Warning Taint starts here, for this level and every level after it.
 
 > **init:** Welcome to the Process District. My home. Look at it. Empty doorways. Nobody running.
 >
-> **init:** Your shell can do four tricks. A real shell can run _anything_. Here's how every process in this city was born.
+> **init:** On the Surface you watched bash start programs all day. Here you build a shell of your own, `ksh-lite`. It already reads a line, cuts it into words and knows one builtin, `exit`. It can't run a program yet. A real shell can run _anything_. Here's how every process in this city was born.
 >
 > **init:** First, a process copies itself. That's `fork`. Two of you, each with a copy of the same memory, same code. Only the return value differs: the child gets 0.
 >
@@ -991,13 +991,14 @@ same view as text, from a real tool: `strace`.
 
 ### Watch it
 
-**Predict:** before running a small `fork` demo, the player says how many lines it
-prints and what the child's copy of `count` holds after the child adds one. The run
-and the memory panel show the answer.
+**Predict:** before typing `nosuch`, the player says who prints "command not found":
+the shell, or the child it forked. The child does: its `execvp` failed, so it printed
+why and called `_exit(127)`; the shell only reads 127 from `waitpid`.
 
 ```
 ksh$ ls /
-bin  dev  etc  home  proc  sys  tmp  usr
+bin    dev    home   media  opt    root   sbin   sys    usr
+boot   etc    lib    mnt    proc   run    srv    tmp    var
 ksh$ nosuch
 ksh-lite: nosuch: command not found
 ```

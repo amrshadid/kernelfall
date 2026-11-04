@@ -19,4 +19,4 @@ export interface RevealRequest {
 export type RunState =
   | { readonly kind: 'idle' }
   /** `reason` says why Run is off, for its title and screen readers. */
-  | { readonly kind: 'busy'; readonly label: string; readonly reason: string }
+  | { readonly kind: 'busy'; readonly label: string; readonly reason: string; readonly working?: boolean }

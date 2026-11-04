@@ -20,7 +20,7 @@ function readConcept(value: unknown, path: string, issues: Issues): Concept {
   }
 }
 
-/** Checks a parsed `concepts.yaml`. Its Codex card ids are checked against the levels when the content is put together. */
+// Codex card ids are checked later, against the levels, when the content is put together.
 export function validateConcepts(input: unknown): Validated<ConceptCatalogue> {
   const issues = new Issues()
   const catalogue = new ObjectReader(input, '', issues)

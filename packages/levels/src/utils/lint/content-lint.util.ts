@@ -12,12 +12,12 @@ import {
 const INLINE_CODE = /`[^`]*`/g
 const WORD = /[\p{L}\p{N}]/u
 
-/** Words a reader reads: anything with a letter or a digit in it, inline code included. */
+// A word is any token with a letter or digit, inline code included.
 export function countWords(text: string): number {
   return text.split(/\s+/).filter((token) => WORD.test(token)).length
 }
 
-/** Opening parentheses outside inline code: `write()` is code, "(like this)" is an aside. */
+// Outside inline code: `write()` is code, "(like this)" is an aside.
 export function countAsides(text: string): number {
   return text.replace(INLINE_CODE, '').split('(').length - 1
 }
@@ -25,7 +25,6 @@ export function countAsides(text: string): number {
 const escaped = (phrase: string) => phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const BANNED = BANNED_PHRASES.map((phrase) => ({ phrase, pattern: new RegExp(`\\b${escaped(phrase)}\\b`, 'i') }))
 
-/** The prose of a story section, its spoken and narrated lines, without the code. */
 function proseOf(story: Story, section: string): string[] {
   return (story.get(section) ?? []).flatMap((block) => (block.kind === 'line' ? [block.text] : []))
 }
@@ -66,7 +65,6 @@ function problemsOf(lint: Omit<LevelLint, 'problems'>): string[] {
   return problems
 }
 
-/** Measures a level's story and Codex cards against the content budgets, and names every one it breaks. */
 export function lintLevel(level: LevelDefinition, story: Story): LevelLint {
   const steps: StepWords[] = Object.entries(STEP_WORD_BUDGETS).map(([section, budget]) => ({
     section,

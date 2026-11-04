@@ -17,7 +17,7 @@ const red = paint(31)
 const green = paint(32)
 const dim = paint(2)
 
-/** content/ read from disk the way the bundler globs it for the game. */
+// The same files the bundler globs for the game, read from disk.
 async function contentFiles(): Promise<ContentFiles> {
   const paths = readdirSync(contentDir, { recursive: true, encoding: 'utf8' }).map((path) => path.split('\\').join('/'))
   const text = (path: string) => readFileSync(join(contentDir, path), 'utf8')

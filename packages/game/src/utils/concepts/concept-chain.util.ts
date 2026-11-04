@@ -1,11 +1,7 @@
 import type { ConceptId, ConceptViolation } from '#types/definitions/concepts'
 import type { LevelDefinition, LevelId } from '#types/definitions/level'
 
-/**
- * Walks the levels in play order and reports every break in the chain of concepts:
- * a concept used before any level teaches it, a concept taught by a second level,
- * and a Prologue concept (the Survey included) that no later level uses or teaches again.
- */
+// In play order: used before taught, taught twice, or a Prologue concept nothing later uses.
 export function conceptChain(levels: readonly LevelDefinition[]): ConceptViolation[] {
   const violations: ConceptViolation[] = []
   const teacherOf = new Map<ConceptId, LevelId>()

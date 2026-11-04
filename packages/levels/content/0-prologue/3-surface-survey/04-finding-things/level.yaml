@@ -7,6 +7,8 @@ minutes: 20
 tracks: [userland]
 skills: [io-find-files]
 prerequisites: [io-fs-hierarchy]
+teaches: [stderr, redirection]
+uses: [fd, terminal, file-tree, permissions, errno, fork, exec, device-file, proc-fs, pipe]
 objectives:
   - id: found-plan
     text: "`find` with `-name` prints the one path of `lantern-plan.txt`."

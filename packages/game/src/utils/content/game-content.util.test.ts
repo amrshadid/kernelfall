@@ -120,4 +120,20 @@ describe('createGameContent', () => {
 
     expect(errorsOf(content)).toContain('skill "orphan" requires unknown skill "missing-skill"')
   })
+
+  it('keeps the concept catalogue, and reports a concept that names a Codex card no level has', () => {
+    const card = EXAMPLE_LEVEL.codex[0]?.id ?? ''
+    const concepts = {
+      concepts: [
+        { id: 'syscall', term: 'syscall', part: 'gate', codex: card },
+        { id: 'pipe', term: 'pipe', part: 'userland', codex: 'pipes' },
+      ],
+    } as const
+    const content = createGameContent({ ...parts(), concepts: { concepts: concepts.concepts.slice(0, 1) } })
+
+    expect(content.ok && content.value.concepts).toEqual({ concepts: concepts.concepts.slice(0, 1) })
+    expect(errorsOf(createGameContent({ ...parts(), concepts }))).toEqual([
+      'concepts: pipe names the Codex card "pipes", which no level has',
+    ])
+  })
 })

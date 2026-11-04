@@ -7,6 +7,23 @@ minutes: 20
 tracks: [userland, kernel]
 skills: [proc-process-basics]
 prerequisites: [sys-kernel-role]
+teaches: [scheduler, parent, proc-fs]
+uses:
+  [
+    process,
+    pid,
+    cpu,
+    kernel-thread,
+    signal,
+    interrupt,
+    device-file,
+    syscall,
+    pipe,
+    redirection,
+    background-job,
+    c-basics,
+    compiler,
+  ]
 objectives:
   - id: reads-proc-status
     text: "Read what the kernel keeps about a process, in `/proc/<pid>/status`."

@@ -3,6 +3,7 @@ import { Issues, ObjectReader, reportDuplicates } from '@kernelfall/core/utils'
 import type { LabSetup } from '@kernelfall/machine/types'
 import { findUser, resolveAccounts, validateLabSetup } from '@kernelfall/machine/utils'
 import { SYSCALL_NAME_PATTERN } from '#types/definitions/checks'
+import type { ConceptId } from '#types/definitions/concepts'
 import { HINT_TIERS } from '#types/definitions/hints'
 import type {
   CodexCard,
@@ -36,6 +37,8 @@ const LEVEL_FIELDS = [
   'tracks',
   'skills',
   'prerequisites',
+  'teaches',
+  'uses',
   'objectives',
   'hints',
   'chips',
@@ -65,9 +68,14 @@ const ONE_LINE: StringRule = { pattern: /^[^\n\0]+$/, expected: 'one command lin
 /**
  * Checks a parsed `level.yaml` found in `location`'s folders and returns the
  * typed level, or every problem found with the path to the field, e.g.
- * `hints: expected exactly 3 hints …`.
+ * `hints: expected exactly 3 hints …`. Given the catalogue's ids, `teaches` and
+ * `uses` must name only those.
  */
-export function validateLevel(input: unknown, location: LevelLocation): Validated<LevelDefinition> {
+export function validateLevel(
+  input: unknown,
+  location: LevelLocation,
+  concepts?: ReadonlySet<ConceptId>
+): Validated<LevelDefinition> {
   const issues = new Issues()
   const level = new ObjectReader(input, '', issues)
   level.rejectUnknownKeys(LEVEL_FIELDS)
@@ -82,6 +90,8 @@ export function validateLevel(input: unknown, location: LevelLocation): Validate
     tracks: level.oneOfList('tracks', TRACKS),
     skills: level.stringList('skills', SLUG),
     prerequisites: level.stringList('prerequisites', SLUG),
+    ...(level.has('teaches') ? { teaches: level.stringList('teaches', SLUG) } : {}),
+    ...(level.has('uses') ? { uses: level.stringList('uses', SLUG) } : {}),
     objectives: level.list('objectives', (value, path) => readObjective(value, path, issues)),
     hints: readHints(level),
     ...(level.has('chips') ? { chips: level.list('chips', (value, path) => readChip(value, path, issues)) } : {}),
@@ -95,7 +105,31 @@ export function validateLevel(input: unknown, location: LevelLocation): Validate
     ...(level.has('runAs') ? { runAs: level.list('runAs', (value, path) => readRunAsCue(value, path, issues)) } : {}),
   }
   checkConsistency(definition, issues)
+  checkConcepts(definition, concepts, issues)
   return issues.result(definition)
+}
+
+function checkConcepts(level: LevelDefinition, catalogue: ReadonlySet<ConceptId> | undefined, issues: Issues): void {
+  const teaches = level.teaches ?? []
+  const uses = level.uses ?? []
+  reportDuplicates(teaches, 'teaches', issues)
+  reportDuplicates(uses, 'uses', issues)
+  for (const id of uses.filter((concept) => teaches.includes(concept))) {
+    issues.add('uses', `"${id}" is also a concept this level teaches`)
+  }
+  if (!catalogue) {
+    return
+  }
+  for (const [field, ids] of [
+    ['teaches', teaches],
+    ['uses', uses],
+  ] as const) {
+    ids.forEach((id, i) => {
+      if (!catalogue.has(id)) {
+        issues.add(`${field}[${i}]`, `"${id}" is not a concept of concepts.yaml`)
+      }
+    })
+  }
 }
 
 /** The `lab:` block, checked by the lab's own schema; its errors already carry their `lab.` path. */

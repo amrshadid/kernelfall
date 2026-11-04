@@ -28,6 +28,15 @@ export {
   TAINT_CHECK_KINDS,
 } from '#types/definitions/checks'
 export type { CodexCardState, CodexChapter, CodexChapterCard, CodexEntry } from '#types/definitions/codex'
+export type {
+  Concept,
+  ConceptCatalogue,
+  ConceptId,
+  ConceptPart,
+  ConceptViolation,
+  ConceptViolationKind,
+} from '#types/definitions/concepts'
+export { CONCEPT_PARTS, CONCEPT_VIOLATION_KINDS, CORE_CONCEPT_BUDGET } from '#types/definitions/concepts'
 export type { GameConfig, GameOptions, GameTuning } from '#types/definitions/config'
 export { DEFAULT_GAME_OPTIONS, DEFAULT_GAME_TUNING } from '#types/definitions/config'
 export type { GameContent, GameContentParts } from '#types/definitions/content'

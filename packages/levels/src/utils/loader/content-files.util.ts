@@ -58,6 +58,12 @@ const fieldGuideFile = import.meta.glob<string>('../../../content/field-guide.ya
   eager: true,
 })
 
+const conceptsFile = import.meta.glob<string>('../../../content/concepts.yaml', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
 /** `…/content/0-prologue/act.yaml` → `0-prologue/act.yaml`, whatever form the bundler gives the path. */
 export function relativeToContent<T>(files: Readonly<Record<string, T>>): Record<string, T> {
   return Object.fromEntries(
@@ -83,4 +89,5 @@ export const CONTENT_FILES: ContentFiles = {
   skills: single(skillsFile),
   bedrock: single(bedrockFile),
   fieldGuide: single(fieldGuideFile),
+  concepts: single(conceptsFile),
 }

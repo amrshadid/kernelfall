@@ -7,6 +7,8 @@ minutes: 20
 tracks: [userland]
 skills: [io-permissions]
 prerequisites: [io-fs-hierarchy]
+teaches: [uid, permissions, capability]
+uses: [inode, file-tree, device-file, process, fork, exec, errno, exit-status]
 objectives:
   - id: exec-denied
     text: "`./hi` without its `x` bit: the kernel refuses to run it, and `execve` returns `EACCES`."

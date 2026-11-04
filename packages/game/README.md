@@ -36,7 +36,8 @@ src/
 │                   writes, files opened and read, errno, the terminal), checker (declared checks,
 │                   levelChecker, defineChecker, verdicts), content (createGameContent), validate
 │                   (level.yaml, act.yaml, region.yaml, placement.yaml, field-guide.yaml,
-│                   skills.yaml), placement (judge, merge, result), field-guide, runner, map, taint,
+│                   concepts.yaml, skills.yaml), concepts (the chain in play order), placement
+│                   (judge, merge, result), field-guide, runner, map, taint,
 │                   hints, progress, saves, achievements, codex (cards, chapters), skills, summary
 ├── events/       → GAME_EVENTS (opened, level started/completed, hint, achievement, saved…), autosave
 ├── test/         → example level and outline, hand-written lab events, fake clock, memory storage,

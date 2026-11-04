@@ -4,7 +4,7 @@ import type { LevelLocation } from '#types/definitions/level'
 import { validateLevel } from '#utils/validate/validate-level.util'
 
 const LEVEL_FIELDS =
-  'id, title, summary, minutes, tracks, skills, prerequisites, objectives, hints, chips, xray, xrayFocus, codex, taint, fidelity, story, lab, runAs'
+  'id, title, summary, minutes, tracks, skills, prerequisites, teaches, uses, objectives, hints, chips, xray, xrayFocus, codex, taint, fidelity, story, lab, runAs'
 
 function errorsFor(input: unknown, location: LevelLocation = EXAMPLE_LOCATION): readonly string[] {
   const result = validateLevel(input, location)
@@ -185,5 +185,32 @@ describe('validateLevel: runAs cues', () => {
       'runAs[0].after: no objective "knocked"',
       `runAs[0].user: no user named "guest" on the level's Machine`,
     ])
+  })
+})
+
+describe('validateLevel: teaches and uses', () => {
+  const CATALOGUE = new Set(['syscall', 'fd', 'process'])
+
+  it('reads the concepts a level teaches and uses, and leaves both out when the level gives none', () => {
+    const result = validateLevel(
+      { ...EXAMPLE_LEVEL_YAML, teaches: ['syscall'], uses: ['process'] },
+      EXAMPLE_LOCATION,
+      CATALOGUE
+    )
+    expect(result.ok && [result.value.teaches, result.value.uses]).toEqual([['syscall'], ['process']])
+    const without = validateLevel(EXAMPLE_LEVEL_YAML, EXAMPLE_LOCATION, CATALOGUE)
+    expect(without.ok && ['teaches' in without.value, 'uses' in without.value]).toEqual([false, false])
+  })
+
+  it('refuses a concept the catalogue lacks, a repeat, and a concept both taught and used', () => {
+    const level = { ...EXAMPLE_LEVEL_YAML, teaches: ['syscall', 'pipe', 'syscall'], uses: ['syscall'] }
+    expect(validateLevel(level, EXAMPLE_LOCATION, CATALOGUE)).toEqual({
+      ok: false,
+      errors: [
+        'teaches: "syscall" appears more than once',
+        'uses: "syscall" is also a concept this level teaches',
+        'teaches[1]: "pipe" is not a concept of concepts.yaml',
+      ],
+    })
   })
 })

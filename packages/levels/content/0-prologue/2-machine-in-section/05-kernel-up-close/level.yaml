@@ -7,6 +7,8 @@ minutes: 20
 tracks: [kernel]
 skills: [sys-kernel-role]
 prerequisites: [sys-user-kernel-mode]
+teaches: [memory-address, hex, kernel-space, user-space, signal, monolithic, module, distribution, kernel-thread]
+uses: [kernel, user-kernel-mode, syscall, exit-status, ram, page, command-substitution, c-basics, compiler]
 objectives:
   - id: poke-segfaults
     text: "`./poke` tries to read the first byte of kernel space: the CPU faults on that address, and the kernel ends it with `SIGSEGV`."

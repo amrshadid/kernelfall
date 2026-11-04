@@ -8,6 +8,8 @@ minutes: 20
 tracks: [kernel]
 skills: [sys-boot-chain]
 prerequisites: [sys-shell-basics]
+teaches: [boot-chain, uefi, kernel-cmdline, initramfs, kernel-log, driver, mount, user-space]
+uses: [kernel, process, env, proc-fs, storage, pipe, hex, interrupt, scheduler, module]
 objectives:
   # /proc/cmdline is what this boot's kernel was told, whatever grub.cfg says.
   - id: booted-your-way

@@ -23,6 +23,7 @@ packages/levels/content/
   skills.yaml                  the skill tree, matching CURRICULUM.md
   bedrock.yaml                 the map's bottom layer, under every act
   field-guide.yaml             the Codex page of commands and folders
+  concepts.yaml                every concept a level may teach or use
   xray/
     syscalls.yaml              what X-ray knows of each syscall: args, kernel path, sources, a sentence
     narration.yaml             every word X-ray's storyboards say, with {placeholders}
@@ -66,6 +67,11 @@ the same. The Surface Survey is a region of the prologue act
   `entries`, each `{ name, kind, what, syscalls, syscallNote?, firstMet, deepenedIn? }`
   with `kind` `command` or `folder`. An entry appears when its `firstMet` slot's level
   starts.
+- **`concepts.yaml`:** `concepts`, each `{ id, term, part, codex? }`: `part` is where it
+  sits on the Section drawing (`userland`, `gate`, `processes`, `scheduler`, `memory`,
+  `vfs`, `security`, `drivers`, `modules`, `networking`, `logging`, `hardware`, the
+  `kernel` as a whole, the `boot` path, or `foundations` for numbers and text), and
+  `codex` the card that explains it. See [Concepts and budgets](#concepts-and-budgets).
 - **`bedrock.yaml`:** a map layer, the hardware under every act.
 - **`skills.yaml`:** a list of `{ id, title, region, prerequisites }`.
 - **`xray/syscalls.yaml`:** one entry per syscall, keyed by its kernel name: `args` in
@@ -97,6 +103,8 @@ minutes: 20 # optional: about how long it takes a new player, 1 to 120
 tracks: [c, userland] # c | userland | kernel | net | debug (one or more)
 skills: [write-to-stdout] # skill-tree nodes it unlocks (one or more)
 prerequisites: [] # skills needed to play it
+teaches: [syscall, fd] # concepts from concepts.yaml it introduces (budget 3)
+uses: [process] # concepts an earlier level taught that it relies on
 objectives: # what the checker verifies by behavior (one or more)
   - id: prints-hello
     text: Your program prints hello to the console.
@@ -152,7 +160,8 @@ runAs: # optional: commands root runs as a user once an objective is first met
 - Ids (objectives, skills, Taint rules) are kebab-case and unique within their list;
   codex card ids are unique across the whole game.
 - Unknown fields are errors, so typos don't pass silently.
-- Skill ids must exist in the skill tree (`validateSkillTree()`).
+- Skill ids must exist in the skill tree (`validateSkillTree()`); `teaches` and `uses`
+  ids in `concepts.yaml`.
 - There is no time budget and no difficulty field.
 - The act and region come from the folders, not from `level.yaml`.
 - A file's `mode` is a quoted octal string (`"0644"`): YAML reads a bare `0644` as 644.
@@ -263,8 +272,9 @@ give the same report.
 
 1. Make its folder in the region, `<nn>-<slug>`, and point a slot of `region.yaml` at
    it: `- { number: "1.5", title: An Address and a Name, level: 05-address-and-name }`.
-2. Write `level.yaml` with the id `<act>-<region>-<nn>-<slug>`, and `story.md` with
-   every section it points at. Add `starter/` and `solution/`.
+2. Write `level.yaml` with the id `<act>-<region>-<nn>-<slug>` and the concepts it
+   `teaches` and `uses`, and `story.md` with every section it points at. Add
+   `starter/` and `solution/`.
 3. Give each objective and Taint rule a `check:` when a kind fits; write `checker.ts`
    for the rest.
 4. Record its golden runs (below): the reference solution must pass with zero Taint.
@@ -299,6 +309,35 @@ Every spec writes its cards the same way, under `### Codex (chapter: <region>)`:
 
 A card's `deepens:` ids must exist earlier in play order, and a required level's
 card never deepens a side level's card.
+
+### Concepts and budgets
+
+A level's `teaches` and `uses` name concepts of `concepts.yaml`, as its text really
+introduces and relies on them. Tests check the chain in play order: a concept used
+before a level teaches it, a concept taught twice, and a Prologue or Survey concept no
+later level uses or teaches again are errors. Today's breaks are listed, each with its
+reason, in `KNOWN_CONCEPT_GAPS` (`src/test/concept-chain.test.ts`) until the level is
+rewritten.
+
+`pnpm content:report` (part of `pnpm verify`) measures every level against the budgets.
+Words are prose words, code blocks left out; a step is its story section.
+
+| Unit                   | Budget      |
+| ---------------------- | ----------- |
+| `teaches`              | ≤ 3         |
+| Story (the five steps) | 500–650     |
+| Scene                  | ≤ 80        |
+| See it                 | ≤ 200       |
+| Build it               | ≤ 150       |
+| Watch it               | ≤ 120       |
+| Debrief                | ≤ 50        |
+| Codex Simple / Deep    | ≤ 25 / ≤ 80 |
+| Parenthetical asides   | 0           |
+
+It also flags banned phrases: game internals ("the game", "emulator", "trace reader")
+and hedges ("your numbers will differ"); the list is in
+`src/utils/lint/content-lint.constants.ts`. A level over budget is a warning; once
+rewritten, it joins `ENFORCED_LEVELS` there, and over budget fails the tests.
 
 ## 3. Rules
 

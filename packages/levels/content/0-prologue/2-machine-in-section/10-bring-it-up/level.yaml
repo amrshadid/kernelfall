@@ -9,6 +9,27 @@ minutes: 30
 tracks: [kernel, userland]
 skills: [sys-command-lifecycle]
 prerequisites: [sys-kernel-subsystems, sys-boot-chain]
+teaches: []
+uses:
+  [
+    boot-chain,
+    kernel-cmdline,
+    initramfs,
+    kernel-log,
+    mount,
+    driver,
+    bus,
+    module,
+    ram,
+    network-stack,
+    sysfs,
+    device-file,
+    vfs,
+    scheduler,
+    pid,
+    fork,
+    exec,
+  ]
 objectives:
   # Only a boot that found its root reaches bash, where this read happens.
   - id: root-found

@@ -7,6 +7,8 @@ minutes: 20
 tracks: [userland]
 skills: [proc-observe]
 prerequisites: [io-permissions, proc-process-basics]
+teaches: [signal, zombie, pending-signal]
+uses: [process, pid, parent, scheduler, kernel-thread, proc-fs, capability, uid, hex, exit-status]
 objectives:
   - id: listed-both
     text: "`ps` lists init's two processes, `sleep` and `yes`, each with its PID."

@@ -6,6 +6,7 @@ The folders mirror the Kernel Map: act → region → level. A number prefix giv
 ```
 skills.yaml                 the skill tree
 bedrock.yaml                the map's bottom layer, under every act
+concepts.yaml               every concept a level may teach or use (docs/LEVELS.md#concepts-and-budgets)
 xray/
   syscalls.yaml             per syscall: argument names, its kernel path, sources, one plain sentence
   narration.yaml            every word X-ray's storyboards say, with {placeholders}

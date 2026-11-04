@@ -9,6 +9,8 @@ minutes: 20
 tracks: [userland]
 skills: [sys-shell-basics]
 prerequisites: [sys-user-kernel-mode]
+teaches: [argv, path-search, env, exit-status, errno, fork, man-page, pid, builtin]
+uses: [shell, command, syscall, fd, exec, process, file-tree]
 objectives:
   # Plain echo is the shell's builtin and starts no program; /bin/echo shows its argv.
   - id: four-arguments

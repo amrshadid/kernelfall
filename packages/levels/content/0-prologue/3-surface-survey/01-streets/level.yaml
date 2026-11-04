@@ -7,6 +7,8 @@ minutes: 25
 tracks: [userland]
 skills: [io-fs-hierarchy]
 prerequisites: [sys-shell-basics, sys-command-lifecycle]
+teaches: [working-directory, inode, builtin, proc-fs]
+uses: [file-tree, shell, terminal, syscall, fd, errno, distribution]
 objectives:
   - id: cd-absolute
     text: '`cd /etc`: bash''s own `chdir("/etc")`, no program started.'

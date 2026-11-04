@@ -1,6 +1,7 @@
 import {
   BootDrawing,
   CpuLanesDrawing,
+  CrossingDrawing,
   ProcessDrawing,
   RouteDrawing,
   SectionDrawing,
@@ -8,6 +9,7 @@ import {
 } from '@features/xray/components/drawing'
 import { StraceLog } from '@features/xray/components/log'
 import type {
+  CrossingScene,
   ProcessScene,
   SyscallScene,
   XrayBoardActions,
@@ -173,7 +175,7 @@ export function XrayBoard({
         />
       )}
 
-      {figure !== null && figure.kind !== 'syscalls' && figure.kind !== 'processes' ? (
+      {figure !== null && figure.kind !== 'syscalls' && figure.kind !== 'crossing' && figure.kind !== 'processes' ? (
         <figure className="xr__drawing">
           {figure.kind === 'section' && <SectionDrawing view={figure.view} />}
           {figure.kind === 'route' && <RouteDrawing view={figure.view} />}
@@ -194,17 +196,19 @@ export function XrayBoard({
       ) : (
         <>
           <figure className="xr__drawing">
-            {figure.kind === 'syscalls' ? (
+            {figure.kind === 'syscalls' && (
               <SyscallDrawing
                 storyboard={figure.storyboard}
                 scene={stage.scene as SyscallScene}
                 depth={controls.depth}
                 label={label}
               />
-            ) : (
-              figure.kind === 'processes' && (
-                <ProcessDrawing storyboard={figure.storyboard} scene={stage.scene as ProcessScene} label={label} />
-              )
+            )}
+            {figure.kind === 'crossing' && (
+              <CrossingDrawing storyboard={figure.storyboard} scene={stage.scene as CrossingScene} label={label} />
+            )}
+            {figure.kind === 'processes' && (
+              <ProcessDrawing storyboard={figure.storyboard} scene={stage.scene as ProcessScene} label={label} />
             )}
             <figcaption className="xr__caption">
               <span>{caption}</span>

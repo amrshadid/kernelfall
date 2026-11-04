@@ -1,6 +1,7 @@
 import type { BootView } from './boot'
 import type { CallListView } from './call-list'
 import type { CpuLanesView } from './cpu-lanes'
+import type { CrossingStoryboard } from './crossing'
 import type { ProcessStoryboard } from './processes'
 import type { RouteView } from './route'
 import type { SectionView } from './section'
@@ -10,6 +11,8 @@ import type { SyscallStoryboard } from './syscalls'
 
 export type XrayFigure =
   | { readonly kind: 'syscalls'; readonly storyboard: SyscallStoryboard }
+  /** One syscall at Simple: a crossing of the Gate in a few beats. */
+  | { readonly kind: 'crossing'; readonly storyboard: CrossingStoryboard }
   | { readonly kind: 'processes'; readonly storyboard: ProcessStoryboard }
   /** A whole run at once, with no stages to play. */
   | { readonly kind: 'section'; readonly view: SectionView; readonly commandLine: string }

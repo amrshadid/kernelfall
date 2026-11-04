@@ -44,6 +44,15 @@ describe('CodeEditorPresentation', () => {
     expect(onRun).not.toHaveBeenCalled()
   })
 
+  it('shows Run working, not switched off, while the code builds', () => {
+    const onRun = editor({ kind: 'busy', label: 'Building…', reason: 'gcc is building your code.', working: true })
+    const run = screen.getByRole('button', { name: /Building/ })
+    expect(run.getAttribute('aria-busy')).toBe('true')
+    expect(run.className).toContain('editor-run--working')
+    fireEvent.click(run)
+    expect(onRun).not.toHaveBeenCalled()
+  })
+
   it('runs once the Machine is ready', () => {
     const onRun = editor({ kind: 'idle' })
     const run = screen.getByRole('button', { name: /^Run/ })

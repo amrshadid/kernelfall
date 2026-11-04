@@ -3,6 +3,7 @@ import type { EditorFile, RevealRequest, RunState } from '@features/editor/types
 import { ariaKeyShortcut, FORMAT_BINDING, RUN_BINDING, shortcutLabel } from '@shared/utils/keyboard'
 import { useId, useRef, useState } from 'react'
 import { FileTabs } from './FileTabs'
+import './CodeEditor.css'
 
 export interface CodeEditorPresentationProps {
   files: readonly EditorFile[]
@@ -40,6 +41,7 @@ const RUN_ON =
   'border-[var(--red,#c8201a)] bg-[var(--red,#c8201a)] text-[var(--on-red,#fafaf7)] hover:border-[var(--ink,#141414)] hover:bg-[var(--ink,#141414)]'
 const RUN_OFF =
   'cursor-not-allowed border-dashed border-[var(--ink-2,#55554f)] bg-[var(--sheet,#fafaf7)] text-[var(--ink-2,#55554f)]'
+const RUN_WORKING = 'editor-run--working cursor-progress border-[var(--red,#c8201a)] text-[var(--on-red,#fafaf7)]'
 
 export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
   const { files, activePath, run, status } = props
@@ -137,9 +139,10 @@ export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
           {/* aria-disabled, not disabled: the button stays focusable, so its reason can be read. */}
           <button
             type="button"
-            className={`${BUTTON} ${run.kind === 'busy' ? RUN_OFF : RUN_ON}`}
+            className={`${BUTTON} ${run.kind === 'idle' ? RUN_ON : run.working ? RUN_WORKING : RUN_OFF}`}
             aria-keyshortcuts={ariaKeyShortcut(RUN_BINDING)}
             aria-disabled={run.kind === 'busy' || undefined}
+            aria-busy={(run.kind === 'busy' && run.working) || undefined}
             aria-describedby={run.kind === 'busy' ? runReasonId : undefined}
             title={run.kind === 'busy' ? run.reason : undefined}
             onClick={run.kind === 'busy' ? undefined : props.onRun}

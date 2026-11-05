@@ -1,6 +1,9 @@
 /** The player's shell on the Machine: busybox init starts bash on the console. */
 export const SHELL_PROGRAM = 'bash'
 
+/** Calls whose bytes can reach the terminal while they run: what n_tty_write prints is theirs. */
+export const CONSOLE_WRITERS: ReadonlySet<string> = new Set(['write', 'writev', 'pwrite64', 'sendfile64'])
+
 /** Byte cells the drawing has room for. */
 export const MAX_BUFFER_CELLS = 12
 

@@ -113,6 +113,78 @@ const pathProbes = (): TraceProbe[] =>
     return { name, definition: `r:${event(name)} __ia32_sys_${syscall} ${fields}` }
   })
 
+// struct offsets in linux-virt 6.18 (i386), read on the Machine: the kernel has no BTF to name them.
+const FILE = { op: 8, inode: 20 }
+const INODE = { op: 24, sb: 28 }
+const SB_TYPE = 28
+const PATH_DENTRY = 4
+const DENTRY_INODE = 32
+const FOPS = {
+  llseek: 8,
+  read: 12,
+  write: 16,
+  read_iter: 20,
+  write_iter: 24,
+  iterate_shared: 32,
+  open: 52,
+  splice_read: 92,
+}
+const IOPS_GETATTR = 56
+const FILE_FOPS = `+${FILE.op}($arg1)`
+const FILE_INODE = `+${FILE.inode}($arg1)`
+const GETATTR_INODE = `+${DENTRY_INODE}(+${PATH_DENTRY}($arg1))`
+
+interface RouteHook {
+  readonly fn: string
+  /** r: at return, for a struct file that do_dentry_open() is still setting up at entry. */
+  readonly kind: 'p' | 'r'
+  readonly inode: string
+  /** The handlers the hook calls, the one it prefers first: vfs_read() ->read, readv() ->read_iter. */
+  readonly handlers: readonly string[]
+  /** The struct file's file_operations: for a character device, the driver's. */
+  readonly fops?: boolean
+}
+
+const fileHook = (fn: string, handlers: readonly (keyof typeof FOPS)[], fops = true): RouteHook => ({
+  fn,
+  kind: 'p',
+  inode: FILE_INODE,
+  handlers: handlers.map((handler) => `+${FOPS[handler]}(${FILE_FOPS})`),
+  fops,
+})
+
+/** By the name the host's parser knows each one by: `route_<hook>`. */
+const ROUTE_HOOKS: Readonly<Record<string, RouteHook>> = {
+  read: fileHook('vfs_read', ['read', 'read_iter']),
+  write: fileHook('vfs_write', ['write', 'write_iter']),
+  readv: fileHook('vfs_readv', ['read_iter', 'read']),
+  writev: fileHook('vfs_writev', ['write_iter', 'write']),
+  open: { ...fileHook('do_dentry_open', ['open']), kind: 'r' },
+  readdir: fileHook('iterate_dir', ['iterate_shared'], false),
+  llseek: fileHook('vfs_llseek', ['llseek']),
+  splice: fileHook('do_splice_read', ['splice_read']),
+  getattr: {
+    fn: 'vfs_getattr_nosec',
+    kind: 'p',
+    inode: GETATTR_INODE,
+    handlers: [`+${IOPS_GETATTR}(+${INODE.op}(${GETATTR_INODE}))`],
+  },
+}
+
+// The filesystem, mode and handlers of the file each VFS hook works on (its struct file is $arg1).
+// :symbol, not :symstr: the next string fetched overwrites a symstr's NUL, so a line could hold one.
+const routeProbes = (): TraceProbe[] =>
+  Object.entries(ROUTE_HOOKS).map(([hook, { fn, kind, inode, handlers, fops }]) => {
+    const name = `${TRACE_PROBES.route}_${hook}`
+    const fields = [
+      `fs=+0(+0(+${SB_TYPE}(+${INODE.sb}(${inode})))):string`,
+      `m=+0(${inode}):u16`,
+      ...handlers.map((handler, i) => `h${i}=${handler}:symbol`),
+      ...(fops ? [`fop=${FILE_FOPS}:symbol`] : []),
+    ]
+    return { name, definition: `${kind}:${event(name)} ${fn} ${fields.join(' ')}` }
+  })
+
 const execveProbe: TraceProbe = {
   name: TRACE_PROBES.execve,
   definition: `e:${event(TRACE_PROBES.execve)} syscalls/sys_enter_execve path=+u0($filename):ustring ${Array.from(
@@ -130,4 +202,5 @@ export const TRACE_PROBE_LIST: readonly TraceProbe[] = [
   ...spliceProbes(),
   ...pathProbes(),
   execveProbe,
+  ...routeProbes(),
 ]

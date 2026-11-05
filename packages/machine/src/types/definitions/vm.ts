@@ -36,7 +36,9 @@ export interface VmSession {
     onOutput: (bytes: Uint8Array) => void,
     onStatus: (status: VmStatus) => void,
     /** The kernel's events for each command line: while it runs, and once when it finishes. */
-    onCommand: (command: TracedCommand) => void
+    onCommand: (command: TracedCommand) => void,
+    /** A boot that stopped in the initramfs (a root= it couldn't mount), as its /init reported it. */
+    onStoppedBoot?: (facts: VmFacts) => void
   ): Promise<void>
   /** Bytes typed at the terminal, as xterm reports them (escape sequences included). */
   input(text: string): void
@@ -50,6 +52,8 @@ export interface VmSession {
   runAs(user: string, commandLine: string): Promise<number>
   /** Root's `reboot`, through SeaBIOS and GRUB on the data disk; resolves once the shutdown begins. */
   reboot(): Promise<void>
+  /** The terminal's size, which the console tty takes once it settles, and again after every restore, setup and boot. */
+  resizeTerminal(rows: number, cols: number): void
   stop(): Promise<void>
 }
 
@@ -127,5 +131,9 @@ export const VM_STATE_STORE = 'boots'
 export const VM_OUTPUT_FLUSH_MS = 16
 /** Waiting at the prompt this long before saving the boot, so no file load is still in flight. */
 export const VM_SAVE_DELAY_MS = 500
+/** The player's console: ttyS0's size is the terminal's only once root sets it (a serial line has none of its own). */
+export const VM_CONSOLE_TTY = '/dev/ttyS0'
+/** A drag of the page's edge resizes the terminal many times: only the size it settles on goes to the guest. */
+export const VM_RESIZE_SETTLE_MS = 200
 /** How long after emulator-ready a restored machine takes to apply its saved state. */
 export const VM_RESTORE_SETTLE_MS = 300

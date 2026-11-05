@@ -25,12 +25,15 @@ import {
   MEANING,
   NO_ANSWER,
   PREDICT,
-  REQUEST,
   SAY,
   YOUR_TERMINAL,
 } from './crossing.constants'
+import type { CallSay } from './crossing-calls.constants'
+import { type CallWords, callWords, refusedText, routeText, sayValues } from './crossing-calls.util'
 
 const PERMISSION_ERRNOS = ['EPERM', 'EACCES']
+// A terminal's colour and cursor codes (CSI sequences): the screen acts on them and shows none.
+const ESCAPES = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;?]*[A-Za-z]`, 'g')
 
 /** What the trace knows about where the call went, beyond the call itself. */
 export interface CrossingInput {
@@ -40,7 +43,10 @@ export interface CrossingInput {
   readonly file?: string | null | undefined
 }
 
-const fdOf = (call: XrayCall) => call.args[0]?.value ?? '?'
+/** What reached the screen, as the screen shows it. */
+const onScreen = (text: string) => text.replaceAll(ESCAPES, '')
+
+const writes = (call: XrayCall) => call.name === 'write' || call.name === 'writev'
 
 /** Where a write's bytes go, in plain words, when the run says. */
 function targetOf(call: XrayCall, file: string | null): string | null {
@@ -50,17 +56,15 @@ function targetOf(call: XrayCall, file: string | null): string | null {
   return file
 }
 
-/** The request in plain words: a write or read by its numbers, any other call by what it does. */
+/** The request in plain words: what the call asks for, and for a write, where its bytes go. */
 export function requestText(call: XrayCall, file: string | null = null): string {
-  const values = { count: call.buffer?.count ?? call.args[2]?.value ?? '?', fd: fdOf(call) }
-  if (call.family === 'write') {
-    const target = targetOf(call, file)
-    return fillTemplate(target === null ? REQUEST.write : REQUEST.writeTo, { ...values, target: target ?? '' })
+  const words = callWords(call)
+  if (!words) {
+    return call.desk
   }
-  if (call.name === 'read') {
-    return fillTemplate(REQUEST.read, values)
-  }
-  return call.desk
+  const request = fillTemplate(words.say.request, words.values)
+  const target = writes(call) ? targetOf(call, file) : null
+  return target === null ? request : `${request} (${target})`
 }
 
 /** The kernel's parts the call works in, from its syscall, its route and what reached the console. */
@@ -68,11 +72,12 @@ export function crossingParts(call: XrayCall, route?: CallRoute): readonly Cross
   const done = returnOf(call)
   const ids = [...(SYSCALL_PARTS[call.name] ?? [])]
   let served: SectionPartId | null = ids[0] ?? null
-  let servedDetail: string | null = null
+  // Without a route, the served part's detail is where the call's own handler lives.
+  let servedDetail: string | null = call.sources[0]?.path ?? null
   if (route) {
-    const reached = (route.kind === 'fs' ? FS_SECTION_PARTS[route.fs] : DRIVER_SECTION_PARTS[route.driver]) ?? [
-      'drivers',
-    ]
+    const reached =
+      (route.kind === 'fs' ? FS_SECTION_PARTS[route.fs] : DRIVER_SECTION_PARTS[route.driver]) ??
+      (route.kind === 'fs' ? ['vfs'] : ['drivers'])
     const kernel = reached.filter((id) => SECTION_PARTS.some((p) => p.id === id && p.floor === 'kernel'))
     ids.push(...kernel)
     served = kernel[0] ?? served
@@ -98,7 +103,7 @@ export function crossingParts(call: XrayCall, route?: CallRoute): readonly Cross
   if (parts.length > 0) {
     return parts
   }
-  return [{ id: null, name: 'The kernel', detail: call.kernelPath.at(-1) ?? call.name, served: true }]
+  return [{ id: null, name: 'The kernel', detail: servedDetail ?? call.kernelPath.at(-1) ?? call.name, served: true }]
 }
 
 interface AnswerText {
@@ -117,9 +122,31 @@ function predictOf(choices: PredictChoices | null, explain: string): StagePredic
   return choices ? { question: PREDICT.question, ...choices, explain } : undefined
 }
 
+/** A guess from the call's CALL_SAY entry: its answer against the other options it names. */
+function sayChoices(say: CallSay | null, value: string, fill: (text: string) => string): PredictChoices | null {
+  return say?.predict ? numberChoices(value, say.predict.map(fill)) : null
+}
+
+/** What a call that came back means: the call's own words, else the content's, else that it worked. */
+function meaningOf(call: XrayCall, say: CallSay | null, ret: number, fill: (text: string) => string): string {
+  if (writes(call) && call.buffer) {
+    return fill(ret < call.buffer.count ? MEANING.short : MEANING.full)
+  }
+  if (say) {
+    return fill(ret === 0 && say.zero ? say.zero : say.meaning)
+  }
+  return call.returns ?? MEANING.worked
+}
+
 /** What comes back, the sentence that says it, and the guess before it; no guess where nothing comes back. */
-function answerText(call: XrayCall, narration: XrayNarration, values: TemplateValues): AnswerText {
+function answerText(
+  call: XrayCall,
+  words: CallWords | null,
+  narration: XrayNarration,
+  values: TemplateValues
+): AnswerText {
   const done = returnOf(call)
+  const say = words?.say ?? null
   const fill = (text: string, extra: TemplateValues = {}) => fillTemplate(text, { ...values, ...extra })
   if (!done) {
     const pending = call.outcome.kind === 'pending'
@@ -132,10 +159,10 @@ function answerText(call: XrayCall, narration: XrayNarration, values: TemplateVa
       predict: undefined,
     }
   }
-  const write = call.family === 'write'
+  const write = call.name === 'write' && call.buffer !== null
   const writeExplain = String(values.writeExplain ?? '')
   if (done.errno !== null) {
-    const choices = write ? writeChoices(call) : numberChoices('-1', ['0'])
+    const choices = write ? writeChoices(call) : say ? sayChoices(say, '-1', fill) : numberChoices('-1', ['0'])
     return {
       answer: { value: '-1', meaning: done.errno },
       say: fill(SAY.answerFailed),
@@ -146,43 +173,52 @@ function answerText(call: XrayCall, narration: XrayNarration, values: TemplateVa
     return { answer: { value: NO_ANSWER, meaning: fill(MEANING.exec) }, say: fill(SAY.answerExec), predict: undefined }
   }
   const value = String(done.toProgram)
-  if (write && call.buffer) {
-    const meaning = fill(done.ret < call.buffer.count ? MEANING.short : MEANING.full)
-    return {
-      answer: { value, meaning },
-      say: fill(SAY.answer, { value, meaning }),
-      predict: predictOf(writeChoices(call), writeExplain),
-    }
+  const meaning = meaningOf(call, say, done.ret, fill)
+  const said = fill(SAY.answer, { value, meaning })
+  if (write) {
+    return { answer: { value, meaning }, say: said, predict: predictOf(writeChoices(call), writeExplain) }
   }
-  if (call.family === 'fork') {
+  if (call.family === 'fork' && words?.key !== 'clone-thread') {
     const forkText = stageText(narration.syscallStages['answer-fork'], values, { predict: forkChoices(call) })
     return {
-      answer: { value, meaning: MEANING.fork },
-      say: fill(SAY.answer, { value, meaning: MEANING.fork }),
+      answer: { value, meaning },
+      say: said,
       predict: predictOf(forkChoices(call), forkText.predict?.explain ?? ''),
     }
   }
-  const meaning = call.returns ?? MEANING.worked
+  const choices = say ? sayChoices(say, value, fill) : numberChoices(value, ['0', '-1'])
   return {
     answer: { value, meaning },
-    say: fill(SAY.answer, { value, meaning }),
-    predict: predictOf(numberChoices(value, ['0', '-1']), fill(PREDICT.explainWorked, { value, meaning })),
+    say: said,
+    predict: predictOf(choices, fill(PREDICT.explainWorked, { value, meaning })),
   }
 }
 
-/** The kernel beat's sentence: a failure, the console's driver, or the part that does the work. */
-function kernelSay(call: XrayCall, parts: readonly CrossingPart[], end: string | null, values: TemplateValues) {
+/** The kernel beat's sentence: why it refused, or what it does, and where the route says it went. */
+function kernelSay(
+  call: XrayCall,
+  words: CallWords | null,
+  parts: readonly CrossingPart[],
+  route: CallRoute | undefined,
+  end: string | null,
+  values: TemplateValues
+): string {
+  const say = words?.say ?? null
   if (returnOf(call)?.errno != null) {
-    return fillTemplate(SAY.kernelFailed, values)
+    return fillTemplate(SAY.kernelFailed, { ...values, errnoMessage: refusedText(call, say, values) })
   }
-  if (call.family === 'write' && call.console !== null) {
-    return fillTemplate(SAY.kernelConsole, values)
+  if (!say) {
+    const served = parts.find((part) => part.served)
+    const work = served?.id
+      ? fillTemplate(SAY.kernelPart, { ...values, part: served.name })
+      : fillTemplate(SAY.kernel, values)
+    return work + (end ? fillTemplate(SAY.kernelEnd, { end }) : '')
   }
-  const served = parts.find((part) => part.served)
-  const work = served?.id
-    ? fillTemplate(SAY.kernelPart, { ...values, part: served.name })
-    : fillTemplate(SAY.kernel, values)
-  return work + (end ? fillTemplate(SAY.kernelEnd, { end }) : '')
+  const toTerminal = call.console !== null && say.console !== undefined
+  const work = fillTemplate(toTerminal ? (say.console ?? '') : say.work, values)
+  // The console sentence already names the tty driver the route would name.
+  const routed = toTerminal && route?.kind === 'driver' ? null : routeText(call, route)
+  return routed ? `${work} ${routed}` : work
 }
 
 /** One syscall at Simple: it asks, crosses the Gate, the kernel does it, the device shows it, the answer comes back. */
@@ -192,24 +228,26 @@ export function crossingStoryboard(
   { route, file = null }: CrossingInput = {}
 ): CrossingStoryboard {
   const done = returnOf(call)
+  const words = callWords(call)
   const values: TemplateValues = {
     ...syscallValues(call, narration.parts),
     desk: lowerFirst(call.desk),
-    target: targetOf(call, file) ?? 'a file',
+    target: targetOf(call, file) ?? `the file behind fd ${call.args[0]?.value ?? '?'}`,
     newProgram: baseName(call.path ?? call.program),
-    printed: shownText(call.console ?? ''),
+    printed: shownText(onScreen(call.console ?? '')),
+    ...(words?.values ?? sayValues(call)),
   }
   const fill = (text: string) => fillTemplate(text, values)
   const parts = crossingParts(call, route)
   const end = route ? routeRowOf(call, route, file).end : null
-  const answer = answerText(call, narration, values)
-  const terminal = call.family === 'write' && call.console !== null && done?.errno == null ? call.console : null
+  const answer = answerText(call, words, narration, values)
+  const terminal = call.console !== null && done?.errno == null ? onScreen(call.console) : null
 
-  const ask = call.family === 'write' ? SAY.askWrite : call.name === 'read' ? SAY.askRead : SAY.ask
+  const ask = words ? words.say.ask : SAY.ask
   const beats: { beat: CrossingBeat; say: string; predict?: StagePredict | undefined }[] = [
     { beat: 'ask', say: fill(ask) },
     { beat: 'gate', say: SAY.gate },
-    { beat: 'kernel', say: kernelSay(call, parts, end, values) },
+    { beat: 'kernel', say: kernelSay(call, words, parts, route, end, values) },
     ...(terminal !== null ? [{ beat: 'device' as const, say: fill(SAY.device) }] : []),
     { beat: 'answer', say: answer.say, predict: answer.predict },
   ]

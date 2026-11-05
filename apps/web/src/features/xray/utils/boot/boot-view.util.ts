@@ -42,7 +42,13 @@ function initNote(lines: readonly KernelLogLine[], fromInitramfs: boolean): stri
   return `The kernel frees its start-up code and runs \`${path}\` as PID 1, the first process in user space.${origin}`
 }
 
-function rootNote(device: string | null, failed: boolean): string {
+function rootNote(summary: BootSummary, failed: boolean): string {
+  const device = summary.rootDevice
+  const tried = summary.failedRoot
+  if (tried) {
+    const type = tried.fstype ? ` (${tried.fstype})` : ''
+    return `The initramfs tried to mount \`${tried.device}\`${type} as the real root filesystem, and the mount failed: \`/\` is still \`rootfs\`, and the boot stopped here.`
+  }
   if (!failed && device !== null) {
     return `The real root filesystem is mounted on \`/\`. \`/proc/mounts\` names its device: \`${device}\`.`
   }
@@ -65,7 +71,7 @@ function noteOf(
     case 'init':
       return initNote(lines, picked.has('initramfs'))
     case 'root':
-      return rootNote(summary.rootDevice, summary.outcome === 'initramfs')
+      return rootNote(summary, summary.outcome === 'initramfs')
     default:
       return BOOT_NOTES[kind]
   }
@@ -93,7 +99,7 @@ export function bootViewOf(record: BootRecord): BootView {
   const { summary, log } = record
   const picked = linesByStage(log)
   const order = (kind: BootStageKind) => BOOT_STAGE_RULES.findIndex((rule) => rule.kind === kind)
-  const rootFailed = summary.outcome === 'initramfs'
+  const rootFailed = summary.outcome === 'initramfs' || summary.failedRoot !== undefined
   const stages = BOOT_STAGE_RULES.flatMap((rule): BootStageView[] => {
     const lines = picked.get(rule.kind) ?? []
     // The root is also known from /proc/mounts, when dmesg says nothing about it.
@@ -109,6 +115,7 @@ export function bootViewOf(record: BootRecord): BootView {
         time: lines[0]?.time ?? null,
         lines,
         failed: rule.kind === 'panic' || (rule.kind === 'root' && rootFailed),
+        mountError: rule.kind === 'root' ? (summary.failedRoot?.error ?? null) : null,
       },
     ]
   }).sort(

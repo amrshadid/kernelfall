@@ -32,6 +32,16 @@ export interface BootSummary {
   readonly pci: readonly PciBinding[]
   readonly netDevices: readonly string[]
   readonly rootDevice: string | null
+  /** The root= the initramfs could not mount, when the boot stopped there. */
+  readonly failedRoot?: FailedRoot
+}
+
+/** What the initramfs tried to mount as `/`, and what mount answered. */
+export interface FailedRoot {
+  readonly device: string
+  readonly fstype: string
+  /** mount's own message, e.g. `mount: mounting /dev/sda2 on /newroot failed: No such device`. */
+  readonly error: string
 }
 
 /** One line of the kernel's log, as `dmesg` prints it: `[    1.733345] scsi host0: ata_piix`. */

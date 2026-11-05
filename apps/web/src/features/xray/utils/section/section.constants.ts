@@ -1,5 +1,5 @@
 import type { SectionFloor, SectionPart, SectionPartId } from '@features/xray/types'
-import { EACCES, EPERM, type FsType } from '@kernelfall/machine/types'
+import { EACCES, EPERM } from '@kernelfall/machine/types'
 
 /** Top to bottom, as init's drawing has them: programs above, the kernel between, the board below. */
 export const SECTION_FLOORS: readonly { readonly floor: SectionFloor; readonly name: string }[] = [
@@ -37,6 +37,7 @@ export const SYSCALL_PARTS: Readonly<Record<string, readonly SectionPartId[]>> =
   read: ['vfs'],
   write: ['vfs'],
   writev: ['vfs'],
+  sendfile64: ['vfs'],
   pread64: ['vfs'],
   pwrite64: ['vfs'],
   openat: ['vfs'],
@@ -127,19 +128,25 @@ export const SYSCALL_PARTS: Readonly<Record<string, readonly SectionPartId[]>> =
 }
 
 /** The parts a filesystem's route reaches below the VFS: ext4 sits on the disk, sysfs shows the driver model. */
-export const FS_SECTION_PARTS: Readonly<Record<FsType, readonly SectionPartId[]>> = {
+export const FS_SECTION_PARTS: Readonly<Record<string, readonly SectionPartId[]>> = {
+  '9p': ['vfs'],
   ext4: ['vfs', 'disk'],
   proc: ['vfs'],
   sysfs: ['vfs', 'drivers'],
   devtmpfs: ['vfs'],
+  devpts: ['vfs'],
   tmpfs: ['vfs', 'memory'],
+  tracefs: ['vfs'],
   pipefs: ['ipc'],
+  sockfs: ['networking'],
+  anon_inodefs: ['vfs'],
 }
 
 /** The parts a driver's route reaches; the tty driver ends at the console. */
 export const DRIVER_SECTION_PARTS: Readonly<Record<string, readonly SectionPartId[]>> = {
   tty: ['drivers'],
   mem: ['drivers'],
+  random: ['drivers'],
 }
 
 /** A failed permission check is the security part's answer. */

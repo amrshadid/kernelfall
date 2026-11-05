@@ -6,7 +6,7 @@ import { ERRNO_TABLE } from '@kernelfall/machine/types'
 import { formatCall, isErrorReturn, syscallName } from '@kernelfall/machine/utils'
 import { baseName, programOf } from './program-name.util'
 import { syscallContent } from './syscall-content.util'
-import { ARG_REGISTERS, MAX_BUFFER_CELLS, PT_REGS_FIELDS, SHELL_PROGRAM } from './xray-call.constants'
+import { ARG_REGISTERS, CONSOLE_WRITERS, MAX_BUFFER_CELLS, PT_REGS_FIELDS, SHELL_PROGRAM } from './xray-call.constants'
 
 const SPACE = 0x20
 const NEWLINE = 0x0a
@@ -81,7 +81,9 @@ export function toXrayCalls(run: TraceRun, events: readonly RunEvent[], content:
   const programs = new Map<number, string>()
   const printed = new Map<number, string>()
   const programAt = new Map<number, string>()
-  let writing: number | null = null
+  // Each process's console writer in flight, by the seq of its sys_enter.
+  const writing = new Map<number, number>()
+  let running: number | null = null
   // A root that forks is the shell running the command; one that doesn't ran a builtin, named after it.
   const forks = events.some((e) => e.type === 'sched_process_fork' && e.parentPid === run.pid)
   const first = forks ? SHELL_PROGRAM : programOf(run.commandLine)
@@ -92,21 +94,24 @@ export function toXrayCalls(run: TraceRun, events: readonly RunEvent[], content:
   for (const event of events) {
     switch (event.type) {
       case 'sys_enter':
+        running = event.pid
         programAt.set(event.seq, programs.get(event.pid) ?? first)
-        if (event.name === 'write') {
-          writing = event.seq
+        if (CONSOLE_WRITERS.has(syscallName(event.name))) {
+          writing.set(event.pid, event.seq)
         }
         break
       case 'sys_exit':
-        if (event.name === 'write') {
-          writing = null
+        running = event.pid
+        writing.delete(event.pid)
+        break
+      case 'console_write': {
+        // One CPU: the bytes are the running task's, else the writer that entered last and hasn't returned.
+        const seq = writing.get(running ?? -1) ?? [...writing.values()].at(-1)
+        if (seq !== undefined) {
+          printed.set(seq, (printed.get(seq) ?? '') + decoder.decode(event.bytes))
         }
         break
-      case 'console_write':
-        if (writing !== null) {
-          printed.set(writing, (printed.get(writing) ?? '') + decoder.decode(event.bytes))
-        }
-        break
+      }
       case 'sched_process_fork':
         programs.set(event.childPid, programs.get(event.parentPid) ?? first)
         break

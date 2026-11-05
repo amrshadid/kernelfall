@@ -39,6 +39,7 @@ function BootStage({ stage, number, params }: { stage: BootStageView; number: nu
             ))}
           </ul>
         )}
+        {stage.mountError !== null && <pre className="xr-boot__lines">{stage.mountError}</pre>}
         {shown.length > 0 && <pre className="xr-boot__lines">{shown.map(dmesgLine).join('\n')}</pre>}
         {folded.length > 0 && (
           <details className="xr-boot__more">

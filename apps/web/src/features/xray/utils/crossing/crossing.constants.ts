@@ -9,32 +9,23 @@ export const BEAT_HEADS: Readonly<Record<CrossingBeat, { readonly tick: string; 
   answer: { tick: 'answer', title: 'The answer comes back' },
 }
 
-/** The request on the card, in plain words; no-break spaces keep a number with its word when the card wraps. */
+/** No-break spaces keep a number with its word when the card wraps. */
 export const NO_BREAK = String.fromCharCode(0xa0)
-
-export const REQUEST = {
-  write: `write {count}${NO_BREAK}bytes to fd${NO_BREAK}{fd}`,
-  writeTo: `write {count}${NO_BREAK}bytes to fd${NO_BREAK}{fd} ({target})`,
-  read: `read up to {count}${NO_BREAK}bytes from fd${NO_BREAK}{fd}`,
-} as const
 
 export const YOUR_TERMINAL = 'your terminal'
 
-/** One sentence per beat; backticks set real names in the code face. */
+/** One sentence per beat (ask and kernel only for a call CALL_SAY has no words for); backticks set the code face. */
 export const SAY = {
-  askWrite: "`{program}` can't touch {target} itself, so it asks the kernel: write these {count} bytes to fd {fd}.",
-  askRead: '`{program}` asks the kernel: read up to {count} bytes from fd {fd}.',
   ask: '`{program}` asks the kernel for `{name}`, which {desk}.',
   gate: "The request crosses the Gate: the CPU switches to kernel mode, where only the kernel's code runs.",
   kernelFailed: 'The kernel tries, and stops: {errnoMessage}.',
-  kernelConsole:
-    'The kernel finds that fd {fd} is your terminal and hands the {count} bytes to its driver, the tty driver.',
   kernelPart: 'The work happens in {part}: the kernel {desk}.',
   kernel: 'The kernel does the work: it {desk}.',
   kernelEnd: ' It ends at {end}.',
   device: 'The bytes reach the terminal: `{printed}` appears on the screen.',
   answer: 'The answer comes back up through the Gate: {value}, {meaning}.',
-  answerFailed: 'The answer comes back up: -1, refused. The C library sets `errno` to `{errno}`: {errnoMessage}.',
+  answerFailed:
+    'The answer comes back up: an error. The C library hands `{program}` -1 and sets `errno` to `{errno}`: {errnoMessage}.',
   answerExec: 'No answer comes back to the old program: this process now runs `{newProgram}`.',
   answerExit: 'No answer comes back: the process is gone.',
   answerPending: 'No answer yet: the call is still waiting inside the kernel.',

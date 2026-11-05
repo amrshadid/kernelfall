@@ -1,5 +1,6 @@
 import { toXrayCalls } from '@features/xray/utils/calls'
 import { xrayContent } from '@kernelfall/levels/utils'
+import type { CallRoute } from '@kernelfall/machine/types'
 import { describe, expect, it } from 'vitest'
 import { bytes, runOf, stamp } from '@/test/fixtures/trace-events.fixture'
 import { routeOf, routesOf } from './route.util'
@@ -67,6 +68,22 @@ describe('routeOf', () => {
     expect(read?.result).toBe('= 3')
     expect(read?.end).toBe("eth0's operstate, kept in its struct net_device (net/core/net-sysfs.c)")
     expect(view().rows[3]?.end).toBe('the console: the text appears on the screen')
+  })
+
+  it("names the Machine's root filesystem, 9p, and a filesystem it has no row for by the trace's own name", () => {
+    const fsRoute = (fs: string, fn: string) => ({ kind: 'fs', fs, fn }) as CallRoute
+    const events = stamp([
+      { type: 'sys_enter', pid: 33, nr: 3, name: 'read', args: [3, 0x5000, 64] },
+      { type: 'sys_exit', pid: 33, nr: 3, name: 'read', ret: 5, route: fsRoute('9p', 'v9fs_file_read_iter') },
+      { type: 'sys_enter', pid: 33, nr: 3, name: 'read', args: [4, 0x5000, 64] },
+      { type: 'sys_exit', pid: 33, nr: 3, name: 'read', ret: 5, route: fsRoute('nfs', 'nfs_file_read') },
+    ])
+    const run = runOf(events, 'cat x')
+    const rows = routeOf(run.commandLine, toXrayCalls(run, events, xrayContent()), events).rows
+    expect(rows.map((row) => row.part)).toEqual([
+      { kind: 'fs', name: '9p', source: 'fs/9p/, net/9p/' },
+      { kind: 'fs', name: 'nfs', source: 'fs/' },
+    ])
   })
 
   it('names where a call no file served lives in the tree', () => {

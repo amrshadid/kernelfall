@@ -1,19 +1,26 @@
 import type { RouteBelow, RoutePart } from '@features/xray/types'
-import type { FsType, RoutedOp } from '@kernelfall/machine/types'
+import type { RoutedOp } from '@kernelfall/machine/types'
 
-export const FS_PARTS: Readonly<Record<FsType, RoutePart>> = {
+/** By the FsType a route names; keyed by string so a filesystem the trace adds later still has a fallback. */
+export const FS_PARTS: Readonly<Record<string, RoutePart>> = {
+  '9p': { kind: 'fs', name: '9p', source: 'fs/9p/, net/9p/' },
   ext4: { kind: 'fs', name: 'ext4', source: 'fs/ext4/' },
   proc: { kind: 'fs', name: 'procfs', source: 'fs/proc/' },
   sysfs: { kind: 'fs', name: 'sysfs', source: 'fs/sysfs/, fs/kernfs/' },
   devtmpfs: { kind: 'fs', name: 'devtmpfs', source: 'drivers/base/devtmpfs.c, mm/shmem.c' },
+  devpts: { kind: 'fs', name: 'devpts', source: 'fs/devpts/' },
   tmpfs: { kind: 'fs', name: 'tmpfs', source: 'mm/shmem.c' },
+  tracefs: { kind: 'fs', name: 'tracefs', source: 'fs/tracefs/, kernel/trace/' },
   pipefs: { kind: 'fs', name: 'pipefs', source: 'fs/pipe.c' },
+  sockfs: { kind: 'fs', name: 'sockfs', source: 'net/socket.c' },
+  anon_inodefs: { kind: 'fs', name: 'anon_inodefs', source: 'fs/anon_inodes.c' },
 }
 
 /** By the name the trace gives a driver in its routes. */
 export const DRIVER_PARTS: Readonly<Record<string, RoutePart>> = {
   tty: { kind: 'driver', name: 'tty driver', source: 'drivers/tty/tty_io.c, drivers/tty/n_tty.c' },
   mem: { kind: 'driver', name: 'mem driver', source: 'drivers/char/mem.c' },
+  random: { kind: 'driver', name: 'random driver', source: 'drivers/char/random.c' },
 }
 
 export const BELOW_NONE: RouteBelow = { fns: [], end: null }
@@ -25,11 +32,11 @@ export const BELOW_NONE: RouteBelow = { fns: [], end: null }
 // models fs/ext4/file.c: ext4_file_read_iter(), mm/filemap.c: filemap_read()
 // models fs/kernfs/file.c: kernfs_seq_show(), fs/sysfs/file.c: sysfs_kf_seq_show()
 // models fs/proc/inode.c: proc_reg_read_iter(), fs/seq_file.c: seq_read_iter()
-export const FS_BELOW: Readonly<Record<FsType, Partial<Record<RoutedOp, RouteBelow>>>> = {
+export const FS_BELOW: Readonly<Record<string, Partial<Record<RoutedOp, RouteBelow>>>> = {
   ext4: {
     read: {
       fns: ['generic_file_read_iter', 'filemap_read'],
-      end: 'the page cache; on a miss, the block layer reads the virtio disk',
+      end: 'the page cache; on a miss, the block layer reads the IDE disk',
     },
     write: {
       fns: ['ext4_buffered_write_iter', 'generic_perform_write'],
@@ -45,7 +52,6 @@ export const FS_BELOW: Readonly<Record<FsType, Partial<Record<RoutedOp, RouteBel
       end: "a device's attribute: its _show() function writes the text",
     },
   },
-  devtmpfs: {},
   tmpfs: { read: { fns: [], end: 'memory: tmpfs keeps its files in RAM' } },
   pipefs: {
     read: { fns: [], end: "the pipe's buffer in the kernel" },

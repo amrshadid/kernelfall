@@ -30,8 +30,12 @@ export function partsOfCall(
   if (call.data && (call.name === 'openat' || call.name === 'open' || call.name === 'execve')) {
     for (const part of partsForPath(decoder.decode(call.data))) parts.add(part)
   }
-  const served = route ? (route.kind === 'fs' ? FS_SECTION_PARTS[route.fs] : DRIVER_SECTION_PARTS[route.driver]) : []
-  for (const part of served ?? ['drivers']) parts.add(part)
+  const served = route
+    ? route.kind === 'fs'
+      ? (FS_SECTION_PARTS[route.fs] ?? ['vfs'])
+      : (DRIVER_SECTION_PARTS[route.driver] ?? ['drivers'])
+    : []
+  for (const part of served) parts.add(part)
   if (call.result.kind === 'returned' && PERMISSION_ERRNOS.includes(-call.result.ret)) {
     parts.add('security')
   }

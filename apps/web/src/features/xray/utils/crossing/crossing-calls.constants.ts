@@ -119,8 +119,8 @@ export const CALL_SAY: Readonly<Record<string, CallSay>> = {
   },
   sendfile64: {
     request: `copy fd${NB}{in} to fd${NB}{out}`,
-    ask: '`{program}` asks the kernel to copy fd {in} into fd {out} itself, up to {max} bytes.',
-    work: "The kernel reads from fd {in} and writes to fd {out} itself: the bytes never pass through `{program}`'s memory.",
+    ask: '`{program}` asks the kernel to copy fd {in} into fd {out} inside the kernel, up to {max}.',
+    work: "The kernel reads from fd {in} and writes to fd {out} inside the kernel: the bytes never pass through `{program}`'s memory.",
     console:
       "The kernel reads from fd {in} and hands the bytes to fd {out}, your terminal, through the tty driver: they never pass through `{program}`'s memory.",
     meaning: '{ret} {retUnit} copied',
@@ -376,19 +376,6 @@ export const CALL_SAY: Readonly<Record<string, CallSay>> = {
     },
     predict: COUNT,
   },
-  // The content gives readlink no path argument yet, so X-ray has no path to show.
-  'readlink-nopath': {
-    request: 'where a link points',
-    ask: '`{program}` asks the kernel where a symbolic link points.',
-    work: "The VFS copies the link's target, a path, into `{program}`'s buffer, up to {bufsiz} bytes, without following it.",
-    meaning: 'a {ret}-byte path',
-    refused: {
-      EINVAL: "the path it names isn't a symbolic link",
-      ENOENT: "a name in the path doesn't exist",
-      EACCES: "you aren't allowed to read where that link points",
-    },
-    predict: COUNT,
-  },
 }
 
 /** Each syscall by the CALL_SAY entry it shares, where its name differs. */
@@ -453,6 +440,7 @@ export const NULL_SAY: Readonly<Record<string, string>> = {
 /** The kernel beat's route sentences. */
 export const ROUTE = {
   file: 'The file is {on}.',
+  folder: 'The folder is {on}.',
   source: 'The file it reads from is {on}.',
 } as const
 

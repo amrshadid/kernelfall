@@ -25,6 +25,7 @@ const P7 = 'prologue-machine-in-section-07-who-runs'
 const S1 = 'prologue-surface-survey-01-streets'
 const S2 = 'prologue-surface-survey-02-who-may-enter'
 const S3 = 'prologue-surface-survey-03-processes'
+const S4 = 'prologue-surface-survey-04-finding-things'
 const ECHO = '/bin/echo one two three four'
 const GCC = 'gcc -Wall -Wextra hello.c -o hello && ./hello'
 const CMDLINE = 'cat /proc/cmdline'
@@ -44,12 +45,17 @@ async function recordedBoard(
   commandLine: string,
   pick: (call: XrayCall) => boolean
 ): Promise<CrossingStoryboard> {
-  const calls = await recordedCalls(level, run, commandLine)
+  const { events } = await recordedCommand(level, run, commandLine)
+  const calls = toXrayCalls(runOf(events, commandLine), events, content)
   const call = calls.find(pick)
   if (!call) {
     throw new Error(`${level}/${run}: no such call`)
   }
-  return crossingStoryboard(call, content.narration, { file: filesOf(calls).get(call.id) })
+  // As the board hook does: the route each sys_exit carried, and the file each fd was opened on.
+  return crossingStoryboard(call, content.narration, {
+    route: routesOf(events).get(call.id),
+    file: filesOf(calls).get(call.id),
+  })
 }
 
 async function recordedCall(level: string, run: string, commandLine: string, pick: (call: XrayCall) => boolean) {
@@ -132,7 +138,7 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
     expect(shown(board)).toEqual({
       request: 'open a file for reading',
       kernel:
-        'The VFS walks `/proc/cmdline` one folder at a time, checking your permission at each step, and gives this process fd 3: the lowest number free in its table.',
+        'The VFS walks `/proc/cmdline` one folder at a time, checking your permission at each step, and gives this process fd 3: the lowest number free in its table. The file is on procfs, whose files the kernel writes out from its own state as you read them.',
       device: null,
       answer: '3 / the new fd',
       predict: ['-1', '0', '3'],
@@ -170,11 +176,13 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
     expect(shown(board)).toMatchObject({
       request: 'copy fd~3 to fd~1',
       kernel:
-        "The kernel reads from fd 3 and hands the bytes to fd 1, your terminal, through the tty driver: they never pass through `cat`'s memory.",
+        "The kernel reads from fd 3 and hands the bytes to fd 1, your terminal, through the tty driver: they never pass through `cat`'s memory. The file it reads from is on procfs, whose files the kernel writes out from its own state as you read them.",
       answer: '89 / 89 bytes copied',
       predict: ['-1', '0', '89'],
     })
     expect(board.terminal).toMatch(/^console=ttyS0 /)
+    expect(board.stages[0]?.what).toBe('`cat` asks the kernel to copy fd 3 into fd 1 inside the kernel, up to 16 MiB.')
+    expect(board.call.text).toContain('0x1000000')
     expect(board.stages.map((s) => s.scene.beat)).toContain('device')
   })
 
@@ -236,7 +244,7 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
     expect(shown(board)).toEqual({
       request: 'list the folder at fd~3',
       kernel:
-        "The VFS copies the folder's next entries into `ls`'s buffer, up to 2048 bytes: each one a name, an inode number and a type.",
+        "The VFS copies the folder's next entries into `ls`'s buffer, up to 2048 bytes: each one a name, an inode number and a type. The folder is on 9p, the Machine's root filesystem: its files live outside the VM and come in over virtio.",
       device: null,
       answer: '488 / 488 bytes of entries',
       predict: ['-1', '0', '488'],
@@ -264,15 +272,19 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
 
   it("fork and wait4: the child's PID, then collecting it", async () => {
     const fork = await recordedBoard(P1, 'other-paths', CMDLINE, named('fork'))
-    expect(shown(fork)).toMatchObject({ request: 'make a copy of this process', answer: "483 / the new child's PID" })
+    const child = fork.answer.value
+    expect(shown(fork)).toMatchObject({
+      request: 'make a copy of this process',
+      answer: `${child} / the new child's PID`,
+    })
     expect(shown(fork).kernel).toBe(
-      'The kernel makes PID 483, a copy of this process: the same program, memory and open files. The memory is shared until either one writes to it.'
+      `The kernel makes PID ${child}, a copy of this process: the same program, memory and open files. The memory is shared until either one writes to it.`
     )
     const wait = await recordedBoard(P1, 'other-paths', CMDLINE, (c) => c.name === 'wait4' && errnoOf(c) === null)
     expect(shown(wait)).toMatchObject({
       request: 'wait for a child',
-      answer: "483 / the child's PID",
-      predict: ['-1', '0', '483'],
+      answer: `${child} / the child's PID`,
+      predict: ['-1', '0', child],
     })
     expect(shown(wait).kernel).toBe(
       'The kernel checks whether a child has ended or stopped; if not yet, it puts `bash` to sleep until then. For a child that ended, it hands over the exit status and frees what was left of it, the zombie.'
@@ -314,7 +326,7 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
     })
   })
 
-  it('chdir, getppid and nanosleep, as man runs', async () => {
+  it('chdir and getppid as man runs, and nanosleep as sleep does', async () => {
     const chdir = await recordedBoard(P3, 'solution', MAN, withPath('chdir', '/usr/share/man'))
     expect(shown(chdir)).toMatchObject({
       request: 'move into this folder',
@@ -323,9 +335,11 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
       answer: '0 / now in that folder',
     })
     const ppid = await recordedBoard(P3, 'solution', MAN, named('getppid'))
-    expect(shown(ppid).answer).toBe("480 / the parent's PID")
-    expect(shown(ppid).predict).toEqual(['1', '480', String(ppid.call.pid)])
-    const sleep = await recordedBoard(P3, 'solution', MAN, named('nanosleep'))
+    const parent = ppid.answer.value
+    expect(Number(parent)).not.toBe(ppid.call.pid)
+    expect(shown(ppid).answer).toBe(`${parent} / the parent's PID`)
+    expect(shown(ppid).predict).toEqual(['1', parent, String(ppid.call.pid)])
+    const sleep = await recordedBoard(P7, 'solution', YES, (c) => c.program === 'sleep' && c.name.includes('sleep'))
     expect(shown(sleep)).toMatchObject({
       request: 'sleep for a set time',
       answer: '0 / the time has passed',
@@ -396,14 +410,16 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
     const pipe = await recordedBoard(P1, 'other-paths', CMDLINE, named('pipe'))
     expect(shown(pipe)).toMatchObject({ request: 'make a pipe', answer: '0 / two new fds', predict: null })
     expect(pipe.parts.find((p) => p.served)?.id).toBe('ipc')
-    const dup2 = await recordedBoard(P3, 'near-misses', NEAR, named('dup2'))
+    const dup2 = await recordedBoard(P3, 'near-misses', '/usr/local/bin/hello', named('dup2'))
+    const old = dup2.call.args[0]?.value ?? ''
     expect(shown(dup2)).toMatchObject({
-      request: 'make fd~1 a copy of fd~9',
+      request: `make fd~1 a copy of fd~${old}`,
       answer: '1 / fd 1 shares it now',
-      predict: ['-1', '0', '1', '9'],
+      predict: ['-1', '0', '1', old],
     })
     const getpid = await recordedBoard(P1, 'other-paths', CMDLINE, named('getpid'))
-    expect(shown(getpid)).toMatchObject({ answer: "483 / this process's PID", predict: ['0', '1', '483'] })
+    const pid = String(getpid.call.pid)
+    expect(shown(getpid)).toMatchObject({ answer: `${pid} / this process's PID`, predict: ['0', '1', pid] })
     const uname = await recordedBoard(P5, 'solution', './myuname', named('uname'))
     expect(shown(uname)).toMatchObject({
       kernel:
@@ -424,9 +440,16 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
 
   it('readlink: the link target, by bytes, and refused for another user', async () => {
     const ok = await recordedBoard(P6, 'solution', 'lspci -k', named('readlink'))
-    expect(shown(ok)).toMatchObject({ request: 'where a link points', answer: '35 / a 35-byte path' })
+    expect(shown(ok)).toMatchObject({ request: 'where this link points', answer: '35 / a 35-byte path' })
+    expect(ok.stages[0]?.what).toBe(
+      '`lspci` asks the kernel where the symbolic link `/sys/bus/pci/devices/0000:00:06.0/driver` points.'
+    )
+    const notLink = await recordedBoard(P6, 'solution', 'lspci -k', named('readlink', 'EINVAL'))
+    expect(shown(notLink).kernel).toBe("The kernel tries, and stops: `/sys` isn't a symbolic link.")
     const denied = await recordedBoard(S3, 'kill-without-stop', 'kill $(pidof yes)', named('readlink', 'EACCES'))
-    expect(shown(denied).kernel).toBe("The kernel tries, and stops: you aren't allowed to read where that link points.")
+    expect(shown(denied).kernel).toBe(
+      "The kernel tries, and stops: you aren't allowed to read where `/proc/1/exe` points."
+    )
   })
 
   it('leaves no placeholder unfilled for any call of these runs', async () => {
@@ -464,6 +487,55 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
     const board = crossingStoryboard(call, content.narration)
     expect(board.request).toBe(call.desk)
     expect(board.stages[2]?.what).toMatch(/^The kernel does the work: it /)
+  })
+})
+
+describe('crossingStoryboard on recorded calls that carry a route', () => {
+  const kernel = (board: CrossingStoryboard) => board.stages.find((s) => s.scene.beat === 'kernel')?.what ?? ''
+  const served = (board: CrossingStoryboard) => board.parts.find((p) => p.served)?.detail
+
+  it("P.2's write: the tty driver, said once, and the screen", async () => {
+    const board = await recordedBoard(P3, 'solution', ECHO, (c) => c.program === 'echo' && c.name === 'write')
+    expect(kernel(board)).toBe(
+      'The kernel finds that fd 1 is your terminal and hands the 19 bytes to its driver, the tty driver.'
+    )
+    expect(served(board)).toBe('tty driver')
+  })
+
+  it.each([
+    [
+      P1,
+      'other-paths',
+      'cat /etc/hostname',
+      named('sendfile64'),
+      '9p',
+      "The file it reads from is on 9p, the Machine's root filesystem",
+    ],
+    [P1, 'other-paths', CMDLINE, named('sendfile64'), 'procfs', 'The file it reads from is on procfs'],
+    [
+      P7,
+      'solution',
+      'cat /proc/$$/status',
+      (c: XrayCall) => c.program === 'cat' && c.name === 'read',
+      'procfs',
+      'The file is on procfs',
+    ],
+    [P6, 'solution', 'lspci -k', named('getdents64'), 'sysfs', 'The folder is on sysfs'],
+    [S1, 'copy-not-rename', 'ls -R /tmp/survey', named('getdents64'), 'tmpfs', 'The folder is on tmpfs'],
+    [P1, 'solution', 'ls /', withPath('statx', '/dev'), 'devtmpfs', 'The file is on devtmpfs'],
+    [P4, 'kept-quiet', DMESG, named('writev'), 'pipefs', 'The file is a pipe'],
+    [
+      S4,
+      'solution',
+      'find / -name passwd 2>/dev/null',
+      named('write'),
+      'mem driver',
+      'It is /dev/null, which throws the bytes away',
+    ],
+  ])('%s %s `%s`: names %s', async (level, run, commandLine, pick, detail, sentence) => {
+    const board = await recordedBoard(level, run, commandLine, pick)
+    expect(kernel(board)).toContain(sentence)
+    expect(served(board)).toBe(detail)
   })
 })
 

@@ -37,6 +37,16 @@ const OCTAL = 8
 // drivers/char/mem.c names /dev/null's handlers read_null(), write_null().
 const NULL_HANDLER = /_null$/
 
+const KIB = 1024
+const MIB = KIB * KIB
+
+/** A byte count as people say it: 16 MiB, not 16777216 bytes; the call line keeps the raw number. */
+export function sizeText(count: number): string {
+  if (count >= MIB && count % MIB === 0) return `${count / MIB} MiB`
+  if (count >= KIB && count % KIB === 0) return `${count / KIB} KiB`
+  return `${count} ${count === 1 ? 'byte' : 'bytes'}`
+}
+
 /** The trace prints registers unsigned; pids and fds read as the int the kernel sees. */
 const signed = (value: number) => (value >= WORD / 2 ? value - WORD : value)
 
@@ -75,9 +85,6 @@ export function sayKeyOf(call: XrayCall): string | null {
     }
     default: {
       const key = SAY_OF_SYSCALL[call.name] ?? call.name
-      if (key === 'readlink' && call.path === null) {
-        return 'readlink-nopath'
-      }
       return key in CALL_SAY ? key : null
     }
   }
@@ -122,10 +129,10 @@ export function sayValues(call: XrayCall): TemplateValues {
     retUnit: unitOf(done?.ret ?? 0),
     what: flags & O_DIRECTORY ? 'a folder' : 'a file',
     access: `${ACCESS[flags & O_ACCMODE] ?? ACCESS[0]}${flags & O_CREAT ? ', creating it if needed' : ''}`,
-    buffers: n('iovcnt', 2),
+    buffers: n('vlen', 2),
     out: n('out_fd', 0),
     in: n('in_fd', 1),
-    max: n('count', 3),
+    max: sizeText(n('count', 3)),
     old: n('oldfd', 0),
     new: n('newfd', 1),
     mode: `0${(n('mode', 1) & 0o7777).toString(OCTAL).padStart(3, '0')}`,
@@ -183,7 +190,8 @@ export function routeText(call: XrayCall, route: CallRoute | undefined): string 
     return fillTemplate(ROUTE.file, { on })
   }
   const on = FS_SAY[route.fs] ?? `on ${route.fs}`
-  const sentence = fillTemplate(call.name === 'sendfile64' ? ROUTE.source : ROUTE.file, { on })
+  const lead = call.name === 'sendfile64' ? ROUTE.source : op === 'readdir' ? ROUTE.folder : ROUTE.file
+  const sentence = fillTemplate(lead, { on })
   const ext4 = route.fs === 'ext4' && op ? EXT4_SAY[op] : undefined
   return ext4 ? `${sentence} ${ext4}` : sentence
 }

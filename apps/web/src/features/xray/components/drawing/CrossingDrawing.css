@@ -1,0 +1,18 @@
+/* The card's lane through the Gate: ink, so the one red mark stays the beat's. */
+.xr-lane {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+}
+
+.xr-lane-head {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2;
+}
+
+.xr .xr-card-say {
+  font-size: 13px;
+  font-weight: 600;
+}

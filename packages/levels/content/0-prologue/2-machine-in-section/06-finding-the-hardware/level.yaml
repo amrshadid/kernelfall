@@ -1,99 +1,125 @@
-# Prologue P.6, Finding the Hardware (docs/levels/prologue.md). Every objective is
-# judged in checker.ts: none of them is about the player's own program.
+# Prologue P.6, Finding the Hardware (docs/levels/prologue.md). The bus question is a
+# declared check; checker.ts judges the rest, none of it the player's own program.
+# Registers, MMIO and interrupts are Codex cards here; Act II and III build them.
 id: prologue-machine-in-section-06-finding-the-hardware
 title: Finding the Hardware
-summary: "Find the Machine's devices and the drivers bound to them, then fix a small board's device tree so its lamp lights. You learn how the kernel discovers hardware and matches each device to a driver."
-minutes: 25
+summary: "Ask the Machine's PCI bus what it found and which driver took each device, then fix a small board's device tree so its lamp gets a driver. You learn how the kernel finds its hardware and matches each device to a driver."
+minutes: 20
 tracks: [kernel]
 skills: [drv-hardware-discovery]
 prerequisites: [sys-kernel-role]
+teaches: [bus, sysfs, device-tree]
+uses: [kernel, driver, device, hex, file-tree]
 objectives:
+  - id: asks-pci-bus
+    text: "Ask the PCI bus what it found, and each device's driver: `lspci -k`."
+    check: { kind: ran, program: lspci, args: { match: ["^-[A-Za-z]*k[A-Za-z]*$"] }, status: 0 }
   - id: reads-disk-driver
-    text: "Read the disk controller's `driver` link in `/sys/bus/pci/devices/0000:00:1e.0`: it names the controller's driver."
+    text: "Find the disk controller's driver yourself: `readlink` its `driver` link in `/sys`."
   - id: compiles-dts
-    text: "`dtc` compiles `lighthouse.dts` into `lighthouse.dtb` without errors."
+    text: "Compile the lighthouse board's device tree with `dtc`."
   - id: lamp-binds
-    text: "`board lighthouse.dtb` shows the `leds-gpio` driver taking the lamp, and `lighthouse:lamp` in the board's `/sys/class/leds`."
+    text: "Give the lamp its driver: `board` shows `leds-gpio` taking it."
 hints:
-  - "In `/sys`, a device that has a driver has a link called `driver`. Where does the disk controller's link point?"
-  - "A device tree node binds when its `compatible` text is one of the texts in a driver's `of_match_table`, whole and letter for letter (only upper and lower case may differ). One letter off and nothing happens."
+  - "In `/sys`, a device that has a driver has a link named `driver`. For the lamp, compare two texts: its node's `compatible` and the driver's list."
+  - "A node binds when its `compatible` text is one of the texts in a driver's `of_match_table`, whole and letter for letter; only upper and lower case may differ."
   - 'The `leds` node says `"gpio-led"`. The driver''s list says `"gpio-leds"`.'
 chips:
-  - { command: lspci, explain: "list the PCI devices: -k adds the driver each one uses, -nn the IDs" }
+  - { command: lspci, explain: "list the PCI devices; -k adds the driver each one uses" }
+  - { command: cat, explain: "show a file, like one fact in /sys" }
   - { command: readlink, explain: "print where a link points, like a device's driver link in /sys" }
-  - { command: cat, explain: "cat /proc/interrupts counts each interrupt line" }
   - { command: dtc, explain: "the device tree compiler: -I dts -O dtb -o out.dtb in.dts" }
   - { command: board, explain: "boot the lighthouse board from a .dtb, as far as matching its drivers" }
 xray: [syscalls, files]
 codex:
+  - id: driver-model
+    term: buses, devices and drivers
+    simple: >-
+      A bus finds its devices and offers each to the drivers; one whose list matches
+      takes it. `lspci -k` prints `Kernel driver in use: ata_piix`.
+    deep: >-
+      The driver model has struct bus_type, struct device and struct device_driver.
+      When either side is added, the core calls the bus's match(), then the driver's
+      probe(), which takes the device over, in really_probe(). PCI joins cards inside
+      a PC, USB plugged-in devices, I2C a board's small chips; PCI matches the IDs in
+      a driver's id_table. On most systems udev, in
+      Userland, hears each new device as a uevent and loads its module by modalias;
+      the Machine runs no udev.
+    sources: [drivers/base/dd.c, drivers/base/bus.c, drivers/pci/pci-driver.c]
+    docs: https://docs.kernel.org/driver-api/driver-model/overview.html
+    tryIt: lspci -k
+  - id: sysfs
+    term: /sys, the devices' tree
+    simple: >-
+      Files the kernel fills with what it knows about devices, one fact each:
+      `/sys/bus/pci/devices/0000:00:1e.0/vendor` holds `0x8086`, Intel.
+    deep: >-
+      sysfs is made by the kernel from its own objects, on read, like /proc.
+      /sys/bus/<bus>/devices and /sys/bus/<bus>/drivers show a bus's two sides,
+      /sys/devices the physical tree, /sys/class devices by kind. A bound device's
+      driver entry is a symbolic link into its driver's folder. A PCI device's folder
+      is named by its address: domain 0000, bus 00, slot 1e, function 0. lspci reads
+      its answers from /sys/bus/pci. In 2.7 the Lantern gets files of its own here.
+    sources: [fs/sysfs, drivers/base/core.c]
+    docs: https://docs.kernel.org/filesystems/sysfs.html
+    tryIt: ls /sys/bus/pci/devices
+  - id: device-tree
+    term: the device tree
+    simple: >-
+      A text description of a board's devices, compiled by `dtc` and handed to the
+      kernel at boot. Most ARM and RISC-V boards use one.
+    deep: >-
+      A .dts is a tree of nodes with properties: compatible, reg for register
+      addresses, links like <&gpio 4 0>, the lamp on pin 4 of a GPIO controller, a
+      chip whose pins software switches. Drivers list their strings in an
+      of_match_table; of_compat_cmp() compares whole strings, ignoring case. A node
+      with reg becomes a device named address.node, like 7e200000.gpio. A running
+      system shows its tree in /sys/firmware/devicetree/base. You write the
+      lighthouse beacon's driver in 3.14.
+    sources: [drivers/of, arch/arm64/boot/dts, drivers/leds/leds-gpio.c]
+    docs: https://docs.kernel.org/devicetree/usage-model.html
+    tryIt: "ls /proc/device-tree 2>/dev/null || echo 'no device tree: normal on a PC'"
   - id: drivers
     term: drivers
     simple: >-
-      The part of the kernel that knows how to work one kind of device. Without one,
-      a device is seen but can't be used.
+      The kernel code that knows how to work one kind of device: `ata_piix` runs the
+      Machine's disk controller.
     deep: >-
       Most of the kernel's code is drivers, under drivers/. A driver registers with a
       bus and is offered every matching device; it can be built in or a module.
+      Without a bound driver, the kernel sees a device but can't run it. The Machine's
+      display controller at 00:12.0 has one, bochs, as a module nothing loads: no udev.
     sources: [drivers, include/linux/device/driver.h]
     docs: https://docs.kernel.org/driver-api/
     tryIt: ls /sys/bus/pci/drivers
   - id: acpi-pci
     term: "finding hardware: ACPI and PCI"
     simple: >-
-      On PCs the firmware usually describes the board (ACPI) and the kernel asks each
-      PCI slot what's there: vendor and device IDs.
+      On PCs, firmware tables called ACPI describe what can't announce itself, and the
+      kernel asks each PCI slot for its vendor and device IDs.
     deep: >-
-      ACPI tables (the DSDT and others) come from firmware and are parsed by the
-      kernel's ACPI core; /sys/firmware/acpi/tables shows them. PCI devices are found
-      by reading each slot's configuration space, in pci_scan_device(); each gets a
-      struct pci_dev and a folder in /sys/bus/pci/devices. The Machine's firmware,
-      SeaBIOS under v86, gives no ACPI tables.
+      The kernel's ACPI core parses the firmware's tables, the DSDT and others;
+      /sys/firmware/acpi/tables shows them. Arm servers use ACPI too. PCI devices are
+      found by reading each slot's configuration space in pci_scan_device(); each gets
+      a struct pci_dev. A host bridge joins PCI to the CPU and memory; an ISA bridge
+      leads to old PC parts like the keyboard. The Machine's firmware gives no ACPI
+      tables: /sys/firmware holds only memmap. You write a PCI driver in 3.15.
     sources: [drivers/acpi, drivers/pci/probe.c, include/linux/pci.h]
     docs: https://docs.kernel.org/PCI/pci.html
     tryIt: lspci -nn
-  - id: device-tree
-    term: the device tree
-    simple: >-
-      A text description of a board's hardware, compiled to a binary and given to the
-      kernel at boot. Used by most ARM and RISC-V boards, not by PCs.
-    deep: >-
-      A .dts is a tree of nodes with properties (compatible, reg, interrupts, links
-      like <&gpio 4 0>); dtc compiles it to a .dtb that the bootloader passes to the
-      kernel. Drivers list the strings they handle in an of_match_table of struct
-      of_device_id; bindings are documented in Documentation/devicetree/bindings/. A
-      running system shows its tree in /sys/firmware/devicetree/base (also
-      /proc/device-tree).
-    sources: [drivers/of, arch/arm64/boot/dts, drivers/leds/leds-gpio.c]
-    docs: https://docs.kernel.org/devicetree/usage-model.html
-    tryIt: "ls /proc/device-tree 2>/dev/null || echo 'no device tree (normal on x86)'"
-  - id: driver-model
-    term: buses, devices and drivers
-    simple: >-
-      A bus matches each device it finds with a driver that can run it; the driver's
-      probe() then takes the device over.
-    deep: >-
-      The driver model has struct bus_type, struct device and struct device_driver.
-      When either side is added, the core calls the bus's match(), then the driver's
-      probe() (driver_attach(), really_probe()); /sys/bus/<bus>/devices and
-      /sys/bus/<bus>/drivers show both sides, /sys/devices the physical tree. On most
-      systems udev, in user space, hears each new device as a uevent and loads its
-      module by modalias; the Machine runs no udev.
-    sources: [drivers/base/dd.c, drivers/base/bus.c, drivers/pci/pci-driver.c]
-    docs: https://docs.kernel.org/driver-api/driver-model/overview.html
-    tryIt: lspci -k
   - id: interrupts-mmio
     term: interrupts and MMIO
     simple: >-
-      A driver works a device by reading and writing its registers at memory
-      addresses; the device calls for attention with an interrupt.
+      A driver works its device through registers, often at memory addresses; the
+      device calls for attention with an interrupt. `cat /proc/interrupts` counts them.
     deep: >-
-      A driver maps the device's register range with ioremap() (or pci_iomap()) and
-      uses readl() and writel(); old PC devices also use I/O ports (inb(), outb()).
-      An interrupt (an IRQ line or a PCI MSI message) makes the CPU run the kernel's
-      interrupt entry, which calls the handler the driver registered with
-      request_irq(); slow work is deferred to softirqs or workqueues.
-      /proc/interrupts counts them per CPU and names the controller: XT-PIC (the
-      8259) on the Machine, IO-APIC on most PCs.
+      A driver maps its device's registers with ioremap() and uses readl() and
+      writel(); old PC parts use I/O ports, inb() and outb(). An interrupt makes the
+      CPU jump into the kernel between two instructions and run the handler given to
+      request_irq(); local_irq_disable() holds them off. Deferrable work goes to
+      softirqs, run as the interrupt ends or by ksoftirqd, or to workqueues, which may
+      sleep. On the Machine's XT-PIC, line 0 is the timer. Built in 2.10a–2.10c and
+      3.15.
     sources: [kernel/irq, kernel/softirq.c, include/linux/io.h, arch/x86/kernel/i8259.c]
     docs: https://docs.kernel.org/core-api/genericirq.html
     tryIt: cat /proc/interrupts
@@ -101,15 +127,18 @@ codex:
 taint: []
 fidelity:
   faithful:
-    - "the Machine's real PCI devices, IDs and drivers (440FX, PIIX3, virtio, ata_piix), as lspci -k prints them"
-    - "the /sys layout and its driver links"
-    - "/proc/interrupts on one CPU, through the XT-PIC"
+    - "the Machine's real PCI devices, IDs and drivers as lspci -k prints them: a 1990s PC's chips, Intel's 440FX and PIIX3, emulated in the browser, and two virtio devices designed for virtual machines, with IDs Red Hat registered, the 9P transport carrying the Machine's files; rev is a chip's revision, Subsystem who built the card around it"
+    - "no ACPI tables from the Machine's firmware (dmesg: no valid RSDP): /sys/firmware holds only memmap, the firmware's map of the RAM"
+    - "the /sys layout and its driver links; the display controller at 00:12.0 really has no driver bound: bochs.ko is on the image but unloaded, and the kernel's VGA text console still writes to it through the old VGA ports"
+    - "/proc/interrupts on one CPU, through the XT-PIC, the 8259; most PCs use an IO-APIC and MSI, and show a column per CPU"
+    - "the two bridges: the 440FX is also the memory controller, and the PIIX3's ISA side holds the timer, the interrupt controllers and DMA"
     - "the device tree syntax, dtc, the gpio-leds and brcm,bcm2835-gpio compatible strings, and whole-string matching that ignores case (of_compat_cmp())"
     - "the LED child named led-0, as the leds-gpio binding asks"
     - "platform device names made from nodes (7e200000.gpio, leds) and LED names from labels"
   simplified:
     - "the lighthouse board is made up (real bindings, invented board); `board` reads a real .dtb and matches it with two drivers' real of_match_table, but runs no ARM kernel"
     - "board's probe lines are its own: the real driver core logs a binding only at debug level"
+    - "the Machine's serial line ttyS1 and its interrupts carry the kernel's trace to the browser; a real PC has no such line"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

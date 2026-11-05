@@ -1,5 +1,7 @@
+export * from './crossing-drawing.constants'
+export * from './crossing-drawing.util'
 export * from './drawing.constants'
-export { firstLine, fitText } from './drawing-text.util'
+export { firstLine, fitText, wrapText } from './drawing-text.util'
 export * from './process-drawing.constants'
 export * from './process-drawing.util'
 export * from './syscall-drawing.constants'

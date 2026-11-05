@@ -1,5 +1,6 @@
 import type { LabSetup } from '@kernelfall/machine/types'
 import type { ObjectiveCheck, TaintCheck } from '#types/definitions/checks'
+import type { ConceptId } from '#types/definitions/concepts'
 import type { TaintKind } from '#types/definitions/taint'
 
 export const ACTS = ['prologue', 'act1', 'act2', 'act3'] as const
@@ -123,6 +124,12 @@ export interface LevelDefinition {
   readonly skills: readonly SkillId[]
   /** Skills that must be unlocked before the level can be played. */
   readonly prerequisites: readonly SkillId[]
+  /** Concepts from `concepts.yaml` the level introduces. */
+  readonly teaches?: readonly ConceptId[]
+  /** Named on the big picture only: a later level may use them, and teaches them properly. */
+  readonly names?: readonly ConceptId[]
+  /** Concepts from `concepts.yaml` the level relies on, taught by an earlier level. */
+  readonly uses?: readonly ConceptId[]
   readonly objectives: readonly Objective[]
   readonly hints: LevelHints
   /** The command chips "build it" offers, in order; left out, none. */

@@ -12,7 +12,8 @@ with `@kernelfall/game`'s validators and hands the app one typed `LoadedContent`
 ```
 content/          → act → region → level, in play order (see content/README.md)
 scripts/          → `pnpm vm:record`: plays every reference run on the real Machine (v86 in Node)
-│                   and saves its traced commands as src/test/runs/<level>/<run>.json.gz
+│                   and saves its traced commands as src/test/runs/<level>/<run>.json.gz;
+│                   `pnpm content:report`: every level against the budgets and the concept chain
 src/
 ├── types/        → LoadedContent, ContentFiles, Story, LevelPlace, LevelLabel; X-ray's text (xray)
 ├── utils/
@@ -20,6 +21,7 @@ src/
 │   │               content paths (play-order prefixes)
 │   ├── story/    → parseStory, sectionOf, slugify
 │   ├── label/    → labelOf ("1.4 Run Anything")
+│   ├── lint/     → lintLevel: a level's words, asides and banned phrases against the budgets
 │   ├── solutions/→ loadReferenceFiles (init's version, loaded lazily)
 │   ├── terminal/ → plainText (a program's output without terminal colour codes)
 │   └── xray/     → X-ray's syscall and process text, its templates and cache
@@ -35,7 +37,8 @@ src/
   `<act>-<region>-<level folder>`, so saves keep working when content moves.
 - **Checked at startup** — every problem in every file is listed with its file and field; the app
   shows the list instead of a half-valid game.
-- **More than levels** — `field-guide.yaml` (the Codex page of commands and folders) and each
+- **More than levels** — `field-guide.yaml` (the Codex page of commands and folders),
+  `concepts.yaml` (what each level teaches and uses names these) and each
   region's optional `placement.yaml` (tasks that let a player skip its levels) load with the rest.
 - **Bundled** — Vite inlines the content at build time; `solution/` loads only when the
   player asks for init's version.

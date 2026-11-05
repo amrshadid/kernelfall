@@ -131,6 +131,14 @@ describe('Speak to the Shell', () => {
   })
 })
 
+describe('Power On', () => {
+  it('meets nothing when other files are read and another folder is listed', () => {
+    const missing = verdictOf('prologue-boot-path-01-power-on', ['other-paths'])?.missing.map(({ id }) => id)
+
+    expect(missing?.sort()).toEqual(['lists-root', 'reads-motd', 'reads-proc-version'])
+  })
+})
+
 describe('The Boot Path', () => {
   const missing = (run: string) =>
     verdictOf('prologue-boot-path-04-the-boot-path', [run])
@@ -154,7 +162,7 @@ describe('The Machine in Section', () => {
 
   it("rejects the starters' runs for what each still lacks", () => {
     expect(missing('05-kernel-up-close', 'starter')).toEqual(['compares-uname', 'poke-segfaults', 'prints-machine'])
-    expect(missing('06-finding-the-hardware', 'starter')).toEqual(['lamp-binds', 'reads-disk-driver'])
+    expect(missing('06-finding-the-hardware', 'starter')).toEqual(['asks-pci-bus', 'lamp-binds', 'reads-disk-driver'])
     expect(missing('07-who-runs', 'starter')).toEqual(['prints-parent-pid', 'reads-proc-status', 'shares-one-cpu'])
     expect(missing('08-pages-and-maps', 'starter')).toEqual(['local-on-stack', 'prints-maps', 'reads-meminfo'])
   })

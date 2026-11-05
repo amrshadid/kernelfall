@@ -7,6 +7,8 @@ minutes: 20
 tracks: [userland]
 skills: [sys-text-tools]
 prerequisites: [sys-shell-basics]
+teaches: [text-line, pipe]
+uses: [redirection, fd, fork, exec, syscall, uid]
 objectives:
   - id: counted-lines
     text: "`wc -l census.txt` counts the census: 40 lines."

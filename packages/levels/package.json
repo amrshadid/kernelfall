@@ -22,7 +22,8 @@
     "type-check": "tsc --noEmit -p .",
     "test": "vitest run",
     "vm:record": "node scripts/record-runs.ts",
-    "vm:facts": "node scripts/machine-facts.ts"
+    "vm:facts": "node scripts/machine-facts.ts",
+    "content:report": "node scripts/content-report.ts"
   },
   "dependencies": {
     "@kernelfall/game": "workspace:*",

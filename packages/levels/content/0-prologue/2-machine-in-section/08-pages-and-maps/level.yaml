@@ -7,6 +7,8 @@ minutes: 25
 tracks: [kernel]
 skills: [mem-virtual-memory-basics]
 prerequisites: [proc-process-basics]
+teaches: [virtual-memory, page, page-cache]
+uses: [ram, memory-address, hex, kernel-space, user-kernel-mode, signal, process, proc-fs, c-basics, compiler]
 objectives:
   - id: reads-meminfo
     # cat copies /proc/meminfo with sendfile64, whose bytes the trace doesn't carry yet; free read()s it.

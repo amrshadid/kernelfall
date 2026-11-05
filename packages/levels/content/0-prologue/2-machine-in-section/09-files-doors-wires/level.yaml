@@ -7,6 +7,8 @@ minutes: 25
 tracks: [userland, kernel]
 skills: [io-everything-is-a-file, sys-kernel-subsystems]
 prerequisites: [drv-hardware-discovery, mem-virtual-memory-basics]
+teaches: [vfs, mount, proc-fs, network-stack]
+uses: [file-tree, device-file, sysfs, driver, module, kernel-log, syscall, fd, errno, c-basics, compiler]
 objectives:
   - id: exits-zero
     text: "`./look` exits with status 0."

@@ -1,4 +1,5 @@
 import type { LevelChecker, LevelCheckers } from '#types/definitions/checker'
+import type { ConceptCatalogue } from '#types/definitions/concepts'
 import type { FieldGuide } from '#types/definitions/field-guide'
 import type { LevelDefinition, LevelId } from '#types/definitions/level'
 import type { ActOutline } from '#types/definitions/outline'
@@ -12,6 +13,7 @@ export interface GameContentParts {
   /** Levels that have a `checker.ts`, by level id. */
   readonly checkers?: LevelCheckers
   readonly fieldGuide?: FieldGuide
+  readonly concepts?: ConceptCatalogue
 }
 
 /** Every part checked against the others once at startup. */
@@ -22,6 +24,8 @@ export interface GameContent {
   readonly skills: readonly SkillNode[]
   /** Null for content without one. */
   readonly fieldGuide: FieldGuide | null
+  /** Null for content without one. */
+  readonly concepts: ConceptCatalogue | null
   level(id: LevelId): LevelDefinition | undefined
   /** Declared checks plus `checker.ts`; undefined if the level has neither (only init's version finishes it). */
   checker(id: LevelId): LevelChecker | undefined

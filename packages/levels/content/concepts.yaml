@@ -1,0 +1,110 @@
+# The concept catalogue: every idea a level may teach or use (docs/LEVELS.md#concepts-and-budgets).
+# `part` is where it sits on the Section drawing; `codex` is the card that explains it.
+concepts:
+  # Hardware
+  - { id: cpu, term: the CPU, part: hardware, codex: computer-parts }
+  - { id: ram, term: memory (RAM), part: hardware, codex: computer-parts }
+  - { id: storage, term: storage, part: hardware, codex: computer-parts }
+  - { id: device, term: devices, part: hardware, codex: computer-parts }
+
+  # Foundations: on no part of the drawing
+  - { id: encoding, term: "bytes and text encoding (UTF-8)", part: foundations, codex: computer-parts }
+  - { id: hex, term: "hexadecimal and bits", part: foundations }
+
+  # The kernel as a whole
+  - { id: os, term: operating system, part: kernel, codex: operating-system }
+  - { id: kernel, term: the kernel, part: kernel, codex: kernel }
+  - { id: user-space, term: user space, part: kernel, codex: kernel-user-space }
+  - { id: kernel-space, term: "kernel space, locked to programs", part: kernel, codex: kernel-user-space }
+  - { id: monolithic, term: monolithic kernel, part: kernel, codex: monolithic-kernel }
+  - { id: distribution, term: Linux and distributions, part: kernel, codex: linux-distribution }
+
+  # Userland
+  - { id: terminal, term: the terminal, part: userland, codex: terminal }
+  - { id: shell, term: the shell, part: userland, codex: shell }
+  - { id: command, term: a command, part: userland, codex: command }
+  - { id: builtin, term: shell builtin, part: userland }
+  - { id: c-basics, term: "C basics: main, statements, strings, &x", part: userland }
+  - { id: compiler, term: "the compiler (gcc) and its diagnostics", part: userland, codex: compiler-diagnostics }
+  - { id: library-function, term: "library function (printf)", part: userland }
+  - { id: argv, term: arguments and options (argv), part: userland, codex: arguments }
+  - { id: path-search, term: "PATH search", part: userland, codex: path-search }
+  - { id: env, term: environment variables, part: userland, codex: environment }
+  - { id: exit-status, term: "exit status ($?)", part: userland, codex: exit-status }
+  - { id: man-page, term: the manual (man), part: userland, codex: man-pages }
+  - {
+      id: working-directory,
+      term: "working directory, absolute and relative paths",
+      part: userland,
+      codex: filesystem-hierarchy,
+    }
+  - { id: stderr, term: standard output and standard error, part: userland, codex: standard-error }
+  - { id: redirection, term: "redirection (> and 2>)", part: userland, codex: redirection }
+  - { id: pipe, term: "pipe (|)", part: userland, codex: shell-pipeline }
+  - { id: background-job, term: "background job (&, %1)", part: userland }
+  - { id: command-substitution, term: "command substitution ($(…))", part: userland }
+  - { id: text-line, term: lines of text, part: userland, codex: text-tools }
+
+  # The Gate: the syscall interface
+  - { id: syscall, term: syscall, part: gate, codex: syscall }
+  - { id: user-kernel-mode, term: user mode and kernel mode, part: gate, codex: user-kernel-mode }
+  - { id: fd, term: file descriptor, part: gate, codex: file-descriptors }
+  - { id: errno, term: "errno (ENOENT, EACCES…)", part: gate, codex: errno }
+
+  # Processes
+  - { id: process, term: program and process, part: processes, codex: program-process }
+  - { id: pid, term: process ID (PID), part: processes, codex: program-process }
+  - { id: parent, term: parent process (PPid), part: processes, codex: process }
+  - { id: fork, term: fork, part: processes, codex: fork }
+  - { id: exec, term: execve, part: processes, codex: execve }
+  - { id: wait, term: wait, part: processes, codex: wait }
+  - { id: zombie, term: zombie, part: processes, codex: wait }
+  - { id: signal, term: signal, part: processes, codex: signals }
+  - { id: pending-signal, term: pending signal, part: processes, codex: sending-signals }
+  - { id: kernel-thread, term: kernel thread, part: processes, codex: kernel-threads }
+
+  # The scheduler
+  - { id: scheduler, term: the scheduler, part: scheduler, codex: scheduler }
+
+  # Memory
+  - { id: memory-address, term: memory address, part: memory }
+  - { id: virtual-memory, term: "virtual memory, one map per process", part: memory, codex: virtual-memory }
+  - { id: page, term: page, part: memory, codex: virtual-memory }
+  - { id: page-cache, term: the page cache, part: memory, codex: page-cache }
+  - { id: copy-on-write, term: copy-on-write, part: memory, codex: address-space }
+
+  # Files: the VFS
+  - { id: file-tree, term: "the file tree and paths", part: vfs, codex: files }
+  - { id: proc-fs, term: "/proc, made when read", part: vfs, codex: proc }
+  - { id: device-file, term: "device file (/dev)", part: vfs, codex: device-files }
+  - { id: mount, term: "mount and the root filesystem", part: vfs, codex: filesystems }
+  - { id: vfs, term: the VFS, part: vfs, codex: vfs }
+  - { id: sysfs, term: "/sys, the devices' tree", part: vfs, codex: sysfs }
+  - { id: inode, term: "inode: a name points at a file", part: vfs, codex: directory-entries }
+
+  # Security
+  - { id: uid, term: user and group IDs, part: security, codex: users-and-ids }
+  - { id: permissions, term: "permission bits (rwx)", part: security, codex: permission-bits }
+  - { id: capability, term: capability, part: security, codex: permission-check }
+
+  # Drivers and the hardware they find
+  - { id: driver, term: driver, part: drivers, codex: drivers }
+  - { id: bus, term: "bus, devices matched to drivers", part: drivers, codex: driver-model }
+  - { id: device-tree, term: device tree, part: drivers, codex: device-tree }
+  - { id: interrupt, term: interrupt, part: drivers, codex: interrupts-mmio }
+  - { id: mmio, term: registers and MMIO, part: drivers, codex: interrupts-mmio }
+
+  # Modules
+  - { id: module, term: kernel module, part: modules, codex: monolithic-kernel }
+
+  # Networking
+  - { id: network-stack, term: "the network stack: interfaces, packets", part: networking, codex: network-stack }
+
+  # Logging
+  - { id: kernel-log, term: "the kernel's log (dmesg)", part: logging, codex: printk-dmesg }
+
+  # Boot: the path through every part
+  - { id: boot-chain, term: "the boot chain: firmware, bootloader, kernel, init", part: boot, codex: boot-sequence }
+  - { id: uefi, term: UEFI, part: boot, codex: firmware }
+  - { id: kernel-cmdline, term: the kernel command line, part: boot, codex: kernel-command-line }
+  - { id: initramfs, term: initramfs, part: boot, codex: initramfs }

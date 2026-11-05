@@ -19,6 +19,7 @@ export const STARTER_DIR = 'starter'
 export const SKILLS_FILE = 'skills.yaml'
 export const BEDROCK_FILE = 'bedrock.yaml'
 export const FIELD_GUIDE_FILE = 'field-guide.yaml'
+export const CONCEPTS_FILE = 'concepts.yaml'
 
 /** One block of a story section: a spoken (or narrated) line, or a code sample. */
 export type StoryBlock =
@@ -74,6 +75,8 @@ export interface ContentFiles {
   readonly bedrock: string
   /** `field-guide.yaml`: the Codex page of commands and folders. */
   readonly fieldGuide: string
+  /** `concepts.yaml`: every concept a level may teach or use. */
+  readonly concepts: string
 }
 
 /** A level folder that read cleanly: its level.yaml, story and starter code. */

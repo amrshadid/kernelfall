@@ -43,6 +43,8 @@ export interface XrayControls {
   readonly log: LogRun | null
   /** The Syscalls view's calls, by process, with the noise folded. */
   readonly callList: CallListView | null
+  /** The whole call list shows; otherwise a crossing in the dock lists only the call on show. */
+  readonly allCalls: boolean
   readonly expanded: boolean
 }
 
@@ -59,6 +61,7 @@ export interface XrayControlActions {
 export interface XrayBoardActions extends XrayControlActions {
   /** Opens or closes a process group or a fold of the call list, by key. */
   toggleRow(key: string): void
+  toggleAllCalls(): void
 }
 
 /** The player's X-ray choices: lens, depth, Predict, and which run and call to show. */

@@ -21,7 +21,8 @@ import type {
 import { STAGE_MS, transcriptOf } from '@features/xray/utils/storyboard'
 import { InlineText, Segmented } from '@shared/components/ui'
 import type { CSSProperties, KeyboardEvent } from 'react'
-import { CallList } from './CallList'
+import { BeatLine } from './BeatLine'
+import { CallList, CallListShell } from './CallList'
 import { Narration } from './Narration'
 import { Predict } from './Predict'
 import { Transcript } from './Transcript'
@@ -79,7 +80,12 @@ export function XrayBoard({
   const stage = playback.stages[playback.index]
   const pendingStage = playback.pending !== null ? playback.stages[playback.pending] : undefined
   const label = stage ? `${caption} Stage ${playback.index + 1}: ${stage.title}` : caption
-  const classes = ['xr', animate && 'xr--animate', playback.playing && 'xr--playing'].filter(Boolean).join(' ')
+  const crossing = figure?.kind === 'crossing'
+  // A crossing fits the dock without scrolling: one call listed, the sentence under the drawing.
+  const fit = crossing && layout === 'dock'
+  const classes = ['xr', animate && 'xr--animate', playback.playing && 'xr--playing', fit && 'xr--fit']
+    .filter(Boolean)
+    .join(' ')
   const style = { '--xr-stage': `${STAGE_MS / playback.speed}ms` } as CSSProperties
 
   return (
@@ -166,14 +172,25 @@ export function XrayBoard({
         </div>
       )}
 
-      {controls.callList !== null && controls.callList.groups.length > 0 && (
-        <CallList
-          view={controls.callList}
-          selectedId={controls.pickId !== null ? Number(controls.pickId) : null}
-          onSelect={(id) => controlActions.select(String(id))}
-          onToggle={controlActions.toggleRow}
-        />
-      )}
+      {controls.callList !== null &&
+        controls.callList.groups.length > 0 &&
+        (fit ? (
+          <CallListShell
+            view={controls.callList}
+            selectedId={controls.pickId !== null ? Number(controls.pickId) : null}
+            onSelect={(id) => controlActions.select(String(id))}
+            onToggle={controlActions.toggleRow}
+            all={controls.allCalls}
+            onToggleAll={controlActions.toggleAllCalls}
+          />
+        ) : (
+          <CallList
+            view={controls.callList}
+            selectedId={controls.pickId !== null ? Number(controls.pickId) : null}
+            onSelect={(id) => controlActions.select(String(id))}
+            onToggle={controlActions.toggleRow}
+          />
+        ))}
 
       {figure !== null && figure.kind !== 'syscalls' && figure.kind !== 'crossing' && figure.kind !== 'processes' ? (
         <figure className="xr__drawing">
@@ -215,9 +232,26 @@ export function XrayBoard({
               <span>{animate ? 'Space plays · ← → step' : '← → step'}</span>
             </figcaption>
           </figure>
+          {fit &&
+            (pendingStage?.predict ? (
+              <Predict
+                predict={pendingStage.predict}
+                picked={playback.pendingGuess}
+                onPick={playbackActions.guess}
+                onWatch={playbackActions.reveal}
+              />
+            ) : (
+              <BeatLine
+                stage={stage}
+                index={playback.index}
+                count={playback.stages.length}
+                guessNext={playback.pending !== null}
+                guess={playback.shownGuess}
+              />
+            ))}
           <Transport playback={playback} actions={playbackActions} animate={animate} />
           <div className="xr__side">
-            {pendingStage?.predict && (
+            {!fit && pendingStage?.predict && (
               <Predict
                 predict={pendingStage.predict}
                 picked={playback.pendingGuess}
@@ -225,14 +259,16 @@ export function XrayBoard({
                 onWatch={playbackActions.reveal}
               />
             )}
-            <Narration
-              stage={stage}
-              index={playback.index}
-              count={playback.stages.length}
-              guessNext={playback.pending !== null}
-              guess={playback.shownGuess}
-              depth={controls.depth}
-            />
+            {!fit && (
+              <Narration
+                stage={stage}
+                index={playback.index}
+                count={playback.stages.length}
+                guessNext={playback.pending !== null}
+                guess={playback.shownGuess}
+                depth={controls.depth}
+              />
+            )}
             <div className="xr__more">
               {controls.log && (
                 <details>

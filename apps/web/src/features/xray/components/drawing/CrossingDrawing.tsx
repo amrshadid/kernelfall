@@ -12,9 +12,10 @@ import {
   CROSSING_LINE_Y as LINE_Y,
   PART_HEIGHT,
   PART_WIDTH,
+  PART_X,
   CROSSING_PARTS_TOP as PARTS_TOP,
   CROSSING_PROGRAM as PROGRAM,
-  TERMINAL_HEIGHT,
+  TERMINAL,
 } from '@features/xray/utils/drawing'
 import { DrawingBox } from './DrawingBox'
 import './Drawing.css'
@@ -28,32 +29,33 @@ export interface CrossingDrawingProps {
 }
 
 const HEAD = 6
-const PART_X = 14
 const TEXT_X = 24
-const ARROW_X = PART_X + PART_WIDTH / 2
+const TERMINAL_TEXT_X = TERMINAL.x + 80
+/** The bytes leave the served part near its right edge, where the terminal lies below. */
+const ARROW_X = PART_X + PART_WIDTH - 24
 
 /** Simple's one picture: Userland, the Gate, the kernel's parts, the terminal; one red mark per beat. */
 export function CrossingDrawing({ storyboard, scene, label }: CrossingDrawingProps) {
   const { parts, answer } = storyboard
   const { beat } = scene
   const layout = crossingDrawingLayout(storyboard, scene)
-  const { text } = layout
+  const { text, hardwareY } = layout
   const laneTop = PROGRAM.y + CARD.height
   const servedY = layout.partsY[parts.findIndex((part) => part.served)] ?? PARTS_TOP
 
   return (
     <svg viewBox={`0 0 ${DRAWING_WIDTH} ${layout.height}`} role="img" aria-label={label}>
-      <text className="xr-zone" x={14} y={16}>
+      <text className="xr-zone" x={14} y={14}>
         Userland
       </text>
-      <text className="xr-m xr-dim" x={DRAWING_WIDTH - 14} y={16} textAnchor="end">
+      <text className="xr-m xr-dim" x={DRAWING_WIDTH - 14} y={14} textAnchor="end">
         user mode
       </text>
       <DrawingBox x={PROGRAM.x} y={PROGRAM.y} width={PROGRAM.width} height={PROGRAM.height} title={text.title}>
-        <text className="xr-m xr-dim" x={TEXT_X} y={PROGRAM.y + 42}>
+        <text className="xr-m xr-dim" x={TEXT_X} y={PROGRAM.y + 37}>
           {text.callLine}
         </text>
-        <text className={`xr-m xr-mb xr-fade${layout.answering ? '' : ' xr-hide'}`} x={TEXT_X} y={PROGRAM.y + 60}>
+        <text className={`xr-m xr-mb xr-fade${layout.answering ? '' : ' xr-hide'}`} x={TEXT_X} y={PROGRAM.y + 52}>
           {text.returnLine}
         </text>
       </DrawingBox>
@@ -96,33 +98,35 @@ export function CrossingDrawing({ storyboard, scene, label }: CrossingDrawingPro
             height={PART_HEIGHT}
             on={beat === 'kernel' && part.served}
           >
-            <text className="xr-ttl" x={TEXT_X} y={y + 14}>
+            <text className="xr-ttl" x={TEXT_X} y={y + 12}>
               {fitText(part.name, CROSSING_FIT.part)}
             </text>
-            <text className="xr-m xr-dim" x={TEXT_X} y={y + 27}>
+            <text className="xr-m xr-dim" x={TEXT_X} y={y + 23}>
               {fitText(part.detail, CROSSING_FIT.detail)}
             </text>
           </DrawingBox>
         )
       })}
 
-      {layout.hardwareY !== null && layout.terminalY !== null && (
+      {hardwareY !== null && (
         <g>
-          <text className="xr-zone" x={14} y={layout.hardwareY}>
+          <text className="xr-zone" x={14} y={hardwareY + 21}>
             Hardware
           </text>
           <DrawingBox
-            x={PART_X}
-            y={layout.terminalY}
-            width={PART_WIDTH}
-            height={TERMINAL_HEIGHT}
-            title="Terminal"
+            x={TERMINAL.x}
+            y={hardwareY}
+            width={TERMINAL.width}
+            height={TERMINAL.height}
             on={beat === 'device'}
           >
+            <text className="xr-ttl" x={TERMINAL.x + 8} y={hardwareY + 19}>
+              Terminal
+            </text>
             <text
               className={`xr-m xr-mb xr-fade${layout.printed ? '' : ' xr-hide'}`}
-              x={TEXT_X}
-              y={layout.terminalY + 40}
+              x={TERMINAL_TEXT_X}
+              y={hardwareY + 19}
             >
               {text.terminal}
             </text>
@@ -130,7 +134,7 @@ export function CrossingDrawing({ storyboard, scene, label }: CrossingDrawingPro
           {beat === 'device' && (
             <path
               className="xr-signal"
-              d={`M${ARROW_X} ${servedY + PART_HEIGHT} V${layout.terminalY - 2} M${ARROW_X - HEAD} ${layout.terminalY - 2 - HEAD} L${ARROW_X} ${layout.terminalY - 2} L${ARROW_X + HEAD} ${layout.terminalY - 2 - HEAD}`}
+              d={`M${ARROW_X} ${servedY + PART_HEIGHT} V${hardwareY - 2} M${ARROW_X - HEAD} ${hardwareY - 2 - HEAD} L${ARROW_X} ${hardwareY - 2} L${ARROW_X + HEAD} ${hardwareY - 2 - HEAD}`}
             />
           )}
         </g>
@@ -146,14 +150,14 @@ export function CrossingDrawing({ storyboard, scene, label }: CrossingDrawingPro
         >
           {layout.answering ? (
             <g key="answer" className="xr-flip">
-              <text className="xr-ttl xr-dim" x={CARD.x + CARD.pad} y={18}>
+              <text className="xr-ttl xr-dim" x={CARD.x + CARD.pad} y={15}>
                 The answer
               </text>
-              <text className="xr-m xr-mb xr-big" x={CARD.x + CARD.pad} y={42}>
+              <text className="xr-m xr-mb xr-big" x={CARD.x + CARD.pad} y={36}>
                 {answer.value}
               </text>
               {text.meaning.map((line, i) => (
-                <text key={line} className="xr-card-say" x={CARD.x + CARD.pad} y={60 + i * CARD_LINE}>
+                <text key={line} className="xr-card-say" x={CARD.x + CARD.pad} y={54 + i * CARD_LINE}>
                   {line}
                 </text>
               ))}
@@ -161,16 +165,16 @@ export function CrossingDrawing({ storyboard, scene, label }: CrossingDrawingPro
           ) : (
             <g key="request">
               {text.request.map((line, i) => (
-                <text key={line} className="xr-card-say" x={CARD.x + CARD.pad} y={20 + i * CARD_LINE}>
+                <text key={line} className="xr-card-say" x={CARD.x + CARD.pad} y={18 + i * CARD_LINE}>
                   {line}
                 </text>
               ))}
               {text.path !== null && (
-                <text className="xr-m" x={CARD.x + CARD.pad} y={20 + text.request.length * CARD_LINE}>
+                <text className="xr-m" x={CARD.x + CARD.pad} y={18 + text.request.length * CARD_LINE}>
                   {text.path}
                 </text>
               )}
-              <text className="xr-m xr-dim" x={CARD.x + CARD.pad} y={CARD.height - 10}>
+              <text className="xr-m xr-dim" x={CARD.x + CARD.pad} y={CARD.height - 9}>
                 {text.footer}
               </text>
             </g>

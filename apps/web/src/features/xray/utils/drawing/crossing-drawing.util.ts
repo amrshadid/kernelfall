@@ -11,8 +11,7 @@ import {
   HARDWARE_GAP,
   PART_HEIGHT,
   PART_STEP,
-  TERMINAL_GAP,
-  TERMINAL_HEIGHT,
+  TERMINAL,
 } from './crossing-drawing.constants'
 import { firstLine, fitText, wrapText } from './drawing-text.util'
 import { syscallReturnText } from './syscall-drawing.util'
@@ -25,8 +24,8 @@ export interface CrossingDrawingLayout {
   /** The card shows the answer, on its way back up. */
   readonly answering: boolean
   readonly partsY: readonly number[]
+  /** The Hardware floor's row, when the call reaches the terminal. */
   readonly hardwareY: number | null
-  readonly terminalY: number | null
   /** The terminal shows the bytes: from the device beat on. */
   readonly printed: boolean
   readonly text: {
@@ -42,8 +41,8 @@ export interface CrossingDrawingLayout {
   }
 }
 
-const REQUEST_LINES = 3
-const MEANING_LINES = 2
+const REQUEST_LINES = 2
+const MEANING_LINES = 1
 
 export function crossingDrawingLayout(storyboard: CrossingStoryboard, scene: CrossingScene): CrossingDrawingLayout {
   const { call, parts, terminal, request, answer } = storyboard
@@ -52,7 +51,6 @@ export function crossingDrawingLayout(storyboard: CrossingStoryboard, scene: Cro
   const partsBottom = (partsY.at(-1) ?? CROSSING_PARTS_TOP) + PART_HEIGHT
   const kernelBottom = Math.max(partsBottom, CROSSING_PARTS_TOP + CROSSING_CARD.height)
   const hardwareY = terminal !== null ? kernelBottom + HARDWARE_GAP : null
-  const terminalY = hardwareY !== null ? hardwareY + TERMINAL_GAP : null
   const path = call.path !== null ? fitText(`"${call.path}"`, CARD_MONO_CHARS) : null
 
   const cardY =
@@ -63,12 +61,11 @@ export function crossingDrawingLayout(storyboard: CrossingStoryboard, scene: Cro
         : CROSSING_PROGRAM.y
 
   return {
-    height: (terminalY !== null ? terminalY + TERMINAL_HEIGHT : kernelBottom) + CROSSING_BOTTOM_PAD,
+    height: (hardwareY !== null ? hardwareY + TERMINAL.height : kernelBottom) + CROSSING_BOTTOM_PAD,
     cardY,
     answering,
     partsY,
     hardwareY,
-    terminalY,
     printed: scene.beat === 'device' || answering,
     text: {
       title: fitText(`${call.program} · PID ${call.pid}`, CROSSING_FIT.title),

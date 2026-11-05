@@ -214,6 +214,7 @@ export function useXrayBoard({
       pickLegend: syscalls ? 'Call' : 'Child',
       log: syscalls ? log : null,
       callList: syscalls && run ? callList.view : null,
+      allCalls: callList.all,
       expanded: state.expanded,
     },
     controlActions: {
@@ -224,6 +225,7 @@ export function useXrayBoard({
       select: state.select,
       setExpanded: state.setExpanded,
       toggleRow: callList.toggle,
+      toggleAllCalls: callList.toggleAll,
     },
     figure,
     emptyText,

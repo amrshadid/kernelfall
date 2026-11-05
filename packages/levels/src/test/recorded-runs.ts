@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
+import type { CheckInput } from '@kernelfall/game/types'
 import type { LabEvent } from '@kernelfall/machine/events'
 import type { TracedCommand } from '@kernelfall/machine/types'
 import { decodeRunFixture, RUN_FIXTURE_EXTENSION, type RunFixture } from '#test/run-fixture'
@@ -19,6 +20,20 @@ export function recordedCommands(level: string, run: string): TracedCommand[] {
   }
   return decodeRunFixture(fixture)
 }
+
+/** Each command as the game hands it to the checkers: its events, its line, and the commands finished before it. */
+export const checkInputsOf = (commands: readonly TracedCommand[]): CheckInput[] =>
+  commands.map(({ events, commandLine }, index) => ({
+    events,
+    commandLine,
+    // The recorder saves finished commands only; an unknown status must never read as success.
+    history: commands
+      .slice(0, index)
+      .map((earlier) => ({ commandLine: earlier.commandLine, status: earlier.status ?? -1 })),
+  }))
+
+/** A recorded run's commands as the checkers receive them in one play-through. */
+export const recordedInputs = (level: string, run: string): CheckInput[] => checkInputsOf(recordedCommands(level, run))
 
 /** The events of each command of a recorded run, one list per typed line. */
 export const recordedRun = (level: string, run: string): LabEvent[][] =>

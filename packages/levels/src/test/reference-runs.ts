@@ -394,6 +394,18 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
     lines: typed('chmod 640 notes.txt', 'ls -l notes.txt', 'chmod 000 notes.txt', 'ls -l notes.txt'),
   },
   {
+    // hi runs, but its x was never taken away, so it never came back.
+    level: 'prologue-surface-survey-02-who-may-enter',
+    name: 'exec-never-removed',
+    lines: typed('cp /usr/local/bin/say hi', './hi hello, Machine'),
+  },
+  {
+    // The same EACCES, from a note without r inside a box that still has its x.
+    level: 'prologue-surface-survey-02-who-may-enter',
+    name: 'file-not-dir',
+    lines: typed('mkdir box', 'cp notes.txt box/', 'chmod 000 box/notes.txt', 'cat box/notes.txt'),
+  },
+  {
     level: 'prologue-surface-survey-03-processes',
     name: 'kill-without-stop',
     lines: typed('kill $(pidof yes)', 'cat /proc/$$/status', 'ps -o pid,stat,comm'),

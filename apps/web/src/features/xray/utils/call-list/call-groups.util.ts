@@ -448,8 +448,15 @@ function defaultLeadId(groups: readonly CallGroup[]): number | null {
     }
   }
   const shell = groups.find((g) => g.role === 'shell')
-  return (shell && shownCalls(shell)[0]?.id) ?? null
+  if (!shell) {
+    return null
+  }
+  // A builtin's work is the call that changes the shell (cd's chdir), after its lookups and set-up.
+  const calls = shownCalls(shell)
+  return (calls.find((call) => BUILTIN_WORK.has(call.name)) ?? calls[0])?.id ?? null
 }
+
+const BUILTIN_WORK = new Set(['chdir', 'fchdir', 'kill', 'umask', 'prlimit64', 'setrlimit'])
 
 /** The call the drawing starts on: the lesson's first output, else its first call, else defaultLeadId's pick. */
 export function leadCallId(groups: readonly CallGroup[]): number | null {

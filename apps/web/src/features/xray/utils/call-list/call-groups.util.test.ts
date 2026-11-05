@@ -218,8 +218,8 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
     const made = mkdir.calls.find((c) => c.id === leadCallId(mkdir.groups))
     expect(made).toMatchObject({ program: 'mkdir', name: 'mkdir', path: '/tmp/survey' })
     const cd = await groupsOf(S1, 'cd /etc')
-    const shellRows = cd.groups[0]?.rows.flatMap((row) => (row.kind === 'call' ? [row.call.id] : [])) ?? []
-    expect(shellRows[0]).toBe(leadCallId(cd.groups))
+    const lead = cd.calls.find((c) => c.id === leadCallId(cd.groups))
+    expect(lead).toMatchObject({ program: 'bash', name: 'chdir', path: '/etc' })
   })
 
   it('keeps a taught PATH search one row, and opens the shell for it', async () => {

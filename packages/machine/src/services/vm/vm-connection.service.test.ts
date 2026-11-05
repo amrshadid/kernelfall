@@ -8,6 +8,7 @@ import {
   disconnectVm,
   onVmOutput,
   rebootVm,
+  resizeVmTerminal,
   runVmCommandAs,
   sendToVm,
   setupVmLevel,
@@ -30,6 +31,7 @@ function fakeVm() {
     reboots: 0,
     facts: 0,
     runAs: [] as [string, string][],
+    sizes: [] as [number, number][],
     stops: 0,
   }
   let console: ((bytes: Uint8Array) => void) | null = null
@@ -44,6 +46,7 @@ function fakeVm() {
       command = onCommand
       stoppedBoot = onStoppedBoot ?? null
     },
+    resizeTerminal: (rows, cols) => void calls.sizes.push([rows, cols]),
     input: (text) => void calls.input.push(text),
     async writeFiles(files) {
       calls.files.push(files)
@@ -207,6 +210,22 @@ describe('the VM connection', () => {
     expect(facts).toEqual([stopped])
     expect(booted[0]?.boot).toMatchObject({ outcome: 'initramfs', failedRoot: { device: '/dev/sda2' } })
     subscription.unsubscribe()
+  })
+
+  it("passes the terminal's size to the VM, and to one started later", async () => {
+    const first = fakeVm()
+    configureMachine({ createVmEndpoint: () => first.endpoint })
+    connectVm(() => {})
+    await settle()
+    resizeVmTerminal(37, 80)
+    await settle()
+    expect(first.calls.sizes).toEqual([[37, 80]])
+    disconnectVm()
+    const second = fakeVm()
+    configureMachine({ createVmEndpoint: () => second.endpoint })
+    connectVm(() => {})
+    await settle()
+    expect(second.calls.sizes).toEqual([[37, 80]])
   })
 
   it('sets a level up once per VM, so coming back to its screen keeps what the player made', async () => {

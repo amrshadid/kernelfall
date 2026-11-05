@@ -128,6 +128,9 @@ async function start(saved: boolean, settleMs = 3_000) {
   await run(settleMs)
 }
 
+const STTY = 'root:stty -F /dev/ttyS0 rows 37 cols 80'
+const sizes = () => vm().log.filter((entry) => entry.startsWith('root:stty'))
+
 beforeEach(() => {
   vi.useFakeTimers()
   vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ version: 'v1' })))
@@ -257,6 +260,53 @@ describe('a boot level', () => {
     void session.setupLevel(DEFAULT)
     await run()
     expect(restores()).toBe(1)
+  })
+})
+
+describe("the terminal's size", () => {
+  it('reaches the console tty as root once the terminal settles on it, without counting as use', async () => {
+    await start(true)
+    session.resizeTerminal(30, 80)
+    session.resizeTerminal(37, 80)
+    session.resizeTerminal(0, 80)
+    await run()
+    expect(sizes()).toEqual([STTY])
+    void session.setupLevel(DEFAULT)
+    await run()
+    expect(restores()).toBe(0)
+  })
+
+  it("is set again after a restore, before the level's new shell starts", async () => {
+    await start(true)
+    session.resizeTerminal(37, 80)
+    session.input('ls\n')
+    await run()
+    void session.setupLevel(LAB)
+    await run()
+    const restore = vm().log.indexOf('restore')
+    const kill = vm().log.findIndex((entry) => entry.startsWith('root:kill -9'))
+    expect(
+      vm()
+        .log.slice(restore, kill)
+        .filter((entry) => entry === STTY)
+    ).toHaveLength(1)
+  })
+
+  it('waits for a reboot to reach its prompt, then is set on the new boot', async () => {
+    await start(true)
+    session.resizeTerminal(37, 80)
+    await run()
+    void session.reboot()
+    await run()
+    const reset = vm().log.indexOf('reset')
+    expect(vm().log.slice(reset)).toContain(STTY)
+  })
+
+  it('is never part of the clean boot a first visit saves', async () => {
+    await start(false, 0)
+    session.resizeTerminal(37, 80)
+    await run()
+    expect(vm().log.indexOf(STTY)).toBeGreaterThan(vm().log.indexOf('save'))
   })
 })
 

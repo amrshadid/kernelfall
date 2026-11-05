@@ -1,6 +1,6 @@
 import { vmStatusLine } from '@features/terminal/utils/vm'
 import { openTerminal } from '@features/terminal/utils/xterm'
-import { useLinuxTerminal, useReveal } from '@kernelfall/machine/hooks'
+import { useLinuxTerminal, useReveal, useTerminalSize } from '@kernelfall/machine/hooks'
 import type { Terminal } from '@xterm/xterm'
 import { type RefObject, useEffect, useRef } from 'react'
 import '@xterm/xterm/css/xterm.css'
@@ -21,6 +21,7 @@ export function useTerminalSession(container: RefObject<HTMLDivElement | null>, 
   }
   const { reveal } = useReveal()
   const { phase, detail, send } = useLinuxTerminal(show)
+  const { resize } = useTerminalSize()
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: show only reads refs.
   useEffect(() => {
@@ -53,11 +54,14 @@ export function useTerminalSession(container: RefObject<HTMLDivElement | null>, 
         send(data)
       }
     })
+    const sizing = opened.terminal.onResize(({ rows, cols }) => resize(rows, cols))
+    resize(opened.terminal.rows, opened.terminal.cols)
     terminal.current = opened.terminal
     return () => {
       typing.dispose()
+      sizing.dispose()
       terminal.current = null
       opened.dispose()
     }
-  }, [container, reveal, send])
+  }, [container, reveal, send, resize])
 }

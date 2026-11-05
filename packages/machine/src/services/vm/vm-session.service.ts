@@ -5,6 +5,7 @@ import { loadVmState, saveVmState } from '#services/vm/vm-state.service'
 import { createVmTrace } from '#services/vm/vm-trace.service'
 import {
   VM_CMDLINE,
+  VM_CONSOLE_TTY,
   VM_CONTROL_TIMEOUT_MS,
   VM_CPUS,
   VM_DISK_FILE,
@@ -16,6 +17,7 @@ import {
   VM_PLAYER_FILE,
   VM_PROMPT,
   VM_REPORT_TIMEOUT_MS,
+  VM_RESIZE_SETTLE_MS,
   VM_RESTORE_SETTLE_MS,
   VM_SAVE_DELAY_MS,
   VM_SETUP_TIMEOUT_MS,
@@ -99,6 +101,18 @@ export function createVmSession(wasmUrl?: string): VmSession {
     turn = result.catch(() => undefined)
     return result
   }
+  let size: { rows: number; cols: number } | null = null
+  let sizeTimer: ReturnType<typeof setTimeout> | null = null
+  // Leaves `pristine` alone: a restore is always followed by setting the size again.
+  const sizeTty = async () => {
+    if (size && !rebooting) {
+      await control.run(`stty -F ${VM_CONSOLE_TTY} rows ${size.rows} cols ${size.cols}`)
+    }
+  }
+  // Behind a setup or a file write, never in the middle of one.
+  const applySize = () => {
+    void exclusive(sizeTty)
+  }
 
   return {
     async start(options: VmStartOptions, onOutput, onStatus, onCommand, onStoppedBoot) {
@@ -166,6 +180,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
             pristine = true
             status('ready')
             markReady()
+            applySize()
             // A restored shell is already at its prompt; a newline makes it print one.
             running.serial0_send('\n')
           }, VM_RESTORE_SETTLE_MS)
@@ -189,6 +204,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
             rebooting = false
             status('ready')
             markReady()
+            applySize()
             return
           }
           if (atPrompt || !VM_PROMPT.test(tail)) {
@@ -329,6 +345,8 @@ export function createVmSession(wasmUrl?: string): VmSession {
             await control.run(REBOOT)
             return
           }
+          // Before the new shell starts, so it reads the size as it starts instead of a SIGWINCH later.
+          await sizeTty()
           const prompt = nextPrompt()
           await control.run(`kill -9 "$(cat ${VM_SHELL_PID_FILE})"`)
           await prompt
@@ -368,10 +386,28 @@ export function createVmSession(wasmUrl?: string): VmSession {
       })
     },
 
+    resizeTerminal(rows, cols) {
+      if (!(Number.isInteger(rows) && Number.isInteger(cols) && rows > 0 && cols > 0)) {
+        return
+      }
+      size = { rows, cols }
+      if (sizeTimer !== null) {
+        clearTimeout(sizeTimer)
+      }
+      sizeTimer = setTimeout(() => {
+        sizeTimer = null
+        applySize()
+      }, VM_RESIZE_SETTLE_MS)
+    },
+
     async stop() {
       if (flushTimer !== null) {
         clearInterval(flushTimer)
         flushTimer = null
+      }
+      if (sizeTimer !== null) {
+        clearTimeout(sizeTimer)
+        sizeTimer = null
       }
       await emulator?.destroy()
       emulator = null

@@ -378,8 +378,10 @@ describe('the VM trace', () => {
     expect(events[0]).toMatchObject({ type: 'sys_enter', name: 'fork' })
   })
 
-  it("leaves out the shell's line editing between commands: keys, echo, prompt", () => {
+  it("leaves out the shell's line editing between commands: keys, echo, prompt, a resized terminal", () => {
     const editing = [
+      line(434, 'bash', '7.8', 'signal_deliver: sig=28 errno=0 code=128 sa_handler=4d5f55 sa_flags=4000000'),
+      line(434, 'bash', '7.9', 'sys_sigreturn()'),
       line(434, 'bash', '8.0', 'sys_read(fd: 0, buf: 0xbfc99f5b, count: 1)'),
       line(434, 'bash', '8.1', 'read_0: (__ia32_sys_read+0x10/0x20 <- ksys_read) fd=0x0 ret=1 b0=0x6c'),
       line(434, 'bash', '8.2', 'sys_read -> 0x1'),

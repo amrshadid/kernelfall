@@ -1,6 +1,6 @@
 import type { LabEvent, LabEventInit } from '#events/types'
 import type { CallRoute } from '#types/definitions/route'
-import type { SignalGenerateResult } from '#types/definitions/signal'
+import { SIGWINCH, type SignalGenerateResult } from '#types/definitions/signal'
 import { VM_MARKER_FD, VM_TRACE_AS_END, VM_TRACE_AS_START, VM_TRACE_END, VM_TRACE_START } from '#types/definitions/vm'
 import { TRACE_PROBES, type TracedCommand, type TraceRecord, VM_TRACE_SPLICE_BYTES } from '#types/definitions/vm-trace'
 import {
@@ -59,6 +59,8 @@ const SHELL_HOUSEKEEPING = new Set([
   'llseek',
   'mmap_pgoff',
   'munmap',
+  'sigreturn',
+  'rt_sigreturn',
 ])
 
 /** A buffer's chunks as their probes printed them, until the call's sys_exit says how much it moved. */
@@ -170,10 +172,12 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
   let stashed: Window | null = null
 
   // Of the shell's work between commands, only what isn't line editing (Tab's opendir, its forks).
+  // A resized terminal is readline's too: its SIGWINCH, and the handler's return.
   const editsLine = (init: LabEventInit, pid: number | null) =>
     'pid' in init &&
     init.pid === pid &&
     (init.type === 'console_write' ||
+      (init.type === 'signal_deliver' && init.sig === SIGWINCH) ||
       ((init.type === 'sys_enter' || init.type === 'sys_exit') && SHELL_HOUSEKEEPING.has(init.name)))
   const isLineEditing = (init: LabEventInit) => window.commandLine === null && editsLine(init, shellPid)
 

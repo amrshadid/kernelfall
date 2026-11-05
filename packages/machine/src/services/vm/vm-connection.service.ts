@@ -36,6 +36,7 @@ let users = 0
 const outputListeners = new Set<(bytes: Uint8Array) => void>()
 /** The level each running VM was last set up for. */
 const setupKeys = new WeakMap<VmConnection, string>()
+let terminalSize: { rows: number; cols: number } | null = null
 
 /**
  * Adds a user; the first one starts the VM worker and boots or restores Linux. Once it first
@@ -100,6 +101,9 @@ export function connectVm(
       }
     })
   )
+  if (terminalSize) {
+    void started.session.resizeTerminal(terminalSize.rows, terminalSize.cols)
+  }
   return { started: true }
 }
 
@@ -159,6 +163,12 @@ export async function rebootVm(): Promise<boolean> {
   }
   await running.session.reboot()
   return true
+}
+
+/** The terminal's size, for this VM and any started later. */
+export function resizeVmTerminal(rows: number, cols: number): void {
+  terminalSize = { rows, cols }
+  void connection?.session.resizeTerminal(rows, cols)
 }
 
 /** Runs a command line as another user, traced like the player's; null while no VM runs. */

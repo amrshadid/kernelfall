@@ -109,16 +109,12 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
   {
     level: 'prologue-boot-path-01-power-on',
     name: 'solution',
-    lines: typed(
-      'echo hello',
-      'echo the lamps are out',
-      'ls /',
-      'ls /bin',
-      'cat /etc/motd',
-      'cat /etc/hostname',
-      'ls /dev',
-      'cat /proc/version'
-    ),
+    lines: typed('cat /proc/version', 'ls /', 'cat /etc/motd'),
+  },
+  {
+    level: 'prologue-boot-path-01-power-on',
+    name: 'other-paths',
+    lines: typed('cat /proc/cmdline', 'ls /home', 'cat /etc/hostname'),
   },
   {
     level: 'prologue-boot-path-02-first-words',
@@ -260,7 +256,7 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
     name,
     files: { 'lighthouse.dts': `${MACHINE}/06-finding-the-hardware/${name}/lighthouse.dts` },
     lines: typed(
-      ...(name === 'solution' ? ['readlink /sys/bus/pci/devices/0000:00:1e.0/driver'] : []),
+      ...(name === 'solution' ? ['lspci -k', 'readlink /sys/bus/pci/devices/0000:00:1e.0/driver'] : []),
       'dtc -I dts -O dtb -o lighthouse.dtb lighthouse.dts',
       'board lighthouse.dtb'
     ),

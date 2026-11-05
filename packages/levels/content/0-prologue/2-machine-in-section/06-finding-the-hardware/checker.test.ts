@@ -25,8 +25,12 @@ const GPIO_ONLY = `${MODEL}${GPIO}leds: no driver matches "gpio-led"\n/sys/class
 const LAMP_LIT = `${MODEL}${GPIO}leds-gpio leds: probed\n/sys/class/leds: lighthouse:lamp\n`
 
 describe('Finding the Hardware', () => {
-  it('passes with the disk link read, the fixed tree compiled and the lamp bound, with zero Taint', () => {
-    expect(verdictOf(level, [diskLink, dtc(0), boardBoot(LAMP_LIT)])).toEqual({ passed: true, missing: [], taint: [] })
+  // `lspci -k` is a declared check, judged on the recorded runs (level-checkers.test.ts).
+  it('meets the rest with the disk link read, the fixed tree compiled and the lamp bound, with zero Taint', () => {
+    const verdict = verdictOf(level, [diskLink, dtc(0), boardBoot(LAMP_LIT)])
+
+    expect(verdict?.missing.map(({ id }) => id)).toEqual(['asks-pci-bus'])
+    expect(verdict?.taint).toEqual([])
   })
 
   it("looks for the driver lspci names for the Machine's IDE controller, at its address", () => {

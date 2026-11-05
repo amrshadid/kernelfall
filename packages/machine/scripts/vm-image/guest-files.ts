@@ -113,7 +113,8 @@ exec su -l "$(cat ${VM_PLAYER_FILE} 2>/dev/null || echo ${VM_PLAYER.name})"
 
 // The 9p root is v86's "host9p" share; its modules come from this initramfs. cache=mmap, not
 // loose: loose keeps a file's old pages, so an edit the editor writes would never reach gcc.
-// root= is honored so a wrong one in GRUB stops here, in a shell, as Alpine's initramfs does. That
+// root= is honored so a wrong one in GRUB stops here, in a shell, as Alpine's initramfs does, and a
+// disk root with no rootfstype= lets mount probe its filesystem. That
 // boot never reaches kf-control, so /init sends the host its boot report itself, on the same port.
 export const INIT = `#!/bin/busybox sh
 /bin/busybox --install -s /bin
@@ -121,7 +122,7 @@ mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t devtmpfs dev /dev
 for m in netfs 9pnet 9pnet_virtio 9p sd_mod; do insmod /lib/$m.ko; done
-root=host9p fstype=9p flags=
+root=host9p fstype= flags=
 for arg in $(cat /proc/cmdline); do
   case $arg in
     root=*) root=\${arg#root=} ;;
@@ -129,10 +130,11 @@ for arg in $(cat /proc/cmdline); do
     rootflags=*) flags=\${arg#rootflags=} ;;
   esac
 done
+[ -z "$fstype" ] && [ "$root" = host9p ] && fstype=9p
 [ "$fstype" = 9p ] && flags=\${flags:-trans=virtio,version=9p2000.L,cache=mmap,msize=512000}
 mkdir -p /newroot
 stty -F /dev/ttyS2 raw -echo
-until err=$(mount -t "$fstype" -o "\${flags:-defaults}" "$root" /newroot 2>&1); do
+until err=$(mount \${fstype:+-t "$fstype"} -o "\${flags:-defaults}" "$root" /newroot 2>&1); do
   echo "$err"
   echo "Mounting root $root failed."
   { echo ${BOOT_STOPPED_START}; echo "$root"; echo "$fstype"; echo "$err"; ${BOOT_REPORT_SCRIPT}; echo ${BOOT_STOPPED_END}; } > /dev/ttyS2 2>&1 &

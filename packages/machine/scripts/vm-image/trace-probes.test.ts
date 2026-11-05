@@ -52,6 +52,21 @@ describe("the guest's probes", () => {
     expect(probe('execve')?.definition).toMatch(/^e:kf\/execve syscalls\/sys_enter_execve path=/)
   })
 
+  it("reads the file each VFS hook works on: its filesystem's name, its mode and the handlers it can call", () => {
+    expect(probe('route_read')?.definition).toBe(
+      'p:kf/route_read vfs_read fs=+0(+0(+28(+28(+20($arg1))))):string m=+0(+20($arg1)):u16 h0=+12(+8($arg1)):symbol h1=+20(+8($arg1)):symbol fop=+8($arg1):symbol'
+    )
+    expect(probe('route_readv')?.definition).toContain('h0=+20(+8($arg1)):symbol h1=+12(+8($arg1)):symbol')
+    expect(probe('route_open')?.definition).toMatch(
+      /^r:kf\/route_open do_dentry_open .* h0=\+52\(\+8\(\$arg1\)\):symbol /
+    )
+    expect(probe('route_readdir')?.definition).not.toContain('fop=')
+    expect(probe('route_getattr')?.definition).toBe(
+      'p:kf/route_getattr vfs_getattr_nosec fs=+0(+0(+28(+28(+32(+4($arg1)))))):string m=+0(+32(+4($arg1))):u16 h0=+56(+24(+32(+4($arg1)))):symbol'
+    )
+    expect(TRACE_PROBE_LIST.some((each) => each.definition.includes(':symstr'))).toBe(false)
+  })
+
   it('has no name twice, and nothing that would break the boot script: no | in a definition', () => {
     const names = TRACE_PROBE_LIST.map((each) => each.name)
     expect(new Set(names).size).toBe(names.length)

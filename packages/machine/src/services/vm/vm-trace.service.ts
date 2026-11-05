@@ -1,9 +1,11 @@
 import type { LabEvent, LabEventInit } from '#events/types'
+import type { CallRoute } from '#types/definitions/route'
 import type { SignalGenerateResult } from '#types/definitions/signal'
 import { VM_MARKER_FD, VM_TRACE_AS_END, VM_TRACE_AS_START, VM_TRACE_END, VM_TRACE_START } from '#types/definitions/vm'
 import { TRACE_PROBES, type TracedCommand, type TraceRecord, VM_TRACE_SPLICE_BYTES } from '#types/definitions/vm-trace'
 import {
   argvOf,
+  callRoute,
   chunkBytes,
   fieldNumber,
   joinChunks,
@@ -11,6 +13,7 @@ import {
   parseProbeName,
   parseTraceLine,
   pathData,
+  routeHookOf,
   syscallNumber,
 } from '#utils/vm-trace/index'
 
@@ -83,6 +86,8 @@ interface Window {
   lastSignal: Map<number, number>
   captures: Map<number, Capture>
   copies: Map<number, Part[]>
+  /** What the route probes saw during each task's call in flight. */
+  routes: Map<number, CallRoute>
   /** Each task's latest terminal write, which a later chunk of the same write extends. */
   lastTty: Map<number, number>
   /** Faults are kept only when a SIGSEGV follows: the model's page_fault_user is a bad access. */
@@ -103,6 +108,7 @@ const newWindow = (commandLine: string | null, events: LabEvent[] = [], markerPi
   lastSignal: new Map(),
   captures: new Map(),
   copies: new Map(),
+  routes: new Map(),
   lastTty: new Map(),
   lastFault: new Map(),
   skipShellExit: commandLine !== null,
@@ -290,6 +296,14 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
     if (index === undefined || enter?.type !== 'sys_enter') {
       return
     }
+    if (routeHookOf(record.probe) !== null) {
+      // The first hook is the call's; a sendfile goes round do_splice_read() once per pipeful.
+      const route = window.routes.get(pid) ?? callRoute(enter.name, record.probe, fields)
+      if (route) {
+        window.routes.set(pid, route)
+      }
+      return
+    }
     const data = pathData(fields)
     const argv = record.probe === TRACE_PROBES.execve ? argvOf(fields) : undefined
     replace(index, { ...enter, ...(data && { data }), ...(argv && { argv }) })
@@ -366,6 +380,7 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
         const index = window.events.length
         window.captures.delete(pid)
         window.copies.delete(pid)
+        window.routes.delete(pid)
         const kept = append(
           { type: 'sys_enter', pid, nr: syscallNumber(record.name), name: record.name, args: record.args, cpu },
           time
@@ -379,6 +394,8 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
       }
       case 'exit': {
         const captured = takeCapture(pid, record.name, record.ret)
+        const route = run.routes.get(pid)
+        run.routes.delete(pid)
         if (run.skipShellExit && pid === run.markerPid) {
           run.skipShellExit = false
           return
@@ -406,6 +423,7 @@ export function createVmTrace(callbacks: VmTraceCallbacks) {
             name: record.name,
             ret: record.ret,
             ...(filled && { data: filled.data, ...(filled.cut && { dataCut: true }) }),
+            ...(route && { route }),
             cpu,
           },
           time

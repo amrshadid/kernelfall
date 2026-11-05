@@ -9,6 +9,7 @@ import {
   VM_TRACE_START,
 } from '#types/definitions/vm'
 import { VM_TRACE_GROUP } from '#types/definitions/vm-trace'
+import { BOOT_REPORT_SCRIPT, BOOT_STOPPED_END, BOOT_STOPPED_START } from '#utils/boot/index'
 import type { ArchiveEntry } from '#vm-image/archive'
 import { TRACE_PROBE_LIST } from '#vm-image/trace-probes'
 
@@ -112,7 +113,8 @@ exec su -l "$(cat ${VM_PLAYER_FILE} 2>/dev/null || echo ${VM_PLAYER.name})"
 
 // The 9p root is v86's "host9p" share; its modules come from this initramfs. cache=mmap, not
 // loose: loose keeps a file's old pages, so an edit the editor writes would never reach gcc.
-// root= is honored so a wrong one in GRUB stops here, in a shell, as Alpine's initramfs does.
+// root= is honored so a wrong one in GRUB stops here, in a shell, as Alpine's initramfs does. That
+// boot never reaches kf-control, so /init sends the host its boot report itself, on the same port.
 export const INIT = `#!/bin/busybox sh
 /bin/busybox --install -s /bin
 mount -t proc proc /proc
@@ -129,8 +131,11 @@ for arg in $(cat /proc/cmdline); do
 done
 [ "$fstype" = 9p ] && flags=\${flags:-trans=virtio,version=9p2000.L,cache=mmap,msize=512000}
 mkdir -p /newroot
-until mount -t "$fstype" -o "\${flags:-defaults}" "$root" /newroot; do
+stty -F /dev/ttyS2 raw -echo
+until err=$(mount -t "$fstype" -o "\${flags:-defaults}" "$root" /newroot 2>&1); do
+  echo "$err"
   echo "Mounting root $root failed."
+  { echo ${BOOT_STOPPED_START}; echo "$root"; echo "$fstype"; echo "$err"; ${BOOT_REPORT_SCRIPT}; echo ${BOOT_STOPPED_END}; } > /dev/ttyS2 2>&1 &
   echo "initramfs emergency recovery shell launched. Type 'exit' to try again."
   sh
 done

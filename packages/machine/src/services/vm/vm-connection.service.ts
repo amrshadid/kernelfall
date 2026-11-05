@@ -39,7 +39,8 @@ const setupKeys = new WeakMap<VmConnection, string>()
 
 /**
  * Adds a user; the first one starts the VM worker and boots or restores Linux. Once it first
- * reaches its prompt, the guest is asked about itself and `onFacts` gets the answer.
+ * reaches its prompt, the guest is asked about itself and `onFacts` gets the answer; a boot that
+ * stops in the initramfs sends its own.
  */
 export function connectVm(
   onStatus: (status: VmStatus) => void,
@@ -55,6 +56,12 @@ export function connectVm(
   connection = started
   let asked = false
   let rebooted = false
+  const publishFacts = (facts: VmFacts) => {
+    onFacts(facts)
+    if (facts.boot) {
+      eventBus.emit<BootedPayload>(LAB_EVENTS.BOOTED, { boot: facts.boot.summary }, { source: SOURCE })
+    }
+  }
   void started.session.start(
     { baseUrl: config.vmBaseUrl, ...(config.vmWasmUrl === null ? {} : { wasmUrl: config.vmWasmUrl }) },
     proxy((bytes: Uint8Array) => {
@@ -76,12 +83,8 @@ export function connectVm(
         asked = true
         rebooted = false
         void started.session.facts().then((facts) => {
-          if (connection !== started) {
-            return
-          }
-          onFacts(facts)
-          if (facts.boot) {
-            eventBus.emit<BootedPayload>(LAB_EVENTS.BOOTED, { boot: facts.boot.summary }, { source: SOURCE })
+          if (connection === started) {
+            publishFacts(facts)
           }
         })
       }
@@ -89,6 +92,11 @@ export function connectVm(
     proxy((command: TracedCommand) => {
       if (connection === started) {
         publishCommand(command)
+      }
+    }),
+    proxy((facts: VmFacts) => {
+      if (connection === started) {
+        publishFacts(facts)
       }
     })
   )

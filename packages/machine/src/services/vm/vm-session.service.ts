@@ -1,5 +1,5 @@
 import { V86 } from 'v86'
-import { CONTROL_LOST, createVmControl } from '#services/vm/vm-control.service'
+import { CONTROL_LOST, createStoppedBootReader, createVmControl } from '#services/vm/vm-control.service'
 import { loadVmFile } from '#services/vm/vm-files.service'
 import { loadVmState, saveVmState } from '#services/vm/vm-state.service'
 import { createVmTrace } from '#services/vm/vm-trace.service'
@@ -101,7 +101,7 @@ export function createVmSession(wasmUrl?: string): VmSession {
   }
 
   return {
-    async start(options: VmStartOptions, onOutput, onStatus, onCommand) {
+    async start(options: VmStartOptions, onOutput, onStatus, onCommand, onStoppedBoot) {
       status = (phase, detail = null) => onStatus({ phase, detail })
       status('loading')
       try {
@@ -214,7 +214,11 @@ export function createVmSession(wasmUrl?: string): VmSession {
               })
           }, VM_SAVE_DELAY_MS)
         })
-        running.add_listener('serial2-output-byte', (byte) => control.push(byte))
+        const stopped = createStoppedBootReader((output) => onStoppedBoot?.(parseBootReport(output)))
+        running.add_listener('serial2-output-byte', (byte) => {
+          control.push(byte)
+          stopped.push(byte)
+        })
         let traceBytes: number[] = []
         let progress: TracedCommand | null = null
         let progressAt = 0

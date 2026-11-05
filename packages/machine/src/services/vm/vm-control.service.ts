@@ -1,4 +1,5 @@
 import { VM_CONTROL_DONE, VM_CONTROL_TIMEOUT_MS } from '#types/definitions/vm'
+import { BOOT_STOPPED_END, BOOT_STOPPED_START } from '#utils/boot/index'
 
 const DONE = new RegExp(`${VM_CONTROL_DONE} (-?\\d+)\\r?\\n`)
 /** The status of a line that never answered: lost to a restore, or a guest that stopped listening. */
@@ -76,6 +77,36 @@ export function createVmControl(send: (bytes: Uint8Array) => void, timeoutMs = V
     /** A restore puts the guest back to before the line in flight: it will never answer. */
     drop() {
       settle(CONTROL_LOST, '')
+    },
+  }
+}
+
+const NEWLINE = 0x0a
+
+/**
+ * COM3 as a boot that stopped in the initramfs uses it: no control shell, only the report its /init
+ * sends unasked, between BOOT_STOPPED_START and BOOT_STOPPED_END.
+ */
+export function createStoppedBootReader(onReport: (output: string) => void) {
+  const decoder = new TextDecoder()
+  let line: number[] = []
+  let report: string[] | null = null
+  return {
+    push(byte: number) {
+      if (byte !== NEWLINE) {
+        line.push(byte)
+        return
+      }
+      const text = decoder.decode(new Uint8Array(line)).replace(/\r$/, '')
+      line = []
+      if (text === BOOT_STOPPED_START) {
+        report = [text]
+      } else if (report && text === BOOT_STOPPED_END) {
+        onReport(`${report.join('\n')}\n`)
+        report = null
+      } else {
+        report?.push(text)
+      }
     },
   }
 }

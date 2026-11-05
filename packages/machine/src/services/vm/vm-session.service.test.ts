@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createVmSession } from '#services/vm/vm-session.service'
-import type { VmPhase, VmSession } from '#types/definitions/vm'
+import { BOOT_REPORT } from '#test/boot-report'
+import type { VmFacts, VmPhase, VmSession } from '#types/definitions/vm'
 import { setupScript } from '#utils/vm-setup/setup-script.util'
 
 const fake = vi.hoisted(() => {
@@ -110,16 +111,19 @@ const run = (ms = 3_000) => vi.advanceTimersByTimeAsync(ms)
 
 let session: VmSession
 let phases: VmPhase[]
+let stoppedBoots: VmFacts[]
 
 async function start(saved: boolean, settleMs = 3_000) {
   fake.loadVmState.mockResolvedValue(saved ? new ArrayBuffer(8) : null)
   session = createVmSession('v86.wasm')
   phases = []
+  stoppedBoots = []
   void session.start(
     { baseUrl: '/vm/' },
     () => {},
     (status) => phases.push(status.phase),
-    () => {}
+    () => {},
+    (facts) => stoppedBoots.push(facts)
   )
   await run(settleMs)
 }
@@ -253,5 +257,26 @@ describe('a boot level', () => {
     void session.setupLevel(DEFAULT)
     await run()
     expect(restores()).toBe(1)
+  })
+})
+
+describe('a boot that stops in the initramfs', () => {
+  it('reports itself on the control port, unasked, with the root it failed to mount', async () => {
+    await start(true)
+    vm().out(2, 'Mounting root failed.\r\n')
+    vm().out(
+      2,
+      `@kf:stopped\r\n/dev/sda2\r\next4\r\nmount: mounting /dev/sda2 on /newroot failed: No such device\r\n${BOOT_REPORT.replace('host9p / 9p', 'rootfs / rootfs')}@kf:end\r\n`
+    )
+    expect(stoppedBoots).toHaveLength(1)
+    expect(stoppedBoots[0]?.boot?.summary).toMatchObject({
+      outcome: 'initramfs',
+      failedStage: 'root',
+      failedRoot: {
+        device: '/dev/sda2',
+        fstype: 'ext4',
+        error: 'mount: mounting /dev/sda2 on /newroot failed: No such device',
+      },
+    })
   })
 })

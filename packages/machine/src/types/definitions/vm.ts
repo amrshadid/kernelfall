@@ -36,7 +36,9 @@ export interface VmSession {
     onOutput: (bytes: Uint8Array) => void,
     onStatus: (status: VmStatus) => void,
     /** The kernel's events for each command line: while it runs, and once when it finishes. */
-    onCommand: (command: TracedCommand) => void
+    onCommand: (command: TracedCommand) => void,
+    /** A boot that stopped in the initramfs (a root= it couldn't mount), as its /init reported it. */
+    onStoppedBoot?: (facts: VmFacts) => void
   ): Promise<void>
   /** Bytes typed at the terminal, as xterm reports them (escape sequences included). */
   input(text: string): void

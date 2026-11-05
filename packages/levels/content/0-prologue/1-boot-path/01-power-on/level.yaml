@@ -10,6 +10,7 @@ tracks: [userland]
 skills: [sys-computer-basics]
 prerequisites: []
 teaches: [kernel, process, file-tree]
+names: [cpu, ram, storage, device, terminal, shell, command, proc-fs]
 uses: []
 objectives:
   - id: reads-proc-version

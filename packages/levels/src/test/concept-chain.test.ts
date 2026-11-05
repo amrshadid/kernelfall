@@ -4,18 +4,10 @@ import { describe, expect, it } from 'vitest'
 import { loadedContent } from '#test/index'
 import { labelOf } from '#utils/label/level-label.util'
 
-/** Breaks in today's chain of concepts, each with why; the rewrite empties this list level by level. */
+// Today's breaks, each with why; the rewrite empties this list level by level.
 const KNOWN_CONCEPT_GAPS: Readonly<Record<ConceptViolationKind, Readonly<Record<ConceptId, string>>>> = {
   'used-before-taught': {
-    cpu: "P.1 names the hardware's four parts on the Section drawing and files their card; no story explains them",
-    ram: "P.1 names the hardware's four parts on the Section drawing and files their card; no story explains them",
-    storage: "P.1 names the hardware's four parts on the Section drawing and files their card; no story explains them",
-    device: "P.1 names the hardware's four parts on the Section drawing and files their card; no story explains them",
-    terminal: 'P.1 files the terminal card and has the player type, but no story explains the terminal',
-    shell: 'P.1 files the terminal card; P.2 and P.3 lean on the shell before any story explains it',
-    command: 'P.1 files the terminal card; P.3 leans on commands before any story explains them',
     'device-file': 'P.1 no longer shows /dev; P.7 uses /dev/null and P.9 explains device files without declaring it',
-    'proc-fs': 'P.4 reads /proc/cmdline before P.7 explains /proc; P.1 shows only /proc/version',
     hex: "P.2's `int $0x80` and P.4's e820 addresses come before P.5 explains hex",
     'c-basics': 'P.2, P.5, P.7, P.8, P.9 and 1.4 have the player write C; no level introduces C itself',
     pipe: "P.4's `dmesg | grep`, P.7's `top | head` and S.4's aside come before S.5 teaches `|`",

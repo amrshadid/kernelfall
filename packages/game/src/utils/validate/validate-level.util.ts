@@ -38,6 +38,7 @@ const LEVEL_FIELDS = [
   'skills',
   'prerequisites',
   'teaches',
+  'names',
   'uses',
   'objectives',
   'hints',
@@ -91,6 +92,7 @@ export function validateLevel(
     skills: level.stringList('skills', SLUG),
     prerequisites: level.stringList('prerequisites', SLUG),
     ...(level.has('teaches') ? { teaches: level.stringList('teaches', SLUG) } : {}),
+    ...(level.has('names') ? { names: level.stringList('names', SLUG) } : {}),
     ...(level.has('uses') ? { uses: level.stringList('uses', SLUG) } : {}),
     objectives: level.list('objectives', (value, path) => readObjective(value, path, issues)),
     hints: readHints(level),
@@ -111,17 +113,23 @@ export function validateLevel(
 
 function checkConcepts(level: LevelDefinition, catalogue: ReadonlySet<ConceptId> | undefined, issues: Issues): void {
   const teaches = level.teaches ?? []
+  const names = level.names ?? []
   const uses = level.uses ?? []
   reportDuplicates(teaches, 'teaches', issues)
+  reportDuplicates(names, 'names', issues)
   reportDuplicates(uses, 'uses', issues)
-  for (const id of uses.filter((concept) => teaches.includes(concept))) {
-    issues.add('uses', `"${id}" is also a concept this level teaches`)
+  for (const id of uses.filter((concept) => teaches.includes(concept) || names.includes(concept))) {
+    issues.add('uses', `"${id}" is also a concept this level teaches or names`)
+  }
+  for (const id of names.filter((concept) => teaches.includes(concept))) {
+    issues.add('names', `"${id}" is also a concept this level teaches`)
   }
   if (!catalogue) {
     return
   }
   for (const [field, ids] of [
     ['teaches', teaches],
+    ['names', names],
     ['uses', uses],
   ] as const) {
     ids.forEach((id, i) => {

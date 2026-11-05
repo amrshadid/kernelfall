@@ -104,6 +104,7 @@ tracks: [c, userland] # c | userland | kernel | net | debug (one or more)
 skills: [write-to-stdout] # skill-tree nodes it unlocks (one or more)
 prerequisites: [] # skills needed to play it
 teaches: [syscall, fd] # concepts from concepts.yaml it introduces (budget 3)
+names: [shell] # concepts it only names on the big picture; a later level teaches them
 uses: [process] # concepts an earlier level taught that it relies on
 objectives: # what the checker verifies by behavior (one or more)
   - id: prints-hello
@@ -313,8 +314,10 @@ card never deepens a side level's card.
 ### Concepts and budgets
 
 A level's `teaches` and `uses` name concepts of `concepts.yaml`, as its text really
-introduces and relies on them. Tests check the chain in play order: a concept used
-before a level teaches it, a concept taught twice, and a Prologue or Survey concept no
+introduces and relies on them. `names` lists concepts a big-picture level only names
+(P.1's Section drawing): later levels may use them, and one teaches them properly.
+Tests check the chain in play order: a concept used before a level names or teaches it,
+a concept taught twice, and a Prologue or Survey concept no
 later level uses or teaches again are errors. Today's breaks are listed, each with its
 reason, in `KNOWN_CONCEPT_GAPS` (`src/test/concept-chain.test.ts`) until the level is
 rewritten.

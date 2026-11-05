@@ -182,8 +182,8 @@ to its card. Levels use a word only after this line has been shown.
 | distribution           | Linux plus everything around it: init, shell, tools, a way to install software                             | Debian, Fedora, Ubuntu; Alpine, the Machine's                              | P.5       |
 | driver                 | the part of the kernel that knows how to operate one kind of device                                        | `virtio_net` (network card); `ata_piix` (disk); the tty driver (terminal)  | P.6       |
 | bus                    | the wiring and rules that connect devices to the CPU                                                       | PCI (cards inside a PC); USB; I²C on small boards                          | P.6       |
-| register (of a device) | a small slot in a device that a driver reads or writes to control it                                       | "start sending"; "how many bytes arrived"; "lamp on"                       | P.6       |
-| interrupt              | a device's signal to the CPU: stop and deal with me now                                                    | a key pressed; a packet arrived; a timer went off                          | P.6       |
+| register (of a device) | a small slot in a device that a driver reads or writes to control it                                       | "start sending"; "how many bytes arrived"; "lamp on"                       | P.6 Codex |
+| interrupt              | a device's signal to the CPU: stop and deal with me now                                                    | a key pressed; a packet arrived; a timer went off                          | P.6 Codex |
 | kernel thread          | a worker of the kernel's own, run by the scheduler like a process, but only running kernel code            | `kswapd0`, `ksoftirqd/0`, `kthreadd`                                       | P.7       |
 | scheduler              | the part of the kernel that decides which process runs on each CPU, and for how long                       | three `yes` programs on one CPU; you waiting while init runs               | P.7       |
 | memory address         | the number of one byte of memory; a process's addresses are its own (virtual), not the RAM's               | `0x004a6000`; `0xbff3e000`                                                 | P.8       |
@@ -207,7 +207,7 @@ parts."
 | Memory                           | `mm/`, `arch/x86/mm/`                                           | `/proc/meminfo`, `/proc/<pid>/maps` (P.8)     | Slab Mines (2.8a–b); Page-Table Labyrinth (3.3–3.5)                                                  | kswapd                           |
 | VFS and filesystems              | `fs/`                                                           | one `read` on ext4, procfs and sysfs (P.9)    | Surface Survey; Into the Archive (1.6); The Aqueducts (1.7, `fs/pipe.c`); Archive Stacks (3.16–3.17) | init                             |
 | Devices and drivers              | `drivers/`                                                      | `/dev`, major and minor numbers (P.9)         | Device Quarter (2.4–2.7)                                                                             | udev                             |
-| Interrupts, timers, softirqs     | `kernel/irq/`, `kernel/time/`, `kernel/softirq.c`               | `/proc/interrupts` (P.6)                      | Interrupt Spire (2.10a–c)                                                                            | ksoftirqd                        |
+| Interrupts, timers, softirqs     | `kernel/irq/`, `kernel/time/`, `kernel/softirq.c`               | `/proc/interrupts` (P.6 Codex)                | Interrupt Spire (2.10a–c)                                                                            | ksoftirqd                        |
 | Locking                          | `kernel/locking/`                                               | a picture: two processes, one counter (P.7)   | Lock Cathedral (2.9, 2.9b); Grace Halls (3.12–3.13)                                                  | the Verger                       |
 | Networking                       | `net/`, `drivers/net/`                                          | `/sys/class/net`, `/proc/net/dev` (P.9)       | Socket Harbor (1.9, 1.10); Netfilter Wall (2.11); Packet Abyss (3.18–3.19)                           | the Harbormaster, the Tollkeeper |
 | IPC                              | `ipc/`, `fs/pipe.c`, `kernel/signal.c`                          | one line (P.9)                                | The Aqueducts (1.7), Alarm Bells (1.8)                                                               | —                                |
@@ -374,23 +374,23 @@ for the drawing's labels, which the story names but does not teach.
 
 ### Moved out of the story
 
-| Fact (old story)                                                     | Now                                                         |
-| -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| the four parts: CPU, memory, storage, devices                        | the drawing's labels (story) and `computer-parts` Simple    |
-| one CPU switches between programs fast                               | `computer-parts` Deep; taught in P.7                        |
-| bytes, 256 MiB = 268,435,456 bytes, UTF-8 (`h` = 104, `é` two bytes) | `computer-parts` Deep                                       |
-| what an operating system does; Windows, macOS, Android, Ubuntu       | `operating-system` Simple and Deep                          |
-| Linux runs in Android and Ubuntu                                     | `kernel` Deep                                               |
-| the kernel runs only when called on (the city-works limits line)     | `kernel` Deep; the analogy is gone                          |
-| program as a recipe, two cooks, PID, init is PID 1                   | `program-process` Simple and Deep; the analogy is gone      |
-| each top folder's job: `/bin`, `/home`, `/dev`                       | `files` Deep (`/etc` stays in the story)                    |
-| `/proc` in general: files written when read                          | `proc` Simple; taught in P.7                                |
-| the Machine's files come over a virtio share, not a disk             | `fidelity`                                                  |
-| terminal, shell, `bash`, command                                     | `terminal` Simple and Deep; P.3 is the shell's level        |
-| `echo` and `pwd` are builtins                                        | `terminal` Deep; taught in P.2                              |
-| `/dev`: `ttyS0`, `null`, `zero`, `random`; `sda`, `nvme0n1`          | `files` Deep, `terminal` Deep, the real-world card; P.9     |
-| most of `/bin` is links to BusyBox                                   | `program-process` Deep                                      |
-| `/etc/hostname`, the Machine's name                                  | the real-world card                                         |
+| Fact (old story)                                                     | Now                                                      |
+| -------------------------------------------------------------------- | -------------------------------------------------------- |
+| the four parts: CPU, memory, storage, devices                        | the drawing's labels (story) and `computer-parts` Simple |
+| one CPU switches between programs fast                               | `computer-parts` Deep; taught in P.7                     |
+| bytes, 256 MiB = 268,435,456 bytes, UTF-8 (`h` = 104, `é` two bytes) | `computer-parts` Deep                                    |
+| what an operating system does; Windows, macOS, Android, Ubuntu       | `operating-system` Simple and Deep                       |
+| Linux runs in Android and Ubuntu                                     | `kernel` Deep                                            |
+| the kernel runs only when called on (the city-works limits line)     | `kernel` Deep; the analogy is gone                       |
+| program as a recipe, two cooks, PID, init is PID 1                   | `program-process` Simple and Deep; the analogy is gone   |
+| each top folder's job: `/bin`, `/home`, `/dev`                       | `files` Deep (`/etc` stays in the story)                 |
+| `/proc` in general: files written when read                          | `proc` Simple; taught in P.7                             |
+| the Machine's files come over a virtio share, not a disk             | `fidelity`                                               |
+| terminal, shell, `bash`, command                                     | `terminal` Simple and Deep; P.3 is the shell's level     |
+| `echo` and `pwd` are builtins                                        | `terminal` Deep; taught in P.2                           |
+| `/dev`: `ttyS0`, `null`, `zero`, `random`; `sda`, `nvme0n1`          | `files` Deep, `terminal` Deep, the real-world card; P.9  |
+| most of `/bin` is links to BusyBox                                   | `program-process` Deep                                   |
+| `/etc/hostname`, the Machine's name                                  | the real-world card                                      |
 
 ### Real-world card
 
@@ -1876,29 +1876,29 @@ teaches, each pointing at the level that builds it.
 
 ### Moved out of the story
 
-| Fact (old story)                                                         | Now                                                    |
-| ------------------------------------------------------------------------ | ------------------------------------------------------ |
-| USB and I²C as other buses                                               | `driver-model` Deep                                    |
-| ACPI tables describe the board; Arm servers use ACPI                     | `acpi-pci` Simple and Deep; 3.14                       |
-| the Machine's firmware gives no ACPI; `/sys/firmware` holds only `memmap`| `acpi-pci` Deep; `fidelity`                            |
-| PCI enumeration, configuration space                                     | `acpi-pci` Deep; 3.15                                  |
-| what the host bridge and ISA bridge do                                   | one clause in the story; detail in `acpi-pci` Deep     |
-| 440FX and PIIX3 are 1990s chips, emulated; virtio IDs from Red Hat       | `fidelity`                                             |
-| `rev` is a revision, `Subsystem` who built the card                      | `fidelity`                                             |
-| `probe()`, the driver model's three structures                           | `driver-model` Deep; 2.4                               |
-| udev loads modules and names devices; the Machine runs none              | `driver-model` Deep; P.9                               |
-| registers, MMIO, I/O ports                                               | `interrupts-mmio` Simple and Deep; 3.15                |
-| interrupts, the jump between two instructions, `cli`/`local_irq_disable` | `interrupts-mmio` Deep; 2.10a–2.10c                    |
-| `/proc/interrupts`, XT-PIC, one CPU column, line 0 the timer             | `interrupts-mmio` Simple and Deep, `fidelity`; 2.10b   |
-| `ttyS1` carries the trace                                                | `fidelity` (game internals)                            |
-| ksoftirqd's cameo: "the handler does the urgent part"                    | `interrupts-mmio` Deep; 2.10b                          |
-| `reg`, nodes, `of_match_table`, `7e200000.gpio`, GPIO pin 4              | `device-tree` Deep; 3.14                               |
-| the LED child `led-0` as the binding asks                                | `fidelity`                                             |
-| `-I dts -O dtb -o` explained                                             | the `dtc` chip                                         |
-| a PCI address: bus, slot, function                                       | `sysfs` Deep                                           |
-| the 9P transport carries the Machine's files                             | `fidelity`                                             |
-| which interrupt line each device uses                                    | the real-world card's `/proc/interrupts`, 2.10b        |
-| "a link: a file that points to another path"                             | stays in the story (Build it)                          |
+| Fact (old story)                                                          | Now                                                  |
+| ------------------------------------------------------------------------- | ---------------------------------------------------- |
+| USB and I²C as other buses                                                | `driver-model` Deep                                  |
+| ACPI tables describe the board; Arm servers use ACPI                      | `acpi-pci` Simple and Deep; 3.14                     |
+| the Machine's firmware gives no ACPI; `/sys/firmware` holds only `memmap` | `acpi-pci` Deep; `fidelity`                          |
+| PCI enumeration, configuration space                                      | `acpi-pci` Deep; 3.15                                |
+| what the host bridge and ISA bridge do                                    | one clause in the story; detail in `acpi-pci` Deep   |
+| 440FX and PIIX3 are 1990s chips, emulated; virtio IDs from Red Hat        | `fidelity`                                           |
+| `rev` is a revision, `Subsystem` who built the card                       | `fidelity`                                           |
+| `probe()`, the driver model's three structures                            | `driver-model` Deep; 2.4                             |
+| udev loads modules and names devices; the Machine runs none               | `driver-model` Deep; P.9                             |
+| registers, MMIO, I/O ports                                                | `interrupts-mmio` Simple and Deep; 3.15              |
+| interrupts, the jump between two instructions, `cli`/`local_irq_disable`  | `interrupts-mmio` Deep; 2.10a–2.10c                  |
+| `/proc/interrupts`, XT-PIC, one CPU column, line 0 the timer              | `interrupts-mmio` Simple and Deep, `fidelity`; 2.10b |
+| `ttyS1` carries the trace                                                 | `fidelity` (game internals)                          |
+| ksoftirqd's cameo: "the handler does the urgent part"                     | `interrupts-mmio` Deep; 2.10b                        |
+| `reg`, nodes, `of_match_table`, `7e200000.gpio`, GPIO pin 4               | `device-tree` Deep; 3.14                             |
+| the LED child `led-0` as the binding asks                                 | `fidelity`                                           |
+| `-I dts -O dtb -o` explained                                              | the `dtc` chip                                       |
+| a PCI address: bus, slot, function                                        | `sysfs` Deep                                         |
+| the 9P transport carries the Machine's files                              | `fidelity`                                           |
+| which interrupt line each device uses                                     | the real-world card's `/proc/interrupts`, 2.10b      |
+| "a link: a file that points to another path"                              | stays in the story (Build it)                        |
 
 ### Real-world card
 

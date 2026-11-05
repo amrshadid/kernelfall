@@ -96,6 +96,29 @@ describe('bootViewOf', () => {
     expect(root?.failed).toBe(true)
     expect(root?.note).toContain('never mounted')
     expect(view.marks.find((mark) => mark.failed)?.number).toBe(view.stages.length)
+    expect(root?.mountError).toBeNull()
+  })
+
+  it("names the root the initramfs tried, and keeps mount's own words", () => {
+    const error = 'mount: mounting /dev/sda3 on /newroot failed: No such file or directory'
+    const view = bootViewOf(
+      bootWith((record) => ({
+        ...record,
+        summary: {
+          ...record.summary,
+          outcome: 'initramfs',
+          failedStage: 'root',
+          rootDevice: 'rootfs',
+          failedRoot: { device: '/dev/sda3', fstype: 'ext4', error },
+        },
+      }))
+    )
+    const root = view.stages.find((stage) => stage.kind === 'root')
+    expect(root).toMatchObject({ failed: true, mountError: error })
+    expect(root?.note).toBe(
+      'The initramfs tried to mount `/dev/sda3` (ext4) as the real root filesystem, and the mount failed: `/` is still `rootfs`, and the boot stopped here.'
+    )
+    expect(view.stages.filter((stage) => stage.mountError !== null)).toHaveLength(1)
   })
 
   it('ends at a panic', () => {

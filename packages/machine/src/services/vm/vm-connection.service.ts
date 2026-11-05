@@ -38,11 +38,7 @@ const outputListeners = new Set<(bytes: Uint8Array) => void>()
 const setupKeys = new WeakMap<VmConnection, string>()
 let terminalSize: { rows: number; cols: number } | null = null
 
-/**
- * Adds a user; the first one starts the VM worker and boots or restores Linux. Once it first
- * reaches its prompt, the guest is asked about itself and `onFacts` gets the answer; a boot that
- * stops in the initramfs sends its own.
- */
+// The first user starts the VM; a boot stopped in the initramfs reports itself, with no prompt to ask at.
 export function connectVm(
   onStatus: (status: VmStatus) => void,
   onFacts: (facts: VmFacts) => void = () => {}

@@ -83,10 +83,7 @@ export function createVmControl(send: (bytes: Uint8Array) => void, timeoutMs = V
 
 const NEWLINE = 0x0a
 
-/**
- * COM3 as a boot that stopped in the initramfs uses it: no control shell, only the report its /init
- * sends unasked, between BOOT_STOPPED_START and BOOT_STOPPED_END.
- */
+// A stopped boot has no control shell on COM3, only the report its /init sends unasked.
 export function createStoppedBootReader(onReport: (output: string) => void) {
   const decoder = new TextDecoder()
   let line: number[] = []

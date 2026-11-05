@@ -7,6 +7,7 @@ export type {
   CheckReport,
   CheckVerdict,
   CompilerWarning,
+  FinishedCommand,
   LevelChecker,
   LevelCheckers,
 } from '#types/definitions/checker'

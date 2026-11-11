@@ -9,6 +9,14 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Added
 
+- **The Guide shows a step one beat at a time.** It stops at the next thing you do and
+  shows the rest once you've run it (or pressed Continue), so a result is on your
+  terminal before it is explained, and a Predict's answer waits for your run. Level
+  authors mark a pause with `---` in `story.md`.
+- **A missed objective says what your last run did instead**, for example "Your program
+  exited with status 3, not 0".
+- `make` on the Machine, the loopback interface up, and `/dev/fd`, so bash's `<(…)`
+  works.
 - **Run shows its progress:** "Building…" while gcc compiles, "Running…" while the
   program runs (an interactive one until it exits), then Run again.
 - `pnpm vm:facts` records what the Machine prints for the commands levels quote (uname,
@@ -22,6 +30,8 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Changed
 
+- The Machine runs kernel 6.18.63. `tcc` is gone: it could never link a program there.
+- After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p
   root, the IDE disk, virtio-net, and bash as init's shell.
 

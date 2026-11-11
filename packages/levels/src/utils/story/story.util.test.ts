@@ -33,6 +33,15 @@ describe('parseStory', () => {
     ])
   })
 
+  it('reads --- as a pause, and leaves one inside a code block alone', () => {
+    const paced = parseStory('## Build it\n\n> **init:** Press Run.\n\n---\n\n```\na\n---\nb\n```\n')
+    expect(paced.get('build-it')).toEqual([
+      { kind: 'line', speaker: 'init', text: 'Press Run.' },
+      { kind: 'pause' },
+      { kind: 'code', text: 'a\n---\nb' },
+    ])
+  })
+
   it('ignores text before the first section', () => {
     expect([...parseStory(STORY).keys()]).toEqual(['scene', 'real-world'])
   })

@@ -12,6 +12,8 @@
 
 > **init:** Type `/bin/echo hello` in the terminal: the program file, not the shell's builtin `echo`, so there's a program to watch. Want to see what really happened? X-ray shows what happens inside the Machine, and its syscalls view is yours now.
 
+---
+
 ```
 execve("/bin/echo", ["/bin/echo", "hello"], ...) = 0
   … 17 more requests: the program getting ready
@@ -28,7 +30,9 @@ exit_group(0)                                    = ?
 > **init:** The `1` is a _file descriptor_, a small number for something a process has open. Every program starts with three: 0 for what you type, 1 for its normal output, called standard output, and 2 for error messages. Standard output leads to your terminal here, but it doesn't have to.
 >
 > **init:** Start a program, write, leave. Every program talks to the kernel this way. There is no other door. Try `ls /bin` and `cat /etc/motd` with X-ray on. You'll see a few new names, like `open`, `getdents64`, `writev` and `sendfile64`. The Survey explains them; for now, notice that they are all requests.
->
+
+---
+
 > **init:** Now one request, slowly. Programs run in _user mode_: the CPU won't let them touch devices, other programs' memory or the kernel's. To ask, a program runs one special instruction. The CPU switches to _kernel mode_ and jumps to one of two fixed places in the kernel: the Syscall Gate. The kernel does the work, and the CPU drops back to user mode with the answer.
 >
 > **init:** The Machine is a 32-bit PC, so its gate has two doors. The fast one is the instruction `sysenter`, which programs reach through a few bytes of code the kernel puts in every process. The old one is `int $0x80`, and it still works. A 64-bit PC, like most laptops today, uses an instruction called `syscall` instead. Same idea, different door.
@@ -42,6 +46,8 @@ Where "asking" stops being a good picture: the program doesn't wait in line or t
 > **init:** Now say it in C. `hello.c` is _source code_, the program as a person writes it. The _compiler_, gcc, turns it into a program file the CPU can run. Run builds it and runs `./hello`. The `./` means "the `hello` in this folder"; you'll see why it's needed next time.
 >
 > **init:** Before you write anything, let's break it. Delete the `;` after `return 0` and press Run.
+
+---
 
 ```
 hello.c: In function 'main':
@@ -60,7 +66,9 @@ hello.c:19:17: error: expected ';' before '}' token
 > **init:** Then what the compiler expected: a `;` before the `}`. It only noticed the missing `;` when it reached the `}` on line 20, which it marks with `~`. But the `^` points where the `;` belongs, and under it is the fix it suggests.
 >
 > **init:** Fix the first error first. Later ones are often caused by it. Put the `;` back and press Run.
->
+
+---
+
 > **init:** A clean build, and nothing printed: `main` says nothing yet. Write one call to `write()` that prints a line to standard output, ending in a newline, and return 0. The kernel answers with how many bytes it took.
 
 If you'd rather use `printf`, that works too: it's a _library function_, ready-made code that comes with C. It collects your text and hands it to the kernel for you. X-ray will show `writev`, write's sibling that takes the text in pieces.
@@ -68,6 +76,8 @@ If you'd rather use `printf`, that works too: it's a _library function_, ready-m
 ## Watch it
 
 > **init:** Before you run it: which lane of X-ray will `./hello` light up? User mode only, kernel mode only, or both?
+
+---
 
 ```
 $ ./hello

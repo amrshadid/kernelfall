@@ -30,8 +30,8 @@ function props(fields: Partial<LevelLayoutProps> = {}): LevelLayoutProps {
     guide: {
       stepLabel: 'Build it',
       reviewNote: null,
-      lines: [],
-      code: [],
+      beats: [],
+      onContinue: null,
       showObjectives: false,
       objectives: [],
       checkReport: null,

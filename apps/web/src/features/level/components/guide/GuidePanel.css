@@ -52,6 +52,40 @@
   color: var(--blue);
 }
 
+.level-guide__beat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* What the player has already acted on steps back, so the beat they are on reads first. */
+.level-guide__beat--read {
+  color: var(--ink-2);
+}
+
+.level-guide__beat + .level-guide__beat {
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--ink-2);
+}
+
+.level-guide__continue {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed currentColor;
+  padding: 0;
+  cursor: pointer;
+}
+
+.level-guide__continue:hover,
+.level-guide__continue:focus-visible {
+  color: var(--ink);
+}
+
 .level-guide__note {
   font-size: 0.8125rem;
   color: var(--ink-2);

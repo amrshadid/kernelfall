@@ -1,5 +1,6 @@
 import type {
   GuideAction,
+  GuidePace,
   GuidePlacement,
   LevelDialogs,
   LevelLayoutModel,
@@ -48,6 +49,7 @@ export interface LevelLayoutInput {
   /** Runs a chip's command line in the terminal, as if typed. */
   readonly runChip: (commandLine: string) => void
   readonly placement: GuidePlacement | null
+  readonly pace: GuidePace
   /** Plays the level again from its scene, on a fresh Machine. */
   readonly replay: () => void
   /** Reboots through GRUB, keeping the level's progress. */
@@ -107,6 +109,7 @@ export function levelLayoutOf(input: LevelLayoutInput): LevelLayoutModel {
       check,
       runChip: input.runChip,
       placement: input.placement,
+      pace: input.pace,
       actions: dialogs.reviewing
         ? [back]
         : guideActionsOf(run, {

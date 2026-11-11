@@ -6,13 +6,15 @@ import './Dialogue.css'
 export interface DialogueProps {
   label: string
   lines: readonly DialogueLine[]
+  /** Goes on from a dialogue above it: the lead speaker's header is already on screen. */
+  continued?: boolean
 }
 
 /**
  * The first named speaker gets a portrait header with their real term; other speakers cut in with a
  * compact block. Lines with no speaker are stage directions, never a speaker block.
  */
-export function Dialogue({ label, lines }: DialogueProps) {
+export function Dialogue({ label, lines, continued = false }: DialogueProps) {
   const groups = groupLines(lines)
   const lead = groups.find((group) => group.speaker.name !== '')?.speaker.id
   const headerAt = groups.findIndex((group) => group.speaker.id === lead)
@@ -34,7 +36,7 @@ export function Dialogue({ label, lines }: DialogueProps) {
         if (group.speaker.id === lead) {
           return (
             <div key={key} className="kf-dialogue__lead">
-              {index === headerAt && <SpeakerHeader speaker={group.speaker} />}
+              {index === headerAt && !continued && <SpeakerHeader speaker={group.speaker} />}
               {texts}
             </div>
           )

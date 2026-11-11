@@ -65,6 +65,7 @@ function input(levelId: string, run: Partial<LevelRunState> = {}, fields: Partia
     navigate: vi.fn(),
     runChip: vi.fn(),
     placement: null,
+    pace: { shown: 1, advance: vi.fn() },
     replay: vi.fn(),
     ...fields,
   } as unknown as LevelLayoutInput

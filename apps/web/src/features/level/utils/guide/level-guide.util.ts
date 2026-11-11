@@ -1,4 +1,13 @@
-import type { GuideAction, GuideCheckReport, GuideChip, GuidePlacement, LevelGuide } from '@features/level/types'
+import type {
+  GuideAction,
+  GuideBeat,
+  GuideCheckReport,
+  GuideChip,
+  GuidePace,
+  GuidePart,
+  GuidePlacement,
+  LevelGuide,
+} from '@features/level/types'
 import type { UseLevelCheckResult } from '@kernelfall/game/hooks'
 import { type CommandChip, HINT_TIERS, type LevelDefinition, type LevelRunState } from '@kernelfall/game/types'
 import type { StoryBlock } from '@kernelfall/levels/types'
@@ -20,6 +29,26 @@ export interface GuideInput {
   readonly actions: readonly GuideAction[]
   readonly runChip: (commandLine: string) => void
   readonly placement: GuidePlacement | null
+  readonly pace: GuidePace
+}
+
+/** The step's story cut at its pauses; a step with none is one beat. */
+export function beatsOf(blocks: readonly StoryBlock[]): readonly GuideBeat[] {
+  const beats: GuidePart[][] = [[]]
+  for (const block of blocks) {
+    const beat = beats.at(-1) ?? []
+    const last = beat.at(-1)
+    if (block.kind === 'pause') {
+      beats.push([])
+    } else if (block.kind === 'code') {
+      beat.push({ kind: 'code', text: block.text })
+    } else if (last?.kind === 'lines') {
+      beat[beat.length - 1] = { kind: 'lines', lines: [...last.lines, { speaker: block.speaker, text: block.text }] }
+    } else {
+      beat.push({ kind: 'lines', lines: [{ speaker: block.speaker, text: block.text }] })
+    }
+  }
+  return beats.filter((beat) => beat.length > 0)
 }
 
 /** The checker's verdict so far, while building; null before the first judged run. */
@@ -61,11 +90,14 @@ export function guideOf(input: GuideInput): LevelGuide {
   const { level, run, blocks, shown, reviewing, check } = input
   const label = STEPS.find((step) => step.id === shown)?.label ?? ''
   const building = (run.phase === 'build' || run.phase === 'oops') && !reviewing
+  const beats = beatsOf(blocks)
+  // A step looked back at was read to its end.
+  const reached = reviewing ? beats.length : Math.min(Math.max(input.pace.shown, 1), beats.length)
   return {
     stepLabel: label,
     reviewNote: reviewing ? `Looking again at ${label}. Your progress is kept.` : null,
-    lines: blocks.flatMap((block) => (block.kind === 'line' ? [{ speaker: block.speaker, text: block.text }] : [])),
-    code: blocks.flatMap((block) => (block.kind === 'code' ? [block.text] : [])),
+    beats: beats.slice(0, reached),
+    onContinue: reached < beats.length ? input.pace.advance : null,
     showObjectives: true,
     objectives: input.objectives,
     checkReport: reviewing ? null : checkReportOf(run, check, level.objectives.length),

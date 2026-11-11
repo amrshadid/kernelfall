@@ -40,9 +40,19 @@ function guideInput(fields: Partial<GuideInput> = {}): GuideInput {
     actions: [],
     runChip: () => undefined,
     placement: null,
+    pace: { shown: 1, advance: () => undefined },
     ...fields,
   }
 }
+
+const PACED: GuideInput['blocks'] = [
+  { kind: 'line', speaker: 'init', text: 'Break it and press Run.' },
+  { kind: 'pause' },
+  { kind: 'code', text: 'error: expected ;' },
+  { kind: 'line', speaker: 'init', text: 'Read it part by part.' },
+  { kind: 'pause' },
+  { kind: 'line', speaker: 'init', text: 'Now fix it.' },
+]
 
 describe('checkReportOf', () => {
   it('reports nothing before the first judged run, or outside Build it', () => {
@@ -79,14 +89,44 @@ describe('buildNoteOf', () => {
 })
 
 describe('guideOf', () => {
-  it("splits the step's story into lines and code, and links the level's Codex cards over the level", () => {
+  it("shows a step's story with no pause as one beat, and links the level's Codex cards over the level", () => {
     const guide = guideOf(guideInput())
     expect(guide.stepLabel).toBe('Build it')
-    expect(guide.lines).toEqual([{ speaker: 'init', text: 'Run anything.' }])
-    expect(guide.code).toEqual(['fork();'])
+    expect(guide.beats).toEqual([
+      [
+        { kind: 'lines', lines: [{ speaker: 'init', text: 'Run anything.' }] },
+        { kind: 'code', text: 'fork();' },
+      ],
+    ])
+    expect(guide.onContinue).toBeNull()
     expect(guide.codex.every((card) => card.href.startsWith(`#/play/${RUN_ANYTHING}`))).toBe(true)
     expect(guide.seeAlso.every((page) => /\(\d\)$/.test(page.term))).toBe(true)
     expect(guide.note).toBe(BUILD_NOTES.checked)
+  })
+
+  it('shows a paced story up to the beat the player reached, and offers the next one', () => {
+    const advance = vi.fn()
+    const first = guideOf(guideInput({ blocks: PACED, pace: { shown: 1, advance } }))
+    expect(first.beats).toEqual([[{ kind: 'lines', lines: [{ speaker: 'init', text: 'Break it and press Run.' }] }]])
+    expect(first.onContinue).toBe(advance)
+
+    // In the story's order: the error first, then init reading it.
+    const second = guideOf(guideInput({ blocks: PACED, pace: { shown: 2, advance } }))
+    expect(second.beats.at(-1)).toEqual([
+      { kind: 'code', text: 'error: expected ;' },
+      { kind: 'lines', lines: [{ speaker: 'init', text: 'Read it part by part.' }] },
+    ])
+
+    // More commands than beats: the last beat stays, with nothing left to show.
+    const last = guideOf(guideInput({ blocks: PACED, pace: { shown: 9, advance } }))
+    expect(last.beats).toHaveLength(3)
+    expect(last.onContinue).toBeNull()
+  })
+
+  it('shows every beat of a step looked back at', () => {
+    const guide = guideOf(guideInput({ blocks: PACED, shown: 'build', reviewing: 'build' }))
+    expect(guide.beats).toHaveLength(3)
+    expect(guide.onContinue).toBeNull()
   })
 
   it('shows only the hints revealed, each named by its tier', () => {

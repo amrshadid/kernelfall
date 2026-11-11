@@ -16,6 +16,20 @@ export interface GuideLine {
   readonly text: string
 }
 
+/** A run of lines, or a code sample, in the order the story has them. */
+export type GuidePart =
+  | { readonly kind: 'lines'; readonly lines: readonly GuideLine[] }
+  | { readonly kind: 'code'; readonly text: string }
+
+/** The transcript up to the next thing the player does. */
+export type GuideBeat = readonly GuidePart[]
+
+/** How many beats the player has reached on the step shown. */
+export interface GuidePace {
+  readonly shown: number
+  advance(): void
+}
+
 export interface GuideObjective {
   readonly id: string
   readonly text: string
@@ -85,8 +99,10 @@ export interface LevelGuide {
   readonly stepLabel: string
   /** Set while looking back at a done step. */
   readonly reviewNote: string | null
-  readonly lines: readonly GuideLine[]
-  readonly code: readonly string[]
+  /** The beats reached so far; the last one is where the player is. */
+  readonly beats: readonly GuideBeat[]
+  /** Shows the next beat without running anything; null on the last one. */
+  readonly onContinue: (() => void) | null
   readonly showObjectives: boolean
   readonly objectives: readonly GuideObjective[]
   /** What the checker said about the last run, while building; null before the first one. */

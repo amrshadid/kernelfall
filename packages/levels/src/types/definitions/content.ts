@@ -21,10 +21,14 @@ export const BEDROCK_FILE = 'bedrock.yaml'
 export const FIELD_GUIDE_FILE = 'field-guide.yaml'
 export const CONCEPTS_FILE = 'concepts.yaml'
 
-/** One block of a story section: a spoken (or narrated) line, or a code sample. */
+/**
+ * One block of a story section: a spoken (or narrated) line, a code sample, or a pause (`---`):
+ * what follows waits until the player has done what the text before it asked.
+ */
 export type StoryBlock =
   | { readonly kind: 'line'; readonly speaker: string | null; readonly text: string }
   | { readonly kind: 'code'; readonly text: string }
+  | { readonly kind: 'pause' }
 
 /** A level's `story.md`, by section slug (`scene`, `see-it`, `debrief`, `real-world`…). */
 export type Story = ReadonlyMap<string, readonly StoryBlock[]>

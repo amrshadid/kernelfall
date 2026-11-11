@@ -8,6 +8,9 @@ export interface GuidePanelProps {
   guide: LevelGuide
 }
 
+// A beat that appears after a command is brought into view; the first one is already there.
+const showBeat = (beat: HTMLDivElement | null) => beat?.scrollIntoView({ block: 'nearest' })
+
 export function GuidePanel({ guide }: GuidePanelProps) {
   const passing = guide.objectives.filter((objective) => objective.passed).length
   return (
@@ -22,20 +25,42 @@ export function GuidePanel({ guide }: GuidePanelProps) {
             <a href={guide.placement.href}>Take the placement check (about {guide.placement.minutes} minutes)</a>
           </aside>
         )}
-        {guide.lines.length > 0 && (
-          <Dialogue
-            label={`${guide.stepLabel}: transcript`}
-            lines={guide.lines.map((line) => ({
-              speaker: speakerWithPortraits(speakerOf(line.speaker)),
-              text: <InlineText text={line.text} />,
-            }))}
-          />
+        {guide.beats.map((beat, index) => {
+          const current = index === guide.beats.length - 1
+          return (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: beats of a step never reorder
+              key={index}
+              ref={current && index > 0 ? showBeat : undefined}
+              className={current ? 'level-guide__beat' : 'level-guide__beat level-guide__beat--read'}
+            >
+              {beat.map((part, at) =>
+                part.kind === 'code' ? (
+                  <pre key={part.text} className="level-guide__code">
+                    {part.text}
+                  </pre>
+                ) : (
+                  <Dialogue
+                    // biome-ignore lint/suspicious/noArrayIndexKey: parts of a beat never reorder
+                    key={at}
+                    label={`${guide.stepLabel}: transcript`}
+                    // Only the step's first lines introduce the speaker.
+                    continued={index > 0 || beat.findIndex((other) => other.kind === 'lines') !== at}
+                    lines={part.lines.map((line) => ({
+                      speaker: speakerWithPortraits(speakerOf(line.speaker)),
+                      text: <InlineText text={line.text} />,
+                    }))}
+                  />
+                )
+              )}
+            </div>
+          )
+        })}
+        {guide.onContinue !== null && (
+          <button type="button" className="level-guide__continue" onClick={guide.onContinue}>
+            Continue
+          </button>
         )}
-        {guide.code.map((block) => (
-          <pre key={block} className="level-guide__code">
-            {block}
-          </pre>
-        ))}
 
         {guide.showObjectives && (
           <section aria-labelledby="level-objectives-h">

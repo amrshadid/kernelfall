@@ -3,7 +3,7 @@ import { useSaveStatus } from '@features/chrome/hooks/save'
 import { useScreenChrome } from '@features/chrome/hooks/screen'
 import { useContent } from '@features/content/hooks/content'
 import { LevelScreenPresentation } from '@features/level/components/layout'
-import { useLevelDialogs, useLevelShortcuts } from '@features/level/hooks/layout'
+import { useGuidePace, useLevelDialogs, useLevelShortcuts } from '@features/level/hooks/layout'
 import { useLevelRun, useReferenceRun } from '@features/level/hooks/run'
 import { levelLayoutOf } from '@features/level/utils/layout'
 import { panelsFor, UNAVAILABLE_REASONS } from '@features/level/utils/view'
@@ -61,6 +61,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   // Every level starts from the clean Machine with its own accounts, files and cwd; a replay too.
   const [replays, setReplays] = useState(0)
   useMachineSetup(level?.lab, `${levelId}#${replays}`)
+  const pace = useGuidePace(`${levelId}#${replays}#${phase}`)
   // A level's other users act once an objective is met (S.2's neighbour knocking).
   const { runAs } = useRunAs()
   useRunAsCues((cue) => void runAs(cue.user, cue.command))
@@ -137,6 +138,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
           setReplays((count) => count + 1)
         },
         restart: () => void reboot(),
+        pace,
         placement: offer
           ? {
               offer: offer.check.offer,

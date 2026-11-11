@@ -317,6 +317,21 @@ Every spec writes its cards the same way, under `### Codex (chapter: <region>)`:
 A card's `deepens:` ids must exist earlier in play order, and a required level's
 card never deepens a side level's card.
 
+### Pauses in `story.md`
+
+A line holding only `---` is a pause. The Guide shows a step's text up to the next pause,
+and what follows once the player finishes a command (or presses **Continue**). Put one
+after every line that asks the player to do something, so the result is seen in the
+terminal before it is explained, and after a Predict question, so its answer waits.
+
+```md
+> **init:** Delete the `;` after `return 0` and press Run.
+
+---
+
+> **init:** Read it part by part. `hello.c:19:17` is where: …
+```
+
 ### Concepts and budgets
 
 A level's `teaches` and `uses` name concepts of `concepts.yaml`, as its text really

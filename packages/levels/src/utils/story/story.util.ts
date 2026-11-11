@@ -4,6 +4,7 @@ const SECTION_HEADING = /^##\s+(.+?)\s*$/
 const SPOKEN_LINE = /^\*\*(.+?):\*\*\s*(.*)$/
 const CODE_FENCE = /^```/
 const QUOTE_PREFIX = /^>\s?/
+const PAUSE = /^-{3,}$/
 
 /** `Real world` → `real-world`, the slug that `story.md#real-world` points at. */
 export function slugify(heading: string): string {
@@ -15,8 +16,8 @@ export function slugify(heading: string): string {
 
 /**
  * Parses a level's `story.md`. Sections start at `## Heading`. Inside one,
- * `> **Name:** text` is a spoken line, a paragraph is narration and a fenced
- * block is code.
+ * `> **Name:** text` is a spoken line, a paragraph is narration, a fenced
+ * block is code and `---` is a pause.
  */
 export function parseStory(markdown: string): Story {
   const sections = new Map<string, StoryBlock[]>()
@@ -59,6 +60,11 @@ export function parseStory(markdown: string): Story {
     const line = raw.replace(QUOTE_PREFIX, '').trim()
     if (line === '') {
       flushParagraph()
+      continue
+    }
+    if (PAUSE.test(line)) {
+      flushParagraph()
+      blocks.push({ kind: 'pause' })
       continue
     }
     const spoken = SPOKEN_LINE.exec(line)

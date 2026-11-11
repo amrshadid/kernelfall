@@ -1,7 +1,14 @@
 import type { CodeEditorPresentationProps } from '@features/editor/components/editor'
 import type { EditorFile, FileContents, RunState } from '@features/editor/types'
-import { isSourceFile } from '@features/editor/utils/workspace'
-import { useMachineFiles, useMachineStatus, useTerminalCommand } from '@kernelfall/machine/hooks'
+import { isSourceFile, runStageOf } from '@features/editor/utils/workspace'
+import {
+  useCommandResults,
+  useMachineFiles,
+  useMachineStatus,
+  useRunEvents,
+  useSyscallTrace,
+  useTerminalCommand,
+} from '@kernelfall/machine/hooks'
 import { useMachineLock } from '@shared/hooks/machine'
 import { defaultRunCommand } from '@shared/utils/workspace'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -10,6 +17,13 @@ import { useEditorReveal } from './useEditorReveal.hook'
 import { useVmFileSync } from './useVmFileSync.hook'
 
 const IDLE: RunState = { kind: 'idle' }
+const BUILDING: RunState = { kind: 'busy', label: 'Building…', reason: 'gcc is building your code.', working: true }
+const RUNNING: RunState = {
+  kind: 'busy',
+  label: 'Running…',
+  reason: 'Your program is running. Ctrl-C in the terminal stops it.',
+  working: true,
+}
 
 export interface EditorWorkspaceOptions {
   /** Reset restores these. */
@@ -41,6 +55,23 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
   const lock = useMachineLock(machine)
   const ready = machine.phase === 'ready'
   const { flush } = useVmFileSync(contents, ready, writeFiles)
+  const [pending, setPending] = useState<string | null>(null)
+  const { latest } = useSyscallTrace()
+  const live = pending !== null && latest?.running && latest.commandLine.trim() === pending.trim() ? latest : undefined
+  const liveEvents = useRunEvents(live?.id ?? null)
+
+  useCommandResults((result) => {
+    if (pending !== null && result.commandLine.trim() === pending.trim()) {
+      setPending(null)
+    }
+  })
+
+  // A setup or reboot replaces the shell, so the command Run typed will never finish.
+  useEffect(() => {
+    if (!ready) {
+      setPending(null)
+    }
+  }, [ready])
 
   const replacement = options.replacement
   // biome-ignore lint/correctness/useExhaustiveDependencies: a replacement is applied once, by id.
@@ -79,13 +110,15 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
   const onRun = useCallback(() => {
     saveNow()
     // The shortcut reaches here even while the button is off.
-    if (!ready) {
+    if (!ready || pending !== null) {
       return
     }
     setNotice(null)
+    const line = runCommand ?? defaultRunCommand(Object.keys(contents), activePath)
+    setPending(line)
     // The files reach the guest before the command does, so gcc builds what is on screen.
-    void flush().then(() => terminal.run(runCommand ?? defaultRunCommand(Object.keys(contents), activePath)))
-  }, [ready, flush, terminal, runCommand, contents, activePath, saveNow])
+    void flush().then(() => terminal.run(line))
+  }, [ready, pending, flush, terminal, runCommand, contents, activePath, saveNow])
 
   const onReset = useCallback(() => {
     setContents({ ...starter })
@@ -102,7 +135,13 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
     activePath,
     modified,
     reveal,
-    run: lock ? { kind: 'busy', label: lock.failed ? 'Run' : 'Starting Linux…', reason: lock.runReason } : IDLE,
+    run: lock
+      ? { kind: 'busy', label: lock.failed ? 'Run' : 'Starting Linux…', reason: lock.runReason }
+      : pending === null
+        ? IDLE
+        : runStageOf(pending, liveEvents) === 'running'
+          ? RUNNING
+          : BUILDING,
     status: notice ?? machine.detail,
     onSelectFile: setActivePath,
     onChange,

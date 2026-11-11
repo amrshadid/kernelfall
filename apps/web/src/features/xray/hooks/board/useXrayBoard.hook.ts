@@ -135,12 +135,14 @@ export function useXrayBoard({
     if (state.lens === 'boot') {
       return bootView && { kind: 'boot', view: bootView }
     }
+    // init's drawing hangs there before any command: every part dark.
+    if (state.lens === 'section') {
+      return { kind: 'section', view: sectionOf(run ?? null, routes), commandLine: run?.commandLine ?? '' }
+    }
     if (!run) {
       return null
     }
     switch (state.lens) {
-      case 'section':
-        return { kind: 'section', view: sectionOf(run, routesOf(events)), commandLine: run.commandLine }
       case 'route':
         return { kind: 'route', view: routeOf(run.commandLine, calls, events) }
       case 'cpus':
@@ -148,7 +150,7 @@ export function useXrayBoard({
       default:
         return null
     }
-  }, [state.lens, run, events, calls, cpus, bootView])
+  }, [state.lens, run, events, calls, cpus, bootView, routes])
 
   const figure: XrayFigure | null = whole
     ? wholeFigure

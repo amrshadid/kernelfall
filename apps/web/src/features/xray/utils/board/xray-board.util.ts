@@ -104,7 +104,10 @@ export function xrayCaption(figure: XrayFigure | null): string {
       : `Fig. 2. ${parent.program} forks PID ${child}${exec ? `, which runs ${exec.path}` : ''}.`
   }
   if (figure?.kind === 'section') {
-    return `Fig. 3. Section of the Machine: the parts \`${figure.commandLine.trim()}\` passed through.`
+    const command = figure.commandLine.trim()
+    return command
+      ? `Fig. 3. Section of the Machine: the parts \`${command}\` passed through.`
+      : 'Fig. 3. Section of the Machine. Run a command, and the parts it passes through light up.'
   }
   if (figure?.kind === 'route') {
     return `Fig. 4. The route of \`${figure.view.commandLine.trim()}\`: each call, the process that made it, and the part that served it.`

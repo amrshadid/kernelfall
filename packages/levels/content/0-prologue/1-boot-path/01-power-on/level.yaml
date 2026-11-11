@@ -30,8 +30,8 @@ chips:
   - { command: cat /proc/version, explain: "ask the kernel its name and version" }
   - { command: ls /, explain: "list the root, the top of the file tree" }
   - { command: cat /etc/motd, explain: "show the file motd in the folder etc: init's note" }
-# X-ray's first view unlocks in P.2.
-xray: []
+# Only init's drawing; the call-by-call views unlock in P.2.
+xray: [section]
 codex:
   - id: kernel
     term: the kernel

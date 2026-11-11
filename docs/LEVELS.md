@@ -116,7 +116,7 @@ hints: # exactly three: nudge, concept, point at the spot
   - Look at the line where main() returns …
 chips: # optional: commands "build it" offers; whole lines before P.3, names alone from P.3 on
   - { command: ls /bin, explain: "list the folder /bin" }
-xray: [syscalls] # syscalls | processes | files | network | modules | memory | locks | boot (Act III adds vm | sched | trace | order | buses | storage | dump); [] for none
+xray: [syscalls] # syscalls | processes | files | network | modules | memory | locks | boot | section (Act III adds vm | sched | trace | order | buses | storage | dump); [] for none
 xrayFocus: [pipe, fork, dup2] # optional: calls X-ray keeps open beyond those the declared checks name (the shell's side)
 codex: # cards it adds (one or more)
   - id: write-syscall # unique across the game

@@ -42,8 +42,8 @@ export function partsOfCall(
   return [...parts]
 }
 
-/** init's section drawing for one run: every part lit by the syscalls that passed through it. */
-export function sectionOf(run: TraceRun, routes: ReadonlyMap<number, CallRoute> = new Map()): SectionView {
+/** init's section drawing for one run: every part lit by the syscalls that passed through it; all dark with no run. */
+export function sectionOf(run: TraceRun | null, routes: ReadonlyMap<number, CallRoute> = new Map()): SectionView {
   const touched = new Map<SectionPartId, { calls: number; names: string[] }>()
   const touch = (id: SectionPartId, name: string) => {
     const entry = touched.get(id) ?? { calls: 0, names: [] }
@@ -51,14 +51,14 @@ export function sectionOf(run: TraceRun, routes: ReadonlyMap<number, CallRoute> 
     if (!entry.names.includes(name)) entry.names.push(name)
     touched.set(id, entry)
   }
-  for (const call of run.calls) {
+  for (const call of run?.calls ?? []) {
     // A program and the kernel working for it both run on a CPU.
     touch('programs', call.name)
     touch('cpu', call.name)
     for (const part of partsOfCall(call, routes.get(call.id))) touch(part, call.name)
   }
   return {
-    total: run.calls.length,
+    total: run?.calls.length ?? 0,
     floors: SECTION_FLOORS.map(({ floor }) => ({
       floor,
       parts: SECTION_PARTS.filter((part) => part.floor === floor).map((part) => ({

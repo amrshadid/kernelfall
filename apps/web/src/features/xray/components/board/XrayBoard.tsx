@@ -83,6 +83,8 @@ export function XrayBoard({
   const crossing = figure?.kind === 'crossing'
   // A crossing fits the dock without scrolling: one call listed, the sentence under the drawing.
   const fit = crossing && layout === 'dock'
+  // P.1 has only init's drawing: no call list, depth or predict to control yet.
+  const plate = controls.lenses.length === 1 && controls.lens === 'section'
   const classes = ['xr', animate && 'xr--animate', playback.playing && 'xr--playing', fit && 'xr--fit']
     .filter(Boolean)
     .join(' ')
@@ -92,13 +94,13 @@ export function XrayBoard({
     // biome-ignore lint/a11y/noStaticElementInteractions: playback keys work from anywhere inside the board
     <div
       className={classes}
-      data-depth={controls.depth}
+      data-depth={plate ? 'simple' : controls.depth}
       data-speed={playback.speed}
       style={style}
       onKeyDown={(event) => onBoardKey(event, playbackActions, animate)}
     >
       <div className="xr__bar">
-        <h2 className="xr__title">X-ray</h2>
+        <h2 className="xr__title">{plate ? 'The Machine' : 'X-ray'}</h2>
         {controls.lenses.length > 1 && (
           <Segmented
             legend="View"
@@ -108,16 +110,18 @@ export function XrayBoard({
           />
         )}
         <div className="xr__bar-end">
-          <Segmented
-            legend="Depth"
-            showLegend={false}
-            options={[
-              { value: 'simple', label: 'Simple' },
-              { value: 'deep', label: 'Deep' },
-            ]}
-            value={controls.depth}
-            onChange={controlActions.setDepth}
-          />
+          {!plate && (
+            <Segmented
+              legend="Depth"
+              showLegend={false}
+              options={[
+                { value: 'simple', label: 'Simple' },
+                { value: 'deep', label: 'Deep' },
+              ]}
+              value={controls.depth}
+              onChange={controlActions.setDepth}
+            />
+          )}
           <button
             type="button"
             className="xr__icon-btn"
@@ -131,7 +135,7 @@ export function XrayBoard({
         </div>
       </div>
 
-      {controls.runs.length > 0 && (
+      {controls.runs.length > 0 && !plate && (
         <div className="xr__run">
           <label>
             Run
@@ -194,7 +198,7 @@ export function XrayBoard({
 
       {figure !== null && figure.kind !== 'syscalls' && figure.kind !== 'crossing' && figure.kind !== 'processes' ? (
         <figure className="xr__drawing">
-          {figure.kind === 'section' && <SectionDrawing view={figure.view} />}
+          {figure.kind === 'section' && <SectionDrawing view={figure.view} commandLine={figure.commandLine} />}
           {figure.kind === 'route' && <RouteDrawing view={figure.view} />}
           {figure.kind === 'cpus' && <CpuLanesDrawing view={figure.view} />}
           {figure.kind === 'boot' && <BootDrawing view={figure.view} />}

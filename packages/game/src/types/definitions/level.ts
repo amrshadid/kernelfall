@@ -8,8 +8,21 @@ export const ACTS = ['prologue', 'act1', 'act2', 'act3'] as const
 /** Curriculum tracks (docs/LEVELS.md). */
 export const TRACKS = ['c', 'userland', 'kernel', 'net', 'debug'] as const
 
-/** X-ray views a level can demonstrate (docs/GAME.md §5); `boot` follows the boot stage by stage (P.4). */
-export const XRAY_VIEWS = ['syscalls', 'processes', 'files', 'network', 'modules', 'memory', 'locks', 'boot'] as const
+/**
+ * X-ray views a level can demonstrate (docs/GAME.md §5); `boot` follows the boot stage by
+ * stage (P.4), `section` is init's drawing of the whole Machine.
+ */
+export const XRAY_VIEWS = [
+  'syscalls',
+  'processes',
+  'files',
+  'network',
+  'modules',
+  'memory',
+  'locks',
+  'boot',
+  'section',
+] as const
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 

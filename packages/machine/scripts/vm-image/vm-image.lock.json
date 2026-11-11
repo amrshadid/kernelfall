@@ -17,26 +17,6 @@
       "version": "1.37.0-r31",
       "sha256": "26d45cc895b3fa99ba7500d0860c3934a363e74e464eeb5fc623f08147c33cfd"
     },
-    "tcc-dev": {
-      "version": "0.9.27_git20250619-r1",
-      "sha256": "398215d205b226600758b4c9bdbcef1c5f7a71d466cc57845fff5f9a4db7cc4b"
-    },
-    "pkgconf": {
-      "version": "2.5.1-r0",
-      "sha256": "43681ffe8284e82d690bd02f982b6019f3731aa4af4de7e2c8e636b78a993de8"
-    },
-    "tcc-libs": {
-      "version": "0.9.27_git20250619-r1",
-      "sha256": "52805357487de00cbaab02fb0c2db40bef6bc9b2e0335e7c189a2eddc0a12278"
-    },
-    "tcc-libs-static": {
-      "version": "0.9.27_git20250619-r1",
-      "sha256": "3676269075207df0edcd6ac5b22a404a700b5e93de20dd1c83b64045000c3642"
-    },
-    "tcc": {
-      "version": "0.9.27_git20250619-r1",
-      "sha256": "f4c92fcc456f5d5f005989d6c6991db536d7c2dc0e53f3edaf8cb0fa88c8f8b2"
-    },
     "strace": {
       "version": "6.19-r1",
       "sha256": "587acff19a40dd4cfd995ccbc465c59161a0b5705260e4354259227867fc6b1c"
@@ -132,10 +112,6 @@
     "ncurses-terminfo-base": {
       "version": "6.6_p20260516-r0",
       "sha256": "dbb8268b7a8c9e98b109dc6bd1a989f846bd49b71a186308a2224f3195620501"
-    },
-    "linux-virt": {
-      "version": "6.18.59-r0",
-      "sha256": "afbf8dc33703d3a1d9beccb1ce58db6c8d50dd4d8ae2ce3b36dbb7ba5f1fd768"
     },
     "e2fsprogs": {
       "version": "1.47.4-r0",
@@ -244,6 +220,18 @@
     "device-mapper-libs": {
       "version": "2.03.35-r3",
       "sha256": "d53be78833c5a6c52a4f54ec69940442f47e521d34bdee22f506b7ca4c0636b4"
+    },
+    "make": {
+      "version": "4.4.1-r4",
+      "sha256": "35caec815dee7fa87aaf9fb0d5617c0e7c43e6be136b5394692d26660e119f33"
+    },
+    "linux-virt": {
+      "version": "6.18.63-r0",
+      "sha256": "18093d5e08232dde7a77837f4074c02a2ec4c8d4d59da2107daeb59f3d3f1f7c"
+    },
+    "linux-virt-dev": {
+      "version": "6.18.63-r0",
+      "sha256": "36869450e0caaae110ec98403c050bee9ac1ba17a57b6d85dc1f6f641e93c2b4"
     }
   }
 }

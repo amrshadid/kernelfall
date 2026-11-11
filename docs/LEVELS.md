@@ -210,7 +210,7 @@ Facts about the Machine that levels must respect:
 - It is a 32-bit PC (i386): Alpine 3.24, kernel 6.18 (`linux-virt`), one CPU, 256 MiB.
   Syscall numbers, registers and the syscall table are i386's (`syscall_32.tbl`).
 - The shell is bash 5.3; most commands are BusyBox, so their options and output are
-  BusyBox's unless the image ships the GNU tool. gcc 15, tcc, musl, `strace` and man
+  BusyBox's unless the image ships the GNU tool. gcc 15, `make`, musl, `strace` and man
   pages are installed.
 - The root filesystem is 9p (`/` is not on a block device). The data disk is
   `/dev/sda1` (ext4, label `kernelfall`), not mounted until a level or the player

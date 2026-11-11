@@ -77,7 +77,9 @@ The game is an engine; the levels are data.
 
 - **The VM.** v86 0.5.471 emulates a 32-bit PC with one CPU and 256 MiB of memory.
   The guest is Alpine 3.24 (i386) with kernel 6.18 (`linux-virt`), bash 5.3, BusyBox,
-  gcc 15, tcc, musl, man pages and strace. The root filesystem is served over
+  gcc 15, make, musl, man pages and strace. The loopback interface is up. The kernel's
+  build tree (`linux-virt-dev`) is pinned and mirrored with the kernel, for the module
+  levels, and is not in the image yet. The root filesystem is served over
   virtio-9p. A 16 MiB data disk is the first IDE disk: GRUB 2.14 in its MBR, and an
   ext4 `/dev/sda1` holding `/boot` (not mounted at boot). On a restart SeaBIOS boots
   GRUB from it, which loads the kernel and initramfs; the root stays on 9p. eth0 is a

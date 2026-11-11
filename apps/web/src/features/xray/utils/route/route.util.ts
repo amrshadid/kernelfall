@@ -66,7 +66,7 @@ export function resultText(outcome: CallOutcome): string {
 
 function partOf(route: CallRoute): RoutePart {
   if (route.kind === 'fs') {
-    return FS_PARTS[route.fs]
+    return FS_PARTS[route.fs] ?? { kind: 'fs', name: route.fs, source: 'fs/' }
   }
   return DRIVER_PARTS[route.driver] ?? { kind: 'driver', name: `${route.driver} driver`, source: 'drivers/' }
 }
@@ -77,7 +77,7 @@ function belowOf(route: CallRoute, name: string, file: string | null): RouteBelo
   if (op === undefined) {
     return BELOW_NONE
   }
-  const below = (route.kind === 'fs' ? FS_BELOW[route.fs][op] : DRIVER_BELOW[route.driver]?.[op]) ?? BELOW_NONE
+  const below = (route.kind === 'fs' ? FS_BELOW[route.fs]?.[op] : DRIVER_BELOW[route.driver]?.[op]) ?? BELOW_NONE
   const net = route.kind === 'fs' && route.fs === 'sysfs' && op === 'read' ? file?.match(NET_SYSFS_ATTRIBUTE) : null
   if (net) {
     const [, device, attribute] = net

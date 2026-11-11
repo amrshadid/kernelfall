@@ -8,8 +8,7 @@ import type {
   XrayCall,
 } from '@features/xray/types'
 import { stageText } from '@features/xray/utils/narration'
-import type { SyscallDeskKey, SyscallStageKey, TemplateValues, XrayNarration } from '@kernelfall/levels/types'
-import { fillTemplate } from '@kernelfall/levels/utils'
+import type { SyscallStageKey, TemplateValues, XrayNarration } from '@kernelfall/levels/types'
 import { forkChoices, returnOf, syscallValues, writeChoices } from './syscall-values.util'
 
 // SIMPLIFIED: every call is drawn entering by int $0x80 (arch/x86/entry/entry_32.S, syscall_32.c);
@@ -21,23 +20,6 @@ const CONSOLE_PATH = ['tty_write', 'iterate_tty_write', 'n_tty_write'] as const
 const CONSOLE_COPY_STEPS = 2
 
 type ScenePatch = Partial<Pick<SyscallScene, 'loaded' | 'saved' | 'answered' | 'copied' | 'printed' | 'back'>>
-
-/** Which "In the kernel now" line a step shows; the step where the call does its own work has none. */
-function deskKeyOf(step: CallStep, call: XrayCall): SyscallDeskKey | null {
-  const done = returnOf(call)
-  switch (step) {
-    case 'fd':
-      return done?.errno === 'EBADF' ? 'fd-ebadf' : call.console !== null ? 'fd-console' : 'fd'
-    case 'copy':
-      return call.console !== null ? 'copy-console' : 'copy'
-    case 'answer':
-      return done ? 'answer' : 'answer-none'
-    case 'work':
-      return null
-    default:
-      return step
-  }
-}
 
 /** Each stage carries the drawing's state so far. */
 class StageList {
@@ -75,19 +57,8 @@ class StageList {
     this.#stages.push({
       ...text,
       key: step,
-      scene: { step, ring, active, reached: this.#reached, ...this.#flags, desk: this.#desk(step) },
+      scene: { step, ring, active, reached: this.#reached, ...this.#flags },
     })
-  }
-
-  #desk(step: CallStep): SyscallScene['desk'] {
-    const key = deskKeyOf(step, this.#call)
-    if (key === null) {
-      const call = this.#call
-      return { fn: call.kernelPath.at(-1) ?? call.name, say: call.desk, file: call.sources[0]?.path ?? '' }
-    }
-    const desk = this.#narration.desks[key]
-    const fill = (text: string) => fillTemplate(text, this.#values)
-    return { fn: fill(desk.fn), say: fill(desk.say), file: fill(desk.file) }
   }
 
   get stages(): readonly Stage<SyscallScene>[] {

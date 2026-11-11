@@ -266,8 +266,13 @@ export const checker = defineChecker({
 ```
 
 It reports objectives and Taint rules by their ids in `level.yaml`, and the engine
-merges its report with the declared checks. It must be pure: the same events always
-give the same report.
+merges its report with the declared checks. It must be pure: the same input always
+gives the same report.
+
+Besides `events`, the input holds `commandLine` (as typed) and `history`: the
+`{ commandLine, status }` of each command finished earlier since the level started
+(oldest first, empty again on Replay). Declared checks ignore both; S.2 reads the
+earlier `chmod` lines to know which modes the kernel was judging.
 
 ### Add a level
 
@@ -292,6 +297,7 @@ Level tests judge the kernel's real events, recorded on the real image:
    program reads.
 3. `pnpm vm:record <level id>` boots the image in Node, sets up the level, types each
    line and saves the events as `src/test/runs/<level>/<run>.json.gz`. Commit them.
+   The tests judge each command with the run's earlier commands as its `history`.
 4. List the level in `src/test/level-checkers.test.ts`. An objective the Machine can't
    show yet goes in its `KNOWN_GAPS`, with the reason.
 

@@ -85,9 +85,10 @@ fidelity:
     - a folder's x as search permission
     - "Alpine's /etc/shadow, root:shadow, 0640"
     - "init's knock: root runs cat as guest (uid 1001) with runuser"
+    - "the refused execve, the run of hi and the refused or allowed open through box are judged from the kernel's events"
   simplified:
     - "the Machine has no sudo, ACLs or SELinux; many distributions add them on top of the same check"
-    - "each command is judged on its own: a `./hi` that runs before `chmod -x` counts as one that runs after `chmod u+x`, and a `cat` refused by a `notes.txt` without `r` inside `box` counts as one refused by `box` without `x`; the kernel answers both with the same calls"
+    - "which modes hi and box had before is read from the earlier command lines, not the kernel: a plain `chmod MODE FILE…` that exited 0 (octal, or symbolic with r, w, x, s, t), and `mkdir box`; a line with quotes, globs, variables or `;`, `&&`, `|` isn't read, and the files are matched by name"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

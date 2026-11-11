@@ -1,4 +1,4 @@
-import type { DrawingTableRow, SyscallScene, SyscallStoryboard, XrayDepth } from '@features/xray/types'
+import type { DrawingTableRow, SyscallScene, SyscallStoryboard } from '@features/xray/types'
 import { CELL_HEIGHT } from './drawing.constants'
 import { firstLine, fitText } from './drawing-text.util'
 import {
@@ -7,9 +7,7 @@ import {
   POINTER_Y,
   PT_REGS_HEIGHT,
   SHOWN_ARGS,
-  SLIP_CHARS,
   SYSCALL_BOTTOM_PAD,
-  SYSCALL_DESK_HEIGHT,
   SYSCALL_FIT,
   SYSCALL_KERNEL_PAD,
   SYSCALL_KERNEL_TOP,
@@ -19,7 +17,7 @@ import {
   SYSCALL_USER_BUFFER_Y,
 } from './syscall-drawing.constants'
 
-/** Where things go on the syscall figure, for one scene at one depth. */
+/** Where things go on the syscall figure, for one scene. */
 export interface SyscallDrawingLayout {
   readonly height: number
   readonly kernelBufferY: number
@@ -41,11 +39,8 @@ export interface SyscallDrawingText {
   readonly title: string
   readonly callLine: string
   readonly returnLine: string
-  readonly slip: readonly string[]
-  readonly answer: string
   readonly path: string
   readonly console: string
-  readonly deskSay: string
 }
 
 /** What the program has back at the end, as the program box prints it. */
@@ -64,35 +59,18 @@ export function syscallReturnText(storyboard: Pick<SyscallStoryboard, 'call'>): 
   return `→ ${outcome.toProgram}`
 }
 
-/** The request slip's lines at Simple: the call's arguments in plain words, each short enough for the slip. */
-export function slipLines(storyboard: SyscallStoryboard): readonly string[] {
+export function syscallDrawingText(storyboard: SyscallStoryboard): SyscallDrawingText {
   const { call } = storyboard
-  if (call.family === 'write' && call.buffer) {
-    // The buffer itself is drawn beside the slip, so its size is enough here.
-    return [`fd ${call.args[0]?.value ?? '?'}`, fitText(`${call.buffer.count} bytes`, SLIP_CHARS)]
-  }
-  if (call.path !== null) {
-    return [fitText(`"${call.path}"`, SLIP_CHARS)]
-  }
-  return call.args.slice(0, 2).map((arg) => fitText(`${arg.name} ${arg.value}`, SLIP_CHARS))
-}
-
-export function syscallDrawingText(storyboard: SyscallStoryboard, scene: SyscallScene): SyscallDrawingText {
-  const { call } = storyboard
-  const returned = call.outcome.kind === 'returned' ? call.outcome : null
   return {
     title: fitText(`${call.program} · PID ${call.pid}`, SYSCALL_FIT.title),
     callLine: fitText(call.text, SYSCALL_FIT.programLine),
     returnLine: fitText(syscallReturnText(storyboard), SYSCALL_FIT.programLine),
-    slip: slipLines(storyboard),
-    answer: returned ? fitText(`answer: ${returned.ret}`, SLIP_CHARS) : '',
     path: fitText(`"${call.path ?? ''}"`, SYSCALL_FIT.path),
     console: fitText(firstLine(call.console ?? ''), SYSCALL_FIT.console),
-    deskSay: fitText(scene.desk.say, SYSCALL_FIT.deskSay),
   }
 }
 
-function pointerYOf(storyboard: SyscallStoryboard, scene: SyscallScene, depth: XrayDepth, showBuffer: boolean): number {
+function pointerYOf(storyboard: SyscallStoryboard, scene: SyscallScene, showBuffer: boolean): number {
   switch (scene.step) {
     case 'call':
       return POINTER_Y.call
@@ -104,36 +82,32 @@ function pointerYOf(storyboard: SyscallStoryboard, scene: SyscallScene, depth: X
       return POINTER_Y.sysret
     default: {
       const activeRow = storyboard.path.findIndex((name) => scene.active.includes(name))
-      return depth === 'deep' && activeRow >= 0
+      return activeRow >= 0
         ? SYSCALL_KERNEL_TOP + SYSCALL_PATH_TOP + activeRow * SYSCALL_PATH_ROW + Math.floor(SYSCALL_PATH_ROW / 2)
         : SYSCALL_KERNEL_TOP + POINTER_Y.kernelOffset
     }
   }
 }
 
-export function syscallDrawingLayout(
-  storyboard: SyscallStoryboard,
-  scene: SyscallScene,
-  depth: XrayDepth
-): SyscallDrawingLayout {
+export function syscallDrawingLayout(storyboard: SyscallStoryboard, scene: SyscallScene): SyscallDrawingLayout {
   const { call, path } = storyboard
   const inKernel = scene.ring === 0
   const write = call.family === 'write'
   const toScreen = write && call.console !== null
   const showBuffer = write && call.buffer !== null
   const kernelBuffer = showBuffer && !(call.outcome.kind === 'returned' && call.outcome.errno === 'EBADF')
-  const deepBottom = Math.max(
-    SYSCALL_KERNEL_TOP + SYSCALL_PATH_TOP + path.length * SYSCALL_PATH_ROW,
-    SYSCALL_KERNEL_TOP + PT_REGS_HEIGHT
-  )
-  const kernelBottom = (depth === 'deep' ? deepBottom : SYSCALL_KERNEL_TOP + SYSCALL_DESK_HEIGHT) + SYSCALL_KERNEL_PAD
+  const kernelBottom =
+    Math.max(
+      SYSCALL_KERNEL_TOP + SYSCALL_PATH_TOP + path.length * SYSCALL_PATH_ROW,
+      SYSCALL_KERNEL_TOP + PT_REGS_HEIGHT
+    ) + SYSCALL_KERNEL_PAD
   const returned = call.outcome.kind === 'returned' ? call.outcome : null
   const args = call.args.slice(0, SHOWN_ARGS)
 
   return {
     height: kernelBottom + (kernelBuffer ? KERNEL_BUFFER_HEIGHT : 0) + SYSCALL_BOTTOM_PAD,
     kernelBufferY: kernelBottom + KERNEL_BUFFER_GAP,
-    pointerY: pointerYOf(storyboard, scene, depth, showBuffer),
+    pointerY: pointerYOf(storyboard, scene, showBuffer),
     inKernel,
     write,
     toScreen,

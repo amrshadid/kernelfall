@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { INIT_PID, PENDING_FIELD, STOPPED_LINE } from '#content/0-prologue/3-surface-survey/03-processes/checker.ts'
 import { DENIED, PASSWD } from '#content/0-prologue/3-surface-survey/04-finding-things/checker.ts'
 import { allMetBy } from '#content/0-prologue/3-surface-survey/survey.fixture.ts'
-import { levelUnderTest, loadedContent, recordedRun, verdictOf } from '#test/index'
+import { levelUnderTest, loadedContent, recordedInputs, recordedRun, verdictOf } from '#test/index'
 import { machineFacts } from '#test/machine-facts'
 import { CONTENT_FILES } from '#utils/loader/index'
 import { parseStory } from '#utils/story/index'
@@ -16,7 +16,7 @@ const facts = machineFacts().outputs
 const fact = (command: string) => facts[command] ?? ''
 
 const missing = (folder: string, run: string) =>
-  verdictOf(levelUnderTest(idOf(folder)), recordedRun(idOf(folder), run))?.missing.map(({ id }) => id) ?? []
+  verdictOf(levelUnderTest(idOf(folder)), recordedInputs(idOf(folder), run))?.missing.map(({ id }) => id) ?? []
 const metPerCommand = (folder: string, run: string) =>
   recordedRun(idOf(folder), run).map((events) => allMetBy(levelUnderTest(idOf(folder)), events))
 const CD_IDS = ['cd-absolute', 'cd-up', 'relative-path']

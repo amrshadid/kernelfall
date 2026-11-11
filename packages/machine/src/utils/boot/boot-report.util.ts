@@ -1,15 +1,28 @@
-import type { BootOutcomeKind, BootRecord, BootStageId, KernelLogLine, PciBinding } from '#types/definitions/boot'
+import type {
+  BootOutcomeKind,
+  BootRecord,
+  BootStageId,
+  FailedRoot,
+  KernelLogLine,
+  PciBinding,
+} from '#types/definitions/boot'
 import { VM_CPUS, type VmFacts } from '#types/definitions/vm'
 
 const SECTION = '@kf:'
-const SECTIONS = ['dmesg', 'pci', 'net', 'mounts', 'meminfo', 'cpus'] as const
+const REPORTED = ['dmesg', 'pci', 'net', 'mounts', 'meminfo', 'cpus'] as const
+/** `stopped`: the root the initramfs failed to mount (its device, its type, mount's message), first. */
+const SECTIONS = ['stopped', ...REPORTED] as const
 type Section = (typeof SECTIONS)[number]
+
+/** Around the report the initramfs sends on COM3 when it can't mount the root: no control line asked for it. */
+export const BOOT_STOPPED_START = `${SECTION}stopped`
+export const BOOT_STOPPED_END = `${SECTION}end`
 
 // More than the 128 KiB log buffer, so the whole boot comes back whatever BusyBox reads by default.
 const DMESG_BYTES = 1 << 20
 const NS_LAST_PID = '/proc/sys/kernel/ns_last_pid'
 
-const COMMANDS: Readonly<Record<Section, string>> = {
+const COMMANDS: Readonly<Record<(typeof REPORTED)[number], string>> = {
   dmesg: `dmesg -s ${DMESG_BYTES}`,
   // `<slot> <driver>`: the driver link is missing when nothing bound the device.
   pci: 'for d in /sys/bus/pci/devices/*; do echo "$(basename "$d") $(basename "$(readlink "$d/driver")" 2>/dev/null)"; done',
@@ -23,7 +36,7 @@ const COMMANDS: Readonly<Record<Section, string>> = {
 export const BOOT_REPORT_SCRIPT = [
   // Builtins fork nothing: the report gives back the pids it took, so a level's pids match the clean boot's.
   `read kf_pid < ${NS_LAST_PID}`,
-  ...SECTIONS.map((name) => `echo ${SECTION}${name}; ${COMMANDS[name]}`),
+  ...REPORTED.map((name) => `echo ${SECTION}${name}; ${COMMANDS[name]}`),
   `echo "$kf_pid" > ${NS_LAST_PID}`,
   'unset kf_pid',
 ].join('; ')
@@ -86,7 +99,12 @@ function rootOf(mounts: string): string | null {
   return root?.[0] ?? null
 }
 
-/** The guest's report (BOOT_REPORT_SCRIPT's output) → what the Machine says about itself. */
+function failedRootOf(text: string): FailedRoot | undefined {
+  const [device, fstype, ...error] = text.replace(/\n$/, '').split('\n')
+  return device ? { device, fstype: fstype ?? '', error: error.join('\n') } : undefined
+}
+
+/** The guest's report (BOOT_REPORT_SCRIPT's output, after a `stopped` section from the initramfs) → what the Machine says about itself. */
 export function parseBootReport(output: string): VmFacts {
   const sections = sectionsOf(output)
   const log = parseKernelLog(sections.dmesg)
@@ -105,6 +123,7 @@ export function parseBootReport(output: string): VmFacts {
       : 'init'
   const failedStage: BootStageId | null = outcome === 'panic' ? 'kernel' : outcome === 'initramfs' ? 'root' : null
   const cpus = Number.parseInt(sections.cpus, 10)
+  const failedRoot = failedRootOf(sections.stopped)
   const boot: BootRecord = {
     summary: {
       kernel: find(KERNEL)?.[1] ?? '',
@@ -117,6 +136,7 @@ export function parseBootReport(output: string): VmFacts {
       pci: pciOf(sections.pci),
       netDevices: linesOf(sections.net).map((name) => name.trim()),
       rootDevice,
+      ...(failedRoot && { failedRoot }),
     },
     log,
   }

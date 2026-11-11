@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONTROL_LOST, createVmControl } from '#services/vm/vm-control.service'
+import { CONTROL_LOST, createStoppedBootReader, createVmControl } from '#services/vm/vm-control.service'
 
 /** A guest that answers each line after a tick, with what its command printed first. */
 function guest(statusOf: (line: string) => number) {
@@ -38,6 +38,17 @@ describe('the root control channel', () => {
     expect(await wiped).toBe(CONTROL_LOST)
     expect(await control.run('silence')).toBe(CONTROL_LOST)
     expect(sent).toEqual(['chown you: hello.c', 'silence'])
+  })
+
+  it("picks a stopped boot's report out of the port, whatever came before it, line ends and all", () => {
+    const reports: string[] = []
+    const reader = createStoppedBootReader((output) => reports.push(output))
+    for (const byte of new TextEncoder().encode(
+      'kf-done 0\r\n@kf:stopped\r\n/dev/sda2\r\next4\r\n@kf:cpus\r\n1\r\n@kf:end\r\nlater\r\n'
+    )) {
+      reader.push(byte)
+    }
+    expect(reports).toEqual(['@kf:stopped\n/dev/sda2\next4\n@kf:cpus\n1\n'])
   })
 
   it('sends the next line only once the previous one has finished', async () => {

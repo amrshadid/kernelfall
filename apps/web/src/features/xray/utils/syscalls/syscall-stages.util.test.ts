@@ -118,18 +118,6 @@ describe('syscallStoryboard', () => {
     expect(text).toContain('`__ia32_sys_write` returns 6, the number of bytes written')
   })
 
-  it('shows what the kernel is doing at each step on the desk', () => {
-    const desks = ticks(ECHO).stages.map((s) => s.scene.desk)
-    expect(desks[2]).toEqual({
-      fn: 'entry_INT80_32',
-      say: 'The Gate opens: ring 3 → ring 0',
-      file: 'arch/x86/entry/entry_32.S',
-    })
-    expect(desks[5]?.say).toBe("fd 1 → the terminal's struct file")
-    expect(desks[7]?.say).toBe('The screen draws: hello')
-    expect(desks[8]?.say).toBe('The answer, 6, goes in eax')
-  })
-
   it('tells a fork, its answer and a guess about the child PID', () => {
     const events = stamp([
       { type: 'sys_enter', pid: 2, nr: 56, name: 'clone', args: [17, 0, 0, 0, 0] },
@@ -208,7 +196,6 @@ describe('syscallStoryboard', () => {
           s.why,
           s.deeper,
           s.gate ?? '',
-          s.scene.desk.say,
           ...(s.predict ? [s.predict.question, s.predict.explain] : []),
         ])
         expect(texts.flatMap(unfilledPlaceholders), call.name).toEqual([])

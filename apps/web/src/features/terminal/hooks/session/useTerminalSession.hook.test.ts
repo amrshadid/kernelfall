@@ -4,9 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTerminalSession } from './useTerminalSession.hook'
 
 /** What the fake terminal was asked to show, the player's keyboard, and the fake VM. */
-const screen = vi.hoisted(() => ({ text: '', type: (_data: string) => {} }))
+const screen = vi.hoisted(() => ({
+  text: '',
+  type: (_data: string) => {},
+  resize: (_size: { rows: number; cols: number }) => {},
+}))
 const vm = vi.hoisted(() => ({
   sent: [] as string[],
+  sizes: [] as [number, number][],
   output: (_bytes: Uint8Array) => {},
   status: { phase: 'off', detail: null as string | null },
   early: null as Uint8Array | null,
@@ -15,7 +20,13 @@ const vm = vi.hoisted(() => ({
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     options = {}
+    rows = 24
+    cols = 80
     loadAddon() {}
+    onResize(listener: (size: { rows: number; cols: number }) => void) {
+      screen.resize = listener
+      return { dispose() {} }
+    }
     open() {}
     registerLinkProvider() {
       return { dispose() {} }
@@ -39,8 +50,10 @@ vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
 vi.mock('@kernelfall/machine/hooks', () => {
   const actions = { reveal() {} }
   const send = (text: string) => vm.sent.push(text)
+  const sizing = { resize: (rows: number, cols: number) => vm.sizes.push([rows, cols]) }
   return {
     useReveal: () => actions,
+    useTerminalSize: () => sizing,
     useLinuxTerminal(onOutput: (bytes: Uint8Array) => void) {
       vm.output = onOutput
       // Bytes the VM had already sent when the hook first rendered, before the terminal opened.
@@ -63,6 +76,7 @@ function open() {
 beforeEach(() => {
   screen.text = ''
   vm.sent = []
+  vm.sizes = []
   vm.status = { phase: 'off', detail: null }
   vi.stubGlobal(
     'ResizeObserver',
@@ -128,6 +142,15 @@ describe('useTerminalSession', () => {
     rerender({ locked: false })
     act(() => screen.type('pwd\r'))
     expect(vm.sent).toEqual(['pwd\r'])
+  })
+
+  it('tells the Machine the size it opened at, and each new one, so full-screen programs fill it', () => {
+    open()
+    act(() => screen.resize({ rows: 37, cols: 80 }))
+    expect(vm.sizes).toEqual([
+      [24, 80],
+      [37, 80],
+    ])
   })
 
   it('says what the Machine is doing while Linux starts', () => {

@@ -1,7 +1,7 @@
 import type { BuildHistory, CheckVerdict, LevelId } from '@kernelfall/game/types'
 import { compileReport, evaluateCheck, mergeVerdicts } from '@kernelfall/game/utils'
 import { describe, expect, it } from 'vitest'
-import { loadedContent, recordedRun, recordedRunNames } from '#test/index'
+import { loadedContent, recordedInputs, recordedRun, recordedRunNames } from '#test/index'
 
 const RUN_ANYTHING = 'act1-process-district-04-run-anything'
 const FIRST_WORDS = 'prologue-boot-path-02-first-words'
@@ -39,10 +39,10 @@ function verdictOf(levelId: LevelId, names: readonly string[]): CheckVerdict | n
   }
   const builds = BUILDS[levelId]
   return names
-    .flatMap((name) => recordedRun(levelId, name))
+    .flatMap((name) => recordedInputs(levelId, name))
     .reduce<CheckVerdict | null>(
-      (previous, events) =>
-        mergeVerdicts(previous, evaluateCheck(level, checkerOf(levelId), builds ? { events, builds } : { events })),
+      (previous, input) =>
+        mergeVerdicts(previous, evaluateCheck(level, checkerOf(levelId), builds ? { ...input, builds } : input)),
       null
     )
 }
@@ -53,9 +53,9 @@ function report(levelId: LevelId, run: string) {
   const met = new Set<string>()
   const taint: { ruleId: string }[] = []
   let applies = false
-  for (const events of recordedRun(levelId, run)) {
-    applies ||= checker.applies?.({ events }) ?? true
-    const result = checker.check({ events })
+  for (const input of recordedInputs(levelId, run)) {
+    applies ||= checker.applies?.(input) ?? true
+    const result = checker.check(input)
     for (const id of result.objectivesMet) {
       met.add(id)
     }

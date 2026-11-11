@@ -214,12 +214,7 @@ export function XrayBoard({
         <>
           <figure className="xr__drawing">
             {figure.kind === 'syscalls' && (
-              <SyscallDrawing
-                storyboard={figure.storyboard}
-                scene={stage.scene as SyscallScene}
-                depth={controls.depth}
-                label={label}
-              />
+              <SyscallDrawing storyboard={figure.storyboard} scene={stage.scene as SyscallScene} label={label} />
             )}
             {figure.kind === 'crossing' && (
               <CrossingDrawing storyboard={figure.storyboard} scene={stage.scene as CrossingScene} label={label} />

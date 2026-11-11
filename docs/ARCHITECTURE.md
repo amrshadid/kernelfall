@@ -89,22 +89,30 @@ The game is an engine; the levels are data.
   guest's console.
 - **The trace.** At boot, the guest sets up tracefs: the syscall tracepoints,
   scheduler and signal events, return probes that read user buffers, a kprobe on
-  `n_tty_write` for what reaches the terminal, and an eprobe for execve's argv. Only
-  the player's shell and its children are traced. Bash writes a marker into
-  `trace_marker` before and after each command line, so the events split by command. The trace goes out on COM2; the
-  worker parses it into one `TracedCommand` per command line, with the i386 syscall
-  table generated from Linux v6.18's `syscall_32.tbl` (`pnpm vm:syscalls`).
-- **Live runs.** While a command runs, the worker sends its events as
+  `n_tty_write` for what reaches the terminal, an eprobe for execve's argv, and kprobes
+  on the VFS hooks (`vfs_read`, `vfs_write`, `do_dentry_open`, `iterate_dir`…) that read
+  each file's filesystem and handler, so a call carries its `route` (9p, procfs, the tty
+  driver…). The kernel has no BTF, so those probes use struct offsets measured on
+  linux-virt 6.18: a new kernel means measuring them again. Only the player's shell and
+  its children are traced. Bash writes a marker into `trace_marker` before and after each
+  command line, so the events split by command. The trace goes out on COM2; the worker
+  parses it into one `TracedCommand` per command line, with the i386 syscall table
+  generated from Linux v6.18's `syscall_32.tbl` (`pnpm vm:syscalls`).
+- **Live runs.** While a command runs, the worker sends its new events as
   `LAB_COMMAND_PROGRESS` (throttled, and at once when the program waits for input), so
   X-ray follows an interactive program live. The finished command goes out as
   `LAB_COMMAND_FINISHED`, which replaces the live run. Once Linux is up, a report over
   the control channel (dmesg, sysfs, `/proc`) gives the CPU count and the boot record
-  as `LAB_BOOTED`.
+  as `LAB_BOOTED`. A boot that stops in the initramfs (a `root=` it can't mount) sends
+  that report itself, with the root that failed.
 - **The control channel.** A root shell on COM3 takes one command line at a time and
-  answers each with `kf-done <status>`. The page never shows it.
-- **Level setup.** The worker restores the clean boot saved in the browser, runs the
-  level's setup lines as root on the control channel, then restarts the player's shell
-  so it starts in the level's session (user, cwd, environment).
+  answers each with `kf-done <status>`. The page never shows it. It also tells the
+  console its size (`stty rows … cols 80`) whenever the terminal resizes, and after
+  every restore, setup and boot.
+- **Level setup.** The worker restores the clean boot saved in the browser, unless the
+  Machine is still exactly that boot, runs the level's setup lines as root on the
+  control channel, then restarts the player's shell so it starts in the level's session
+  (user, cwd, environment).
 - **The first visit.** Linux boots from scratch, then the worker saves the booted
   state. Later visits and every level restore it.
 

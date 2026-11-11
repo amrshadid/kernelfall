@@ -51,4 +51,25 @@ describe('BootDrawing', () => {
     expect(container.querySelectorAll('.xr-boot__stage--failed')).toHaveLength(1)
     expect(container.querySelector('.xr-boot__tick--failed')).not.toBeNull()
   })
+
+  it('prints what mount answered in the stage where the boot stopped', () => {
+    const error = 'mount: mounting /dev/sda3 on /newroot failed: No such file or directory'
+    const view = bootViewOf(
+      bootWith((record) => ({
+        ...record,
+        summary: {
+          ...record.summary,
+          outcome: 'initramfs',
+          failedStage: 'root',
+          rootDevice: 'rootfs',
+          failedRoot: { device: '/dev/sda3', fstype: 'ext4', error },
+        },
+      }))
+    )
+    const { container } = render(<BootDrawing view={view} />)
+    const failed = container.querySelector('.xr-boot__stage--failed')
+    expect(failed?.querySelector('.xr-boot__title span')?.textContent).toBe('Root filesystem')
+    expect(failed?.querySelector('pre')?.textContent).toBe(error)
+    expect(failed?.querySelector('.xr-boot__note')?.textContent).toContain('/dev/sda3')
+  })
 })

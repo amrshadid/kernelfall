@@ -36,11 +36,9 @@ let users = 0
 const outputListeners = new Set<(bytes: Uint8Array) => void>()
 /** The level each running VM was last set up for. */
 const setupKeys = new WeakMap<VmConnection, string>()
+let terminalSize: { rows: number; cols: number } | null = null
 
-/**
- * Adds a user; the first one starts the VM worker and boots or restores Linux. Once it first
- * reaches its prompt, the guest is asked about itself and `onFacts` gets the answer.
- */
+// The first user starts the VM; a boot stopped in the initramfs reports itself, with no prompt to ask at.
 export function connectVm(
   onStatus: (status: VmStatus) => void,
   onFacts: (facts: VmFacts) => void = () => {}
@@ -55,6 +53,12 @@ export function connectVm(
   connection = started
   let asked = false
   let rebooted = false
+  const publishFacts = (facts: VmFacts) => {
+    onFacts(facts)
+    if (facts.boot) {
+      eventBus.emit<BootedPayload>(LAB_EVENTS.BOOTED, { boot: facts.boot.summary }, { source: SOURCE })
+    }
+  }
   void started.session.start(
     { baseUrl: config.vmBaseUrl, ...(config.vmWasmUrl === null ? {} : { wasmUrl: config.vmWasmUrl }) },
     proxy((bytes: Uint8Array) => {
@@ -76,12 +80,8 @@ export function connectVm(
         asked = true
         rebooted = false
         void started.session.facts().then((facts) => {
-          if (connection !== started) {
-            return
-          }
-          onFacts(facts)
-          if (facts.boot) {
-            eventBus.emit<BootedPayload>(LAB_EVENTS.BOOTED, { boot: facts.boot.summary }, { source: SOURCE })
+          if (connection === started) {
+            publishFacts(facts)
           }
         })
       }
@@ -90,8 +90,16 @@ export function connectVm(
       if (connection === started) {
         publishCommand(command)
       }
+    }),
+    proxy((facts: VmFacts) => {
+      if (connection === started) {
+        publishFacts(facts)
+      }
     })
   )
+  if (terminalSize) {
+    void started.session.resizeTerminal(terminalSize.rows, terminalSize.cols)
+  }
   return { started: true }
 }
 
@@ -151,6 +159,12 @@ export async function rebootVm(): Promise<boolean> {
   }
   await running.session.reboot()
   return true
+}
+
+/** The terminal's size, for this VM and any started later. */
+export function resizeVmTerminal(rows: number, cols: number): void {
+  terminalSize = { rows, cols }
+  void connection?.session.resizeTerminal(rows, cols)
 }
 
 /** Runs a command line as another user, traced like the player's; null while no VM runs. */

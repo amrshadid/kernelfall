@@ -89,6 +89,9 @@ ext4 749568 0 - Live 0x00000000
 ## Watch it
 
 > **init:** Before you run it: your program and the `uname` command. Will they print the same release?
+>
+> - [x] yes, the same
+> - no, they differ
 
 ---
 

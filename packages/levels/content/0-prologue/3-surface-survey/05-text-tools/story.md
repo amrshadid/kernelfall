@@ -116,6 +116,10 @@ $ uniq -c sorted.txt
 ## Watch it
 
 > **init:** `uniq census.txt`, without sorting first: how many lines come out?
+>
+> - 6
+> - [x] 37
+> - 40
 
 ---
 

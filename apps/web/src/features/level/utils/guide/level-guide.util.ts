@@ -36,7 +36,7 @@ export interface GuideInput {
 export function beatsOf(blocks: readonly StoryBlock[]): readonly GuideBeat[] {
   const beats: GuidePart[][] = [[]]
   let predicts = 0
-  for (const block of blocks) {
+  for (const [at, block] of blocks.entries()) {
     const beat = beats.at(-1) ?? []
     const last = beat.at(-1)
     if (block.kind === 'pause') {
@@ -47,6 +47,7 @@ export function beatsOf(blocks: readonly StoryBlock[]): readonly GuideBeat[] {
         id: predicts++,
         line: { speaker: block.speaker, text: block.text },
         options: block.options,
+        held: blocks[at + 1]?.kind === 'pause',
         picked: null,
         revealed: false,
         onPick: null,
@@ -114,15 +115,18 @@ export function guideOf(input: GuideInput): LevelGuide {
   return {
     stepLabel: label,
     reviewNote: reviewing ? `Looking again at ${label}. Your progress is kept.` : null,
-    beats: beats.slice(0, reached).map((beat) =>
+    beats: beats.slice(0, reached).map((beat, at) =>
       beat.map((part) =>
         part.kind !== 'predict'
           ? part
           : {
               ...part,
               picked: pace.picks[part.id] ?? null,
-              revealed: answered(part.id),
-              onPick: answered(part.id) ? null : (option) => pace.pick(part.id, option, reached + 1),
+              // A held question shows what happens only once the player's run brought the next beat.
+              revealed: answered(part.id) && (reviewing !== null || !part.held || at < reached - 1),
+              onPick: answered(part.id)
+                ? null
+                : (option) => pace.pick(part.id, option, part.held && option !== null ? reached : reached + 1),
             }
       )
     ),

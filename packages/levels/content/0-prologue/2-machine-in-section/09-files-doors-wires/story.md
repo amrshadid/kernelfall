@@ -95,6 +95,10 @@ Then the Section drawing is complete: every part of the kernel gets its label, i
 ## Watch it
 
 > **init:** Before the `/sys` run: which filesystem will answer?
+>
+> - 9p
+> - procfs
+> - [x] sysfs
 
 ---
 

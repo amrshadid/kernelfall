@@ -116,6 +116,10 @@ Lamps to check: Userland, the Harbor, the Gate. Not yet.
 ## Watch it
 
 > **init:** With `notes.txt` at `-rw-------`, who can read it: you (uid 1000), the neighbour (uid 1001), me (uid 0)? You and the neighbour try first; then I'll tell you how my own try went.
+>
+> - only you
+> - [x] you and me, but not the neighbour
+> - all three of us
 
 ---
 

@@ -101,8 +101,9 @@ $ dmesg | grep -m 4 "calling  "
 ## Watch it
 
 > **init:** Before we go: did your edit change anything for the next boot?
-
----
+>
+> - yes, the next boot uses it
+> - [x] no, it was for this boot only
 
 GRUB's editor worked on a copy of the entry in memory. The entry itself is in `/boot/grub/grub.cfg` on `/dev/sda1`, and nobody wrote to it.
 

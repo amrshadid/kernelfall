@@ -18,8 +18,9 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   how many requests crossed the Gate, and the kernel parts that served them.
 - **init's questions wait for your answer.** A question in the Guide now offers its
   answers; pick one (or "Just show me") and your call is marked beside what really
-  happens. No score. Power On has the first one; level authors write it as a list under
-  the question in `story.md`.
+  happens. No score. When the question is about something you are about to run, your
+  call is kept and the answer is marked only after you run it. 14 of the 16 levels ask
+  one; level authors write it as a list under the question in `story.md`.
 - **A missed objective says what your last run did instead**, for example "Your program
   exited with status 3, not 0".
 - `make` on the Machine, the loopback interface up, and `/dev/fd`, so bash's `<(…)`

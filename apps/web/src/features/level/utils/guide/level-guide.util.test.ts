@@ -162,6 +162,33 @@ describe('guideOf', () => {
     expect(answered.beats[0]?.[0]).toMatchObject({ picked: 0, revealed: true, onPick: null })
   })
 
+  it('keeps a call made before a run, and marks what happens only once the run brought the answer', () => {
+    // A pause after the question: the story says "before you run it".
+    const held: GuideInput['blocks'] = [ASKED[0] as GuideInput['blocks'][number], { kind: 'pause' }, ...ASKED.slice(1)]
+    const pick = vi.fn()
+    const asking = guideOf(guideInput({ blocks: held, pace: paceAt(1, { pick }) }))
+    const question = asking.beats[0]?.[0]
+    if (question?.kind === 'predict') {
+      question.onPick?.(1)
+      question.onPick?.(null)
+    }
+    // A pick stays on the question; Just show me goes on.
+    expect(pick.mock.calls).toEqual([
+      [0, 1, 1],
+      [0, null, 2],
+    ])
+
+    const advance = vi.fn()
+    const kept = guideOf(guideInput({ blocks: held, pace: paceAt(1, { picks: { 0: 1 }, advance }) }))
+    expect(kept.beats).toHaveLength(1)
+    expect(kept.beats[0]?.[0]).toMatchObject({ picked: 1, revealed: false, onPick: null })
+    expect(kept.onContinue).toBe(advance)
+
+    const ran = guideOf(guideInput({ blocks: held, pace: paceAt(2, { picks: { 0: 1 } }) }))
+    expect(ran.beats).toHaveLength(2)
+    expect(ran.beats[0]?.[0]).toMatchObject({ picked: 1, revealed: true })
+  })
+
   it('shows a question as answered, with no call, on a step looked back at', () => {
     const guide = guideOf(guideInput({ blocks: ASKED, reviewing: 'build' }))
     expect(guide.beats).toHaveLength(2)

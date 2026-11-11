@@ -80,6 +80,9 @@ static const struct of_device_id of_gpio_leds_match[] = {
 ## Watch it
 
 > **init:** Before you boot it: the node said `gpio-led`, the list says `gpio-leds`. Close enough for the kernel?
+>
+> - Yes, close enough
+> - [x] No, the whole text must match
 
 ---
 

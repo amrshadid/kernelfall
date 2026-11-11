@@ -90,6 +90,9 @@ Each line is one region of memory: its first address and the first one past it, 
 ## Watch it
 
 > **init:** Before you run it: the global and the local. Which one lives on the stack?
+>
+> - The global
+> - [x] The local
 
 ---
 

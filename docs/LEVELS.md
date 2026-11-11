@@ -346,6 +346,10 @@ answers must be checked on the Machine like any other fact.
 > **init:** The kernel. The `cat` process can't touch a file on its own. …
 ```
 
+When the question is about something the player is about to run ("Before you run it: …"),
+put a `---` after the answers. Their call is then kept, and what happens is marked only
+once their run (or **Continue**) brings the next part.
+
 ### Concepts and budgets
 
 A level's `teaches` and `uses` name concepts of `concepts.yaml`, as its text really

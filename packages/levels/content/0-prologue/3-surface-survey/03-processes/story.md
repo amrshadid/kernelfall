@@ -99,6 +99,9 @@ $ ps -o pid,stat,time,comm
 ## Watch it
 
 > **init:** You send `SIGTERM` to `yes` while it's paused. Does it end right away?
+>
+> - yes, at once
+> - [x] no, not yet
 
 ---
 

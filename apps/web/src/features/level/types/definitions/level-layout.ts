@@ -23,8 +23,11 @@ export interface GuidePredict {
   readonly id: number
   readonly line: GuideLine
   readonly options: readonly { readonly text: string; readonly right: boolean }[]
+  /** A pause follows it in the story: the answer waits for the player's run, not only their pick. */
+  readonly held: boolean
   /** The option the player chose; null if they asked to be shown, or haven't answered. */
   readonly picked: number | null
+  /** What happens is marked; false while unanswered, or answered and still waiting for the run. */
   readonly revealed: boolean
   /** Answers it (null: just show me); null once answered. */
   readonly onPick: ((option: number | null) => void) | null

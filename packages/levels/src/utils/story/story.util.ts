@@ -92,7 +92,21 @@ export function parseStory(markdown: string): Story {
     paragraph.push(line)
   }
   flushParagraph()
+  for (const [section, parsed] of sections) {
+    sections.set(section, parsed.flatMap(plainList))
+  }
   return sections
+}
+
+/** A list with no `[x]` is an ordinary list, not a question: its line and its items read as before. */
+function plainList(block: StoryBlock): StoryBlock[] {
+  if (block.kind !== 'predict' || block.options.some((option) => option.right)) {
+    return [block]
+  }
+  return [
+    { kind: 'line', speaker: block.speaker, text: block.text },
+    { kind: 'line', speaker: null, text: block.options.map((option) => `- ${option.text}`).join(' ') },
+  ]
 }
 
 /** The section a story ref like `story.md#scene` points at. */

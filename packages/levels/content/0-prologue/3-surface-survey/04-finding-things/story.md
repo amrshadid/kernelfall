@@ -108,6 +108,10 @@ Someday.
 ## Watch it
 
 > **init:** `find / -name passwd > found.txt`: which lines still show on your screen?
+>
+> - the results
+> - [x] the complaints
+> - both
 
 ---
 

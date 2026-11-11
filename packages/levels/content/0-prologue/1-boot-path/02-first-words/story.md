@@ -75,7 +75,11 @@ If you'd rather use `printf`, that works too: it's a _library function_, ready-m
 
 ## Watch it
 
-> **init:** Before you run it: which lane of X-ray will `./hello` light up? User mode only, kernel mode only, or both?
+> **init:** Before you run it: which lane of X-ray will `./hello` light up?
+>
+> - user mode only
+> - kernel mode only
+> - [x] both
 
 ---
 

@@ -187,6 +187,9 @@ rmdir("../notes")                                             = -1 ENOTEMPTY (Di
 ## Watch it
 
 > **init:** Before you look: how big is `/proc/uptime` on the disk? You've seen `/proc` answer a `read` before.
+>
+> - [x] 0 bytes
+> - as many bytes as the text it prints
 
 ---
 

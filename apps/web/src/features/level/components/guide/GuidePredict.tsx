@@ -28,24 +28,26 @@ export function GuidePredict({ predict }: GuidePredictProps) {
       </fieldset>
     )
   }
+  const { revealed } = predict
   return (
     <ul className="level-guide__predict level-guide__predict--answered" aria-label="Answers">
       {predict.options.map((option, index) => (
         <li
           key={option.text}
           className={
-            option.right
+            option.right && revealed
               ? 'level-guide__predict-answer level-guide__predict-answer--right'
               : 'level-guide__predict-answer'
           }
         >
           <InlineText text={option.text} />
           {index === predict.picked && <span className="level-guide__predict-tag">your call</span>}
-          {option.right && (
+          {option.right && revealed && (
             <span className="level-guide__predict-tag level-guide__predict-tag--right">what happens</span>
           )}
         </li>
       ))}
+      {!revealed && <li className="level-guide__predict-hint">Kept. Now do it, and see what happens.</li>}
     </ul>
   )
 }

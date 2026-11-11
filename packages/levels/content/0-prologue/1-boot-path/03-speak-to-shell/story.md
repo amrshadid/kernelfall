@@ -103,7 +103,11 @@ $ wc -l /etc/motd
 
 ## Watch it
 
-> **init:** `hello` is in `/home/you`, where you're standing. If you type just `hello`, where will the shell look for it? Here, in `/home/you`; in the six `PATH` folders; or everywhere?
+> **init:** `hello` is in `/home/you`, where you're standing. If you type just `hello`, where will the shell look for it?
+>
+> - here, in `/home/you`
+> - [x] in the six `PATH` folders
+> - everywhere
 
 ---
 

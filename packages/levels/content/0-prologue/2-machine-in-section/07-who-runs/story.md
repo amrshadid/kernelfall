@@ -103,6 +103,10 @@ X-ray shows the one CPU's lane, with the three `yes` taking turns on it, slice a
 ## Watch it
 
 > **init:** Before you run it twice: same PID both times? Same parent?
+>
+> - The same PID and the same parent
+> - [x] A new PID, the same parent
+> - A new PID and a new parent
 
 ---
 

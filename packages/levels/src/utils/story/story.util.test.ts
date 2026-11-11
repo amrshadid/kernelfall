@@ -57,6 +57,14 @@ describe('parseStory', () => {
     ])
   })
 
+  it('leaves a list with no [x] as a list', () => {
+    const errand = parseStory('## Build it\n\n> **init:** Now the errand:\n>\n> - find the file\n> - read it\n')
+    expect(errand.get('build-it')).toEqual([
+      { kind: 'line', speaker: 'init', text: 'Now the errand:' },
+      { kind: 'line', speaker: null, text: '- find the file - read it' },
+    ])
+  })
+
   it('ignores text before the first section', () => {
     expect([...parseStory(STORY).keys()]).toEqual(['scene', 'real-world'])
   })

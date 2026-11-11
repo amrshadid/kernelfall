@@ -203,6 +203,19 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
     expect(groups[1]?.open).toBe(true)
   })
 
+  it("after gcc … && ./hello, starts on the program's write, not the compiler's", async () => {
+    const P2 = 'prologue-boot-path-02-first-words'
+    const run = 'gcc -Wall -Wextra hello.c -o hello && ./hello'
+    const { groups, calls } = await groupsOf(P2, run, levelFocus(P2))
+    const lead = calls.find((c) => c.id === leadCallId(groups))
+    expect(lead).toMatchObject({ program: 'hello', name: 'write' })
+    // A build that fails prints only the compiler's error, so that is where it starts.
+    const broken = await groupsOf(P2, run, levelFocus(P2), 'broken')
+    const error = broken.calls.find((c) => c.id === leadCallId(broken.groups))
+    expect(error?.program).not.toBe('hello')
+    expect(error?.console).not.toBeNull()
+  })
+
   it("with no lesson, starts on the output that reached the terminal: cat's sendfile64", async () => {
     for (const [level, run, commandLine] of [
       [S1, 'no-dots', 'cat /etc/motd'],

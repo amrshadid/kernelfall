@@ -1,7 +1,7 @@
 import type { ConceptId, ConceptViolation } from '#types/definitions/concepts'
 import type { LevelDefinition, LevelId } from '#types/definitions/level'
 
-// In play order: used before taught, taught twice, or a Prologue concept nothing later uses.
+// In play order: used before named or taught, taught twice, or a Prologue concept nothing later uses.
 export function conceptChain(levels: readonly LevelDefinition[]): ConceptViolation[] {
   const violations: ConceptViolation[] = []
   const teacherOf = new Map<ConceptId, LevelId>()
@@ -10,15 +10,16 @@ export function conceptChain(levels: readonly LevelDefinition[]): ConceptViolati
     for (const concept of level.teaches ?? []) {
       teacherOf.set(concept, teacherOf.get(concept) ?? level.id)
     }
-    for (const concept of [...(level.teaches ?? []), ...(level.uses ?? [])]) {
+    for (const concept of [...(level.teaches ?? []), ...(level.names ?? []), ...(level.uses ?? [])]) {
       lastSeen.set(concept, at)
     }
   })
 
+  const met = new Set<ConceptId>()
   const taught = new Set<ConceptId>()
   levels.forEach((level, at) => {
     for (const concept of level.uses ?? []) {
-      if (!taught.has(concept)) {
+      if (!met.has(concept)) {
         violations.push({
           kind: 'used-before-taught',
           concept,
@@ -33,6 +34,12 @@ export function conceptChain(levels: readonly LevelDefinition[]): ConceptViolati
         continue
       }
       taught.add(concept)
+    }
+    for (const concept of [...(level.teaches ?? []), ...(level.names ?? [])]) {
+      if (met.has(concept)) {
+        continue
+      }
+      met.add(concept)
       if (level.act === 'prologue' && lastSeen.get(concept) === at) {
         violations.push({ kind: 'never-used-again', concept, levelId: level.id, other: null })
       }

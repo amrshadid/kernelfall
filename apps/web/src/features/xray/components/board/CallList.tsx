@@ -10,6 +10,12 @@ export interface CallListProps {
   onToggle: (key: string) => void
 }
 
+export interface CallListShellProps extends CallListProps {
+  /** Every call is listed; otherwise only the one on show, so the drawing keeps the dock's room. */
+  all: boolean
+  onToggleAll: () => void
+}
+
 const number = (n: number) => n.toLocaleString('en-US')
 const calls = (n: number) => `${number(n)} ${n === 1 ? 'call' : 'calls'}`
 
@@ -126,6 +132,39 @@ function Group({ group, live, ...rest }: { group: CallGroupView; live: boolean }
         </ol>
       )}
     </li>
+  )
+}
+
+function callOf(view: CallListView, id: number | null): XrayCall | undefined {
+  return view.groups
+    .flatMap((group) => group.rows)
+    .flatMap((row) => (row.kind === 'call' ? [row.call] : row.calls))
+    .find((call) => call.id === id)
+}
+
+/** The call list folded to the call on show, with a way to list them all again. */
+export function CallListShell({ all, onToggleAll, ...list }: CallListShellProps) {
+  const call = callOf(list.view, list.selectedId)
+  const total = list.view.groups.reduce((sum, group) => sum + group.count, 0)
+  return (
+    <div className="xr-calls-shell">
+      <div className="xr-calls-shell__bar">
+        {!all && call && (
+          <p className="xr-calls-shell__picked">
+            <span className="xr-calls-shell__who">
+              {call.program} · PID {call.pid}
+            </span>
+            <code>
+              {call.text} = {returnText(call.outcome)}
+            </code>
+          </p>
+        )}
+        <button type="button" className="xr-calls-shell__toggle" aria-expanded={all} onClick={onToggleAll}>
+          {all ? 'Only this call' : `All ${calls(total)}`}
+        </button>
+      </div>
+      {all && <CallList {...list} />}
+    </div>
   )
 }
 

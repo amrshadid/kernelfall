@@ -126,6 +126,8 @@ export interface LevelDefinition {
   readonly prerequisites: readonly SkillId[]
   /** Concepts from `concepts.yaml` the level introduces. */
   readonly teaches?: readonly ConceptId[]
+  /** Named on the big picture only: a later level may use them, and teaches them properly. */
+  readonly names?: readonly ConceptId[]
   /** Concepts from `concepts.yaml` the level relies on, taught by an earlier level. */
   readonly uses?: readonly ConceptId[]
   readonly objectives: readonly Objective[]

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { XrayChoice, XrayControlState, XrayLens } from '@features/xray/types'
+import type { XrayChoice, XrayControlState, XrayDepth, XrayLens } from '@features/xray/types'
 import type { RunEvent } from '@kernelfall/machine/hooks'
 import type { BootRecord, TraceRun } from '@kernelfall/machine/types'
 import { renderHook } from '@testing-library/react'
@@ -13,10 +13,10 @@ const LENSES: readonly XrayChoice<XrayLens>[] = [
   { id: 'processes', label: 'Processes' },
 ]
 
-function controls(lens: XrayLens): XrayControlState {
+function controls(lens: XrayLens, depth: XrayDepth = 'simple'): XrayControlState {
   return {
     lens,
-    depth: 'simple',
+    depth,
     predict: false,
     runId: null,
     pick: null,
@@ -30,13 +30,13 @@ function controls(lens: XrayLens): XrayControlState {
   }
 }
 
-function board(lens: XrayLens, run: TraceRun | undefined, events: readonly RunEvent[]) {
+function board(lens: XrayLens, run: TraceRun | undefined, events: readonly RunEvent[], depth: XrayDepth = 'simple') {
   const input: XrayBoardInput = {
     runs: run ? [run] : [],
     run,
     events,
     lenses: LENSES,
-    state: controls(lens),
+    state: controls(lens, depth),
     animate: false,
     scope: { levelId: `board-${lens}`, step: 'see-it' },
     cpus: 2,
@@ -51,8 +51,15 @@ describe('useXrayBoard', () => {
     expect(empty.emptyText).toContain('Type a command in the terminal')
   })
 
-  it("draws a command's first write, with its calls to pick from and the strace log", () => {
+  it('draws a call at Simple as a crossing of the Gate in five beats', () => {
     const shown = board('syscalls', runOf(ECHO, 'echo hello'), ECHO)
+    expect(shown.figure?.kind).toBe('crossing')
+    expect(shown.caption).toBe('Fig. 1. write(1, "hello\\n", 6), across the Gate and back.')
+    expect(shown.playback.stages.map((s) => s.tick)).toEqual(['ask', 'the Gate', 'kernel', 'terminal', 'answer'])
+  })
+
+  it("draws a command's first write at Deep, with its calls to pick from and the strace log", () => {
+    const shown = board('syscalls', runOf(ECHO, 'echo hello'), ECHO, 'deep')
     expect(shown.figure?.kind).toBe('syscalls')
     expect(shown.caption).toBe('Fig. 1. write(1, "hello\\n", 6), end to end.')
     expect(shown.controls.picks.map((pick) => pick.label)).toEqual(['write', 'exit_group'])
@@ -124,7 +131,7 @@ describe('useXrayBoard', () => {
       ['the shell (bash, PID 2)', false],
       ['the program (echo, PID 3)', true],
     ])
-    expect(shown.figure?.kind === 'syscalls' && shown.figure.storyboard.call.name).toBe('execve')
+    expect(shown.figure?.kind === 'crossing' && shown.figure.storyboard.call.name).toBe('execve')
   })
 
   it('has no call list outside the Syscalls view', () => {

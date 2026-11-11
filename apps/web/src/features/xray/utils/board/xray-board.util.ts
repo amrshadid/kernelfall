@@ -94,6 +94,9 @@ export function xrayCaption(figure: XrayFigure | null): string {
   if (figure?.kind === 'syscalls') {
     return `Fig. 1. ${figure.storyboard.call.text}, end to end.`
   }
+  if (figure?.kind === 'crossing') {
+    return `Fig. 1. ${figure.storyboard.call.text}, across the Gate and back.`
+  }
   if (figure?.kind === 'processes') {
     const { parent, child, exec } = figure.storyboard.episode
     return child === null
@@ -124,6 +127,10 @@ export function memoryKeysOf(
 ): XrayMemoryKeys {
   const level = levelId ?? FREE_PLAY
   const kind =
-    figure?.kind === 'syscalls' ? figure.storyboard.call.name : figure && isWholeRun(lens) ? figure.kind : PROCESS_KIND
+    figure?.kind === 'syscalls' || figure?.kind === 'crossing'
+      ? figure.storyboard.call.name
+      : figure && isWholeRun(lens)
+        ? figure.kind
+        : PROCESS_KIND
   return { memoryKey: `${level}:${lens}:${kind}`, autoplayKey: `${level}:${step ?? ANY_STEP}` }
 }

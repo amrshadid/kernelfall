@@ -15,7 +15,10 @@ export interface CallListInput {
 
 export interface CallListState {
   readonly view: CallListView
+  /** Every call is listed, not only the one on show; a crossing in the dock starts with one. */
+  readonly all: boolean
   toggle(key: string): void
+  toggleAll(): void
 }
 
 export function useCallList({ groups, depth, live, selectedId, runId }: CallListInput): CallListState {
@@ -43,5 +46,8 @@ export function useCallList({ groups, depth, live, selectedId, runId }: CallList
     [view, runId]
   )
 
-  return { view, toggle }
+  const [all, setAll] = useState(false)
+  const toggleAll = useCallback(() => setAll((shown) => !shown), [])
+
+  return { view, all, toggle, toggleAll }
 }

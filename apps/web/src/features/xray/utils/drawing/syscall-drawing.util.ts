@@ -49,7 +49,7 @@ export interface SyscallDrawingText {
 }
 
 /** What the program has back at the end, as the program box prints it. */
-export function syscallReturnText(storyboard: SyscallStoryboard): string {
+export function syscallReturnText(storyboard: Pick<SyscallStoryboard, 'call'>): string {
   const { call } = storyboard
   const { outcome } = call
   if (outcome.kind !== 'returned') {

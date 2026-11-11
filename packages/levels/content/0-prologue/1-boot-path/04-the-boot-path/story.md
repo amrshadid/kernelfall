@@ -55,7 +55,7 @@ initrd        /boot/initramfs-virt
 > **init:** Third, the _kernel_. It unpacks itself, then its first function, `start_kernel()`, sets up the CPU, memory, interrupts, the scheduler and the console. Its first lines say who it is, and what memory the BIOS reported.
 
 ```
-[    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+[    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
 [    0.000000] BIOS-provided physical RAM map:
 [    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
 ```

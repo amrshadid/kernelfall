@@ -20,7 +20,7 @@ Beside the terminal hangs init's drawing of the Machine in section: three floors
 
 ```
 $ cat /proc/version
-Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
 ```
 
 > **init:** That is Linux, version 6.18, naming itself. Linux is the Machine's _kernel_: the one program with full control of the hardware. Every other program has to ask it for what it needs, and `cat` just did. No disk holds that line: the kernel wrote it at the moment `cat` read it.

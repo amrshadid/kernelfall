@@ -20,7 +20,7 @@ objectives:
     text: "`./myuname` exits with status 0."
     check: { kind: exit-status, status: 0, program: myuname }
   - id: prints-machine
-    text: "After asking the kernel, `./myuname` prints the kernel name, its release and the CPU type on one line: `Linux`, `6.18.59-0-virt` and `i686`."
+    text: "After asking the kernel, `./myuname` prints the kernel name, its release and the CPU type on one line: `Linux`, `6.18.63-0-virt` and `i686`."
   - id: compares-uname
     text: "The `uname` command, with `-m`, prints the CPU type too."
     check: { kind: wrote, fd: 1, program: uname, text: { contains: i686 } }
@@ -119,7 +119,7 @@ codex:
       candidates (-rc1, -rc2, …). Stable maintainers backport fixes as 6.18.1, 6.18.2
       and so on. One release a year, usually the last, becomes LTS; kernel.org lists
       each one's projected end of life. Distributions add their own suffix: Alpine's
-      6.18.59-0-virt is its build 0 of 6.18.59, virt flavour.
+      6.18.63-0-virt is its build 0 of 6.18.63, virt flavour.
     sources: [Documentation/process/2.Process.rst]
     docs: https://docs.kernel.org/process/2.Process.html
     tryIt: uname -r

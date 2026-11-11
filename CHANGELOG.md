@@ -13,6 +13,9 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   shows the rest once you've run it (or pressed Continue), so a result is on your
   terminal before it is explained, and a Predict's answer waits for your run. Level
   authors mark a pause with `---` in `story.md`.
+- **init's drawing of the Machine is on screen in Power On.** It hangs beside the
+  terminal, dark, and each command you run draws itself on it: the command in Userland,
+  how many requests crossed the Gate, and the kernel parts that served them.
 - **A missed objective says what your last run did instead**, for example "Your program
   exited with status 3, not 0".
 - `make` on the Machine, the loopback interface up, and `/dev/fd`, so bash's `<(…)`
@@ -31,6 +34,7 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 ### Changed
 
 - The Machine runs kernel 6.18.63. `tcc` is gone: it could never link a program there.
+- The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p
   root, the IDE disk, virtio-net, and bash as init's shell.

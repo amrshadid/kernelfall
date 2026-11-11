@@ -71,7 +71,7 @@ The drawing shows one message's trip down: a program's **socket**, a file descri
 **The kernel's own log.** `dmesg` shows the boot again, and the lines drivers wrote while they took their devices:
 
 ```
-[    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+[    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
 ...
 [    1.588336] scsi host0: ata_piix
 ...

@@ -1,5 +1,5 @@
 import type { CheckInput, CheckVerdict, LevelChecker } from '#types/definitions/checker'
-import type { LevelDefinition } from '#types/definitions/level'
+import type { LevelDefinition, Objective } from '#types/definitions/level'
 import type { TaintEntry, TaintEvent } from '#types/definitions/taint'
 
 /**
@@ -19,7 +19,16 @@ export function evaluateCheck(level: LevelDefinition, checker: LevelChecker, inp
   priceTaint(level, report.taint)
   const met = new Set(report.objectivesMet)
   const missing = level.objectives.filter((objective) => !met.has(objective.id))
-  return { passed: missing.length === 0, missing, taint: report.taint }
+  return { passed: missing.length === 0, missing, taint: report.taint, observed: observedOf(missing, report.observed) }
+}
+
+/** `observed`, kept only for the objectives still missing; undefined when none has one. */
+export function observedOf(
+  missing: readonly Objective[],
+  observed: Readonly<Record<string, string>> = {}
+): Readonly<Record<string, string>> | undefined {
+  const kept = missing.flatMap(({ id }) => (observed[id] === undefined ? [] : [[id, observed[id]]]))
+  return kept.length === 0 ? undefined : Object.fromEntries(kept)
 }
 
 /**

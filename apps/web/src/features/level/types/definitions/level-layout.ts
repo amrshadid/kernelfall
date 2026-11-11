@@ -26,7 +26,8 @@ export interface GuideObjective {
 export interface GuideCheckReport {
   /** e.g. "Run 3 · 2 of 4 met". */
   readonly heading: string
-  readonly missing: readonly string[]
+  /** Each with what the last run showed instead, when the checker could say. */
+  readonly missing: readonly { readonly text: string; readonly observed: string | null }[]
   /** Taint the last run would add, by rule, e.g. "zombies-left: 1 of 10 children…". */
   readonly taint: readonly string[]
   /** init's word when every objective is met but the run added Taint; null otherwise. */

@@ -34,7 +34,7 @@ export function checkReportOf(
   }
   return {
     heading: `run ${run.attempts} · ${objectiveCount - verdict.missing.length} of ${objectiveCount} met`,
-    missing: verdict.missing.map((objective) => objective.text),
+    missing: verdict.missing.map(({ id, text }) => ({ text, observed: verdict.observed?.[id] ?? null })),
     taint: verdict.taint.map((event) => `${event.ruleId}: ${event.detail}`),
     held: check.heldTaint.length > 0 ? HELD_PASS_LINE : null,
   }

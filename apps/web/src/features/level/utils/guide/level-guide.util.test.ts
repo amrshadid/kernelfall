@@ -52,10 +52,18 @@ describe('checkReportOf', () => {
   })
 
   it("lists what's still missing and the Taint the run would add, with init's word on a held pass", () => {
-    const verdict = { passed: false, missing: [{ id: 'reaps', text: 'Reaps its children.' }], taint: [TAINT] }
+    const missing = [
+      { id: 'reaps', text: 'Reaps its children.' },
+      { id: 'exits', text: 'Exits with 0.' },
+    ]
+    const observed = { exits: 'Your program exited with status 1, not 0.' }
+    const verdict = { passed: false, missing, taint: [TAINT], observed }
     expect(checkReportOf(building({ attempts: 2 }), { ...NO_CHECK, verdict, heldTaint: [TAINT] }, 3)).toEqual({
-      heading: 'run 2 · 2 of 3 met',
-      missing: ['Reaps its children.'],
+      heading: 'run 2 · 1 of 3 met',
+      missing: [
+        { text: 'Reaps its children.', observed: null },
+        { text: 'Exits with 0.', observed: observed.exits },
+      ],
       taint: ['zombies-left: 1 child never reaped'],
       held: HELD_PASS_LINE,
     })

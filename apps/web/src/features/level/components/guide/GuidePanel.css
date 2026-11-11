@@ -75,6 +75,18 @@
   color: var(--ink-2);
 }
 
+/* After `.level-guide__check p`: what the Machine saw, under the objective it missed. */
+.level-guide__check-observed {
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+}
+
+.level-guide__check-observed span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--red);
+}
+
 .level-guide__check-taint {
   margin-top: 0.5rem;
 }

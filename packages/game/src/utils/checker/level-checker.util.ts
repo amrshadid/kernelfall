@@ -3,6 +3,7 @@ import type { ProgramScope } from '#types/definitions/checks'
 import type { LevelDefinition } from '#types/definitions/level'
 import type { TaintEvent } from '#types/definitions/taint'
 import { meetsObjectiveCheck } from '#utils/checker/objective-checks.util'
+import { observedFor } from '#utils/checker/observed.util'
 import { findTaint } from '#utils/checker/taint-checks.util'
 import { judgedProcesses } from '#utils/queries/index'
 
@@ -21,13 +22,25 @@ function scopesOf(level: LevelDefinition): readonly ProgramScope[] {
 
 /** What the level's declared checks report for one command. */
 function declaredReport(level: LevelDefinition, input: CheckInput): CheckReport {
-  const objectivesMet = level.objectives.flatMap((objective) =>
-    objective.check && meetsObjectiveCheck(objective.check, input) ? [objective.id] : []
-  )
+  const objectivesMet: string[] = []
+  const observed: Record<string, string> = {}
+  for (const { id, check } of level.objectives) {
+    if (!check) {
+      continue
+    }
+    if (meetsObjectiveCheck(check, input)) {
+      objectivesMet.push(id)
+      continue
+    }
+    const seen = observedFor(check, input)
+    if (seen !== null) {
+      observed[id] = seen
+    }
+  }
   const taint = level.taint.flatMap((rule): TaintEvent[] =>
     rule.check ? findTaint(rule.check, input).map((finding) => ({ ruleId: rule.id, ...finding })) : []
   )
-  return { objectivesMet, taint }
+  return { objectivesMet, taint, observed }
 }
 
 /**
@@ -49,9 +62,11 @@ export function levelChecker(level: LevelDefinition, custom?: LevelChecker): Lev
     check: (input) => {
       const engine = declaredReport(level, input)
       const own = custom?.check(input) ?? { objectivesMet: [], taint: [] }
+      const observed = { ...engine.observed, ...own.observed }
       return {
         objectivesMet: [...new Set([...engine.objectivesMet, ...own.objectivesMet])],
         taint: [...engine.taint, ...own.taint],
+        ...(Object.keys(observed).length > 0 && { observed }),
       }
     },
   }

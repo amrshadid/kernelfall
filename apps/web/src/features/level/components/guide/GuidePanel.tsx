@@ -84,9 +84,14 @@ export function GuidePanel({ guide }: GuidePanelProps) {
             </SectionHead>
             {guide.checkReport.missing.length > 0 ? (
               <ul>
-                {guide.checkReport.missing.map((text) => (
+                {guide.checkReport.missing.map(({ text, observed }) => (
                   <li key={text}>
                     <InlineText text={text} />
+                    {observed !== null && (
+                      <p className="level-guide__check-observed">
+                        <span>Last run</span> <InlineText text={observed} />
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

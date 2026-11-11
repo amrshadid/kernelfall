@@ -24,6 +24,8 @@ Every byte of memory has a number, its **memory address**. `0x` means the number
 
 > **init:** `poke` is a small program that tries to read the first byte of kernel space directly, at `0xc0000000`. Open `poke.c` in the editor and press Run: it builds `poke` and runs it. Then type `echo $?` to see how it ended.
 
+---
+
 ```
 $ ./poke
 Segmentation fault         ./poke
@@ -87,6 +89,8 @@ ext4 749568 0 - Live 0x00000000
 ## Watch it
 
 > **init:** Before you run it: your program and the `uname` command. Will they print the same release?
+
+---
 
 ```
 $ ./myuname

@@ -30,6 +30,8 @@ execve("/bin/ls", ["ls", "-l", "/etc"], ...)                   = 0
 >
 > **init:** Now `man ls`. Look what the shell did before it started anything.
 
+---
+
 ```
 statx("/usr/local/sbin/man", ...) = -1 ENOENT (No such file or directory)
 statx("/usr/local/bin/man", ...)  = -1 ENOENT (No such file or directory)
@@ -45,6 +47,8 @@ fork()                            = 491
 > **init:** Then the shell made a copy of itself, with `fork`. The copy got a new process number, a _PID_; yours will differ. The copy, `[491]`, became `man` with `execve`. The shell itself waited.
 >
 > **init:** Where did that list of folders come from? `printenv PATH`:
+
+---
 
 ```
 $ printenv PATH
@@ -63,12 +67,16 @@ $ printenv PATH
 >
 > **init:** Options. In your home: `ls`, then `ls -l`, then `ls -a`. See the two extra names, `.` and `..`? `.` is this folder, `..` the one above it. Names starting with `.` stay hidden without `-a`. Now `ls -la`: two options joined in one word. Most programs take that.
 
+---
+
 ```
 $ ls -a
 .        ..       hello    hello.c
 ```
 
 > **init:** Both together. `wc /etc/motd` counts lines, words and bytes. `wc -l /etc/motd` counts lines only, `wc -w /etc/motd` words only.
+
+---
 
 ```
 $ wc /etc/motd
@@ -78,7 +86,9 @@ $ wc -l /etc/motd
 ```
 
 > **init:** The manual. `man ls`, and find what `-a` does: "do not ignore entries starting with .". Arrows scroll, `q` quits. Then `man wc`, and find the option that counts bytes.
->
+
+---
+
 > **init:** One thing the manual won't tell you. Its pages for `ls` and `wc` were written for GNU's versions, which most Linux systems use. The Machine's `ls` and `wc` are BusyBox, smaller programs that take the common options but not every long one. `ls --help` prints BusyBox's own list: `-a  Include names starting with .`. Same option, different words.
 >
 > **init:** Then `man 2 write`. The manual has numbered sections: 1 for commands, 2 for syscalls, 3 for C library functions. Section 2 holds the `write()` you called yourself.
@@ -94,6 +104,8 @@ $ wc -l /etc/motd
 ## Watch it
 
 > **init:** `hello` is in `/home/you`, where you're standing. If you type just `hello`, where will the shell look for it? Here, in `/home/you`; in the six `PATH` folders; or everywhere?
+
+---
 
 ```
 $ hello

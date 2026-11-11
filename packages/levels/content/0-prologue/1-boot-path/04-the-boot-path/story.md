@@ -35,6 +35,8 @@
 
 > **init:** On a laptop you'd see more: the kernel from before the last update, kept in case the new one fails, and a `Windows Boot Manager` entry if Windows shares the disk. Press `e`, and you see what an entry really is: a few lines of commands.
 
+---
+
 ```
 setparams 'Alpine, with Linux virt'
 
@@ -74,6 +76,8 @@ initrd        /boot/initramfs-virt
 >
 > **init:** Boot with Ctrl-X. Without `quiet` the kernel's lines scroll past on your terminal. Then `cat /proc/cmdline` shows the command line this boot really used, and `dmesg` prints the kernel's log: everything it said since it started, even what never reached the screen. It's thousands of lines, so let `grep` pick the ones you want.
 
+---
+
 ```
 $ cat /proc/cmdline
 BOOT_IMAGE=/boot/vmlinuz-virt console=ttyS0 rw tsc=reliable mitigations=off random.trust_cpu=on log_buf_len=128K initcall_debug greeting=hello
@@ -97,6 +101,8 @@ $ dmesg | grep -m 4 "calling  "
 ## Watch it
 
 > **init:** Before we go: did your edit change anything for the next boot?
+
+---
 
 GRUB's editor worked on a copy of the entry in memory. The entry itself is in `/boot/grub/grub.cfg` on `/dev/sda1`, and nobody wrote to it.
 

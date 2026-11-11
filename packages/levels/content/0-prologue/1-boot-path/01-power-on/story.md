@@ -16,6 +16,8 @@ Beside the terminal hangs init's drawing of the Machine in section: three floors
 
 > **init:** The Machine answers questions about itself. Type `cat /proc/version` in the terminal and press Enter.
 
+---
+
 ```
 $ cat /proc/version
 Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
@@ -31,6 +33,8 @@ The drawing labels its parts, top to bottom. Userland, where programs run. A red
 
 > **init:** Now walk down to the kernel from the top. Linux keeps every file in one tree of folders, the _file tree_. Its top is called the root, written `/`. Run `ls /` to list it.
 
+---
+
 ```
 $ ls /
 bin    dev    home   media  opt    root   sbin   sys    usr
@@ -38,6 +42,8 @@ boot   etc    lib    mnt    proc   run    srv    tmp    var
 ```
 
 > **init:** Every file on the Machine sits somewhere below `/`. `proc` is one of these folders; `etc` is another, and it holds settings as plain text you can read. A path names the way down: `/etc/motd` means start at `/`, open the folder `etc`, take the file `motd`. Show it with `cat /etc/motd`.
+
+---
 
 ```
 $ cat /etc/motd
@@ -51,6 +57,8 @@ Find the way down, and bring the kernel back.
 ## Watch it
 
 > **init:** One question before we go on. When `cat` showed my note, who read the file: `cat` itself, or the kernel?
+
+---
 
 On the drawing, two lines run from `cat` in Userland down through the Gate into the kernel.
 

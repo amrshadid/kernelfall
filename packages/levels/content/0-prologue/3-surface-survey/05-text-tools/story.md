@@ -10,6 +10,8 @@
 
 > **init:** One example per tool. Watch me, then run each one yourself.
 
+---
+
 ```
 $ head -n 5 census.txt
 userland lit
@@ -46,6 +48,8 @@ compilers-quarter dark
 
 > **init:** Your turn, one tool at a time.
 
+---
+
 ```
 $ wc -l census.txt
 40 census.txt
@@ -56,6 +60,8 @@ $ wc -c census.txt
 ```
 
 > **init:** Lines, words, bytes. Now `grep`'s options: `-n` numbers the lines, `-v` prints the lines _without_ the word, `-i` ignores upper and lower case.
+
+---
 
 ```
 $ grep -n lit census.txt
@@ -74,6 +80,8 @@ $ grep -n lit census.txt
 >
 > **init:** Now find your own line in the Machine's list of users: `grep you /etc/passwd`. Name, `x`, user ID, group ID, a description, your home folder and your shell, separated by colons.
 
+---
+
 ```
 $ grep you /etc/passwd
 you:x:1000:1000:you:/home/you:/bin/bash
@@ -82,6 +90,8 @@ you:x:1000:1000:you:/home/you:/bin/bash
 > **init:** Then `sort census.txt`, and `sort -r census.txt` for the reverse.
 >
 > **init:** Now the errand: how many houses per district? `uniq` drops a line only if it repeats the line just above it. So first put the same lines next to each other, and keep them in a file with `>`, as you did in the attic.
+
+---
 
 ```
 $ sort census.txt > sorted.txt
@@ -106,6 +116,8 @@ $ uniq -c sorted.txt
 ## Watch it
 
 > **init:** `uniq census.txt`, without sorting first: how many lines come out?
+
+---
 
 ```
 $ uniq census.txt

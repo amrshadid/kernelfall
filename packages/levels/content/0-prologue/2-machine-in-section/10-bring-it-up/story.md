@@ -12,6 +12,8 @@
 
 GRUB's menu waits on the terminal, the same one entry as in The Boot Path. Press Enter, and the boot gets this far:
 
+---
+
 ```
 Loading Linux virt ...
 Loading initial ramdisk ...
@@ -31,6 +33,8 @@ sh: can't access tty; job control turned off
 > **init:** Four steps, in order. My chips only say what each command is for now. You choose what to look at.
 
 **1. Read the stop.** In the emergency shell, ask what the kernel was told, which disks it found and how much memory it has.
+
+---
 
 ```
 ~ # cat /proc/cmdline
@@ -56,6 +60,8 @@ Swap:             0           0           0
 
 **2. Back to GRUB.** Type `reboot -f`.
 
+---
+
 ```
 ~ # reboot -f
 [   29.538620] reboot: Restarting system
@@ -65,6 +71,8 @@ Swap:             0           0           0
 
 GRUB's menu comes back. It has a command line of its own: press `c`, then type `ls`, and it lists the disks it can see in its own names. `(hd0)` is the first hard disk, and `(hd0,msdos1)` its first partition, in an MBR partition table, the old "DOS" kind. `(fd0)` and `(fd1)` are floppy drives the BIOS reports. Esc goes back to the menu.
 
+---
+
 ```
 grub> ls
 (hd0) (hd0,msdos1) (fd0) (fd1)
@@ -72,9 +80,13 @@ grub> ls
 
 **3. Fix the entry, all of it.** Press `e`, go to the `linux` line and take out all three words. Then boot with Ctrl-X.
 
+---
+
 > **init:** All three, in one edit. Once the Machine is up you're `you` again, and only root may restart it: `reboot` answers `reboot: : Operation not permitted`. Fix only `root=` and the Machine comes up with no network driver and 44 MiB, and the boot screen shows the kernel's refusal: `modprobe: can't load module virtio_net (kernel/drivers/net/virtio_net.ko.gz): Operation not permitted`.
 
 Then check every floor:
+
+---
 
 ```
 $ cat /proc/cmdline
@@ -111,6 +123,8 @@ up
 ## Watch it
 
 > **init:** Before you look: guess which floors of the Section that one small read passes through.
+
+---
 
 X-ray replays the run. bash reads your line and `fork`s a copy of itself; the copy calls `execve` and becomes `cat`; the scheduler gives it the CPU; `open` walks the path through the VFS down to sysfs; `sendfile64` asks the kernel to copy the file straight to the terminal, and sysfs asks for the card's state, which the network code keeps from what `virtio_net` reported; the terminal's driver shows the three bytes; `cat` calls `exit_group`, and bash's `wait4` returns, and the prompt comes back.
 

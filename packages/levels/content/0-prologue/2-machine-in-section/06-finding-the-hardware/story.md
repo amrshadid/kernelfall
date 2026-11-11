@@ -14,6 +14,8 @@
 
 > **init:** Ask the Machine's main bus what it found: run `lspci -k`.
 
+---
+
 ```
 $ lspci -k
 00:00.0 Host bridge: Intel Corporation 440FX - 82441FX PMC [Natoma] (rev 02)
@@ -38,6 +40,8 @@ $ lspci -k
 The hardware floor of the drawing fills in with the same six parts, three of them joined by a line to a driver.
 
 > **init:** The kernel writes down what it found in _/sys_, a tree of small files, one fact each, so programs like `lspci` can read it. Read the disk controller's numbers there.
+
+---
 
 ```
 $ cat /sys/bus/pci/devices/0000:00:1e.0/vendor /sys/bus/pci/devices/0000:00:1e.0/device
@@ -76,6 +80,8 @@ static const struct of_device_id of_gpio_leds_match[] = {
 ## Watch it
 
 > **init:** Before you boot it: the node said `gpio-led`, the list says `gpio-leds`. Close enough for the kernel?
+
+---
 
 ```
 $ board lighthouse.dtb

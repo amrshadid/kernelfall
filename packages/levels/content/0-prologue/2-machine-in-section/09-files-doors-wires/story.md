@@ -10,6 +10,8 @@
 
 **One tree, many filesystems.** A **filesystem** is the way files and folders are laid out and found. Several kinds are **mounted**, attached, into the one tree, each at its own folder. `cat /proc/mounts` lists them, one per line: what was mounted, where, and which kind of filesystem it is.
 
+---
+
 ```
 dev /dev devtmpfs rw,relatime,size=110896k,nr_inodes=27724,mode=755 0 0
 host9p / 9p rw,relatime,cache=0x5,access=client,msize=512000,trans=virtio 0 0
@@ -43,6 +45,8 @@ $ cat /sys/class/net/lo/mtu
 > **init:** `cat` opens each one with `open`, then asks with `sendfile64`: copy from this file to my output, without passing through my memory. Different code answers underneath each time. You'll watch it with a program of your own.
 
 **Devices.** `ls -l /dev/null /dev/tty /dev/sda`:
+
+---
 
 ```
 crw-rw-rw-    1 root     root        1,   3 Oct 31 16:16 /dev/null
@@ -91,6 +95,8 @@ Then the Section drawing is complete: every part of the kernel gets its label, i
 ## Watch it
 
 > **init:** Before the `/sys` run: which filesystem will answer?
+
+---
 
 ```
 $ ./look

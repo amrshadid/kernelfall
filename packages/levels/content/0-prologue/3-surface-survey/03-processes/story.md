@@ -14,6 +14,8 @@ Where that picture stops being true: a signal isn't a message the process reads 
 
 > **init:** First, find them. `ps` lists processes; `-o` picks the columns: the PID, the parent's PID, the user, the state, the CPU time used, and the command's name.
 
+---
+
 ```
 $ ps -o pid,ppid,user,stat,time,comm
 PID   PPID  USER     STAT TIME  COMMAND
@@ -74,6 +76,8 @@ State:	T (stopped)
 >
 > **init:** And who's busy? Run `ps -o pid,stat,time,comm` twice, a few seconds apart. Whose `TIME` grew?
 
+---
+
 ```
 $ ps -o pid,stat,time,comm
 ...
@@ -95,6 +99,8 @@ $ ps -o pid,stat,time,comm
 ## Watch it
 
 > **init:** You send `SIGTERM` to `yes` while it's paused. Does it end right away?
+
+---
 
 ```
 $ kill -STOP 478

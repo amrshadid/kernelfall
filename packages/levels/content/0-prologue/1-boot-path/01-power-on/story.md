@@ -56,9 +56,10 @@ Find the way down, and bring the kernel back.
 
 ## Watch it
 
-> **init:** One question before we go on. When `cat` showed my note, who read the file: `cat` itself, or the kernel?
-
----
+> **init:** One question before we go on. When `cat` showed my note, who read the file?
+>
+> - `cat` itself
+> - [x] the kernel
 
 On the drawing, two lines run from `cat` in Userland down through the Gate into the kernel.
 

@@ -16,18 +16,37 @@ export interface GuideLine {
   readonly text: string
 }
 
-/** A run of lines, or a code sample, in the order the story has them. */
+/** A question the player answers before the story does. No score. */
+export interface GuidePredict {
+  readonly kind: 'predict'
+  /** Its place among the step's questions. */
+  readonly id: number
+  readonly line: GuideLine
+  readonly options: readonly { readonly text: string; readonly right: boolean }[]
+  /** The option the player chose; null if they asked to be shown, or haven't answered. */
+  readonly picked: number | null
+  readonly revealed: boolean
+  /** Answers it (null: just show me); null once answered. */
+  readonly onPick: ((option: number | null) => void) | null
+}
+
+/** A run of lines, a code sample or a question, in the order the story has them. */
 export type GuidePart =
   | { readonly kind: 'lines'; readonly lines: readonly GuideLine[] }
   | { readonly kind: 'code'; readonly text: string }
+  | GuidePredict
 
 /** The transcript up to the next thing the player does. */
 export type GuideBeat = readonly GuidePart[]
 
-/** How many beats the player has reached on the step shown. */
+/** How many beats the player has reached on the step shown, and what they answered. */
 export interface GuidePace {
   readonly shown: number
+  /** By question id; null where the player asked to be shown. */
+  readonly picks: Readonly<Record<number, number | null>>
   advance(): void
+  /** Records an answer and shows the story up to `shown` beats. */
+  pick(predict: number, option: number | null, shown: number): void
 }
 
 export interface GuideObjective {

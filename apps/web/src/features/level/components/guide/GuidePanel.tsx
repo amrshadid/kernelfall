@@ -1,7 +1,9 @@
 import type { LevelGuide } from '@features/level/types'
 import { speakerOf } from '@features/level/utils/speakers'
 import { Button, Checklist, Chip, Dialogue, InlineText, SectionHead } from '@shared/components/ui'
+import { Fragment } from 'react'
 import './GuidePanel.css'
+import { GuidePredict } from './GuidePredict'
 import { speakerWithPortraits } from './Portraits'
 
 export interface GuidePanelProps {
@@ -40,17 +42,19 @@ export function GuidePanel({ guide }: GuidePanelProps) {
                     {part.text}
                   </pre>
                 ) : (
-                  <Dialogue
-                    // biome-ignore lint/suspicious/noArrayIndexKey: parts of a beat never reorder
-                    key={at}
-                    label={`${guide.stepLabel}: transcript`}
-                    // Only the step's first lines introduce the speaker.
-                    continued={index > 0 || beat.findIndex((other) => other.kind === 'lines') !== at}
-                    lines={part.lines.map((line) => ({
-                      speaker: speakerWithPortraits(speakerOf(line.speaker)),
-                      text: <InlineText text={line.text} />,
-                    }))}
-                  />
+                  // biome-ignore lint/suspicious/noArrayIndexKey: parts of a beat never reorder
+                  <Fragment key={at}>
+                    <Dialogue
+                      label={`${guide.stepLabel}: transcript`}
+                      // Only the step's first lines introduce the speaker.
+                      continued={index > 0 || beat.findIndex((other) => other.kind !== 'code') !== at}
+                      lines={(part.kind === 'predict' ? [part.line] : part.lines).map((line) => ({
+                        speaker: speakerWithPortraits(speakerOf(line.speaker)),
+                        text: <InlineText text={line.text} />,
+                      }))}
+                    />
+                    {part.kind === 'predict' && <GuidePredict predict={part} />}
+                  </Fragment>
                 )
               )}
             </div>

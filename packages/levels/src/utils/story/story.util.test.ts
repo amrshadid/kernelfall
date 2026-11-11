@@ -42,6 +42,21 @@ describe('parseStory', () => {
     ])
   })
 
+  it('reads a list after a line as a question with its answers, [x] the one that happens', () => {
+    const asked = parseStory('## Watch it\n\n> **init:** Who read the file?\n>\n> - `cat` itself\n> - [x] the kernel\n')
+    expect(asked.get('watch-it')).toEqual([
+      {
+        kind: 'predict',
+        speaker: 'init',
+        text: 'Who read the file?',
+        options: [
+          { text: '`cat` itself', right: false },
+          { text: 'the kernel', right: true },
+        ],
+      },
+    ])
+  })
+
   it('ignores text before the first section', () => {
     expect([...parseStory(STORY).keys()]).toEqual(['scene', 'real-world'])
   })

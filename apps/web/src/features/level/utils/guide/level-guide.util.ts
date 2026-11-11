@@ -32,13 +32,25 @@ export interface GuideInput {
   readonly pace: GuidePace
 }
 
-/** The step's story cut at its pauses; a step with none is one beat. */
+/** The step's story cut at its pauses and after each question; a step with neither is one beat. */
 export function beatsOf(blocks: readonly StoryBlock[]): readonly GuideBeat[] {
   const beats: GuidePart[][] = [[]]
+  let predicts = 0
   for (const block of blocks) {
     const beat = beats.at(-1) ?? []
     const last = beat.at(-1)
     if (block.kind === 'pause') {
+      beats.push([])
+    } else if (block.kind === 'predict') {
+      beat.push({
+        kind: 'predict',
+        id: predicts++,
+        line: { speaker: block.speaker, text: block.text },
+        options: block.options,
+        picked: null,
+        revealed: false,
+        onPick: null,
+      })
       beats.push([])
     } else if (block.kind === 'code') {
       beat.push({ kind: 'code', text: block.text })
@@ -91,13 +103,30 @@ export function guideOf(input: GuideInput): LevelGuide {
   const label = STEPS.find((step) => step.id === shown)?.label ?? ''
   const building = (run.phase === 'build' || run.phase === 'oops') && !reviewing
   const beats = beatsOf(blocks)
+  const { pace } = input
   // A step looked back at was read to its end.
-  const reached = reviewing ? beats.length : Math.min(Math.max(input.pace.shown, 1), beats.length)
+  const answered = (id: number) => reviewing !== null || Object.hasOwn(pace.picks, id)
+  const open = beats.findIndex((beat) => beat.some((part) => part.kind === 'predict' && !answered(part.id)))
+  // Nothing past an open question shows, whatever the player runs meanwhile.
+  const limit = open === -1 ? beats.length : open + 1
+  const reached = reviewing ? beats.length : Math.min(Math.max(pace.shown, 1), limit)
+  const asking = open !== -1 && reached === limit
   return {
     stepLabel: label,
     reviewNote: reviewing ? `Looking again at ${label}. Your progress is kept.` : null,
-    beats: beats.slice(0, reached),
-    onContinue: reached < beats.length ? input.pace.advance : null,
+    beats: beats.slice(0, reached).map((beat) =>
+      beat.map((part) =>
+        part.kind !== 'predict'
+          ? part
+          : {
+              ...part,
+              picked: pace.picks[part.id] ?? null,
+              revealed: answered(part.id),
+              onPick: answered(part.id) ? null : (option) => pace.pick(part.id, option, reached + 1),
+            }
+      )
+    ),
+    onContinue: reached < beats.length && !asking ? pace.advance : null,
     showObjectives: true,
     objectives: input.objectives,
     checkReport: reviewing ? null : checkReportOf(run, check, level.objectives.length),

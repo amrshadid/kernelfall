@@ -322,7 +322,7 @@ card never deepens a side level's card.
 A line holding only `---` is a pause. The Guide shows a step's text up to the next pause,
 and what follows once the player finishes a command (or presses **Continue**). Put one
 after every line that asks the player to do something, so the result is seen in the
-terminal before it is explained, and after a Predict question, so its answer waits.
+terminal before it is explained.
 
 ```md
 > **init:** Delete the `;` after `return 0` and press Run.
@@ -330,6 +330,20 @@ terminal before it is explained, and after a Predict question, so its answer wai
 ---
 
 > **init:** Read it part by part. `hello.c:19:17` is where: …
+```
+
+A question the player should answer first is a line followed by a list of answers, with
+`[x]` on the one that really happens. The Guide stops there until the player picks one
+(or asks to be shown), then marks their call beside what happens. Nothing is scored. The
+answers must be checked on the Machine like any other fact.
+
+```md
+> **init:** When `cat` showed my note, who read the file?
+>
+> - `cat` itself
+> - [x] the kernel
+
+> **init:** The kernel. The `cat` process can't touch a file on its own. …
 ```
 
 ### Concepts and budgets

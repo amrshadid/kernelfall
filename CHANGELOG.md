@@ -16,6 +16,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - **init's drawing of the Machine is on screen in Power On.** It hangs beside the
   terminal, dark, and each command you run draws itself on it: the command in Userland,
   how many requests crossed the Gate, and the kernel parts that served them.
+- **init's questions wait for your answer.** A question in the Guide now offers its
+  answers; pick one (or "Just show me") and your call is marked beside what really
+  happens. No score. Power On has the first one; level authors write it as a list under
+  the question in `story.md`.
 - **A missed objective says what your last run did instead**, for example "Your program
   exited with status 3, not 0".
 - `make` on the Machine, the loopback interface up, and `/dev/fd`, so bash's `<(…)`

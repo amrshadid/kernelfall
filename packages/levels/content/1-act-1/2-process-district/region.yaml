@@ -4,12 +4,7 @@ caption: "processes: fork, exec, wait, file descriptors, pipes, signals"
 source: kernel/fork.c, fs/exec.c, fs/pipe.c, kernel/signal.c
 guide: init
 slots:
-  - {
-      number: "1.4",
-      title: Run Anything,
-      level: 04-run-anything,
-      summary: "Teach your shell to run any program: start a child with fork, load the program into it with exec, and wait for it to finish. You learn how Linux starts every process, and how errno tells you what went wrong.",
-    }
+  - { number: "1.4", title: Run Anything, level: 04-run-anything }
   - {
       number: "1.5",
       title: An Address and a Name,

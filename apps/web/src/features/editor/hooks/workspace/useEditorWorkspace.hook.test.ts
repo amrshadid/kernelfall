@@ -9,6 +9,9 @@ const machine = vi.hoisted(() => ({
   run: vi.fn((_commandLine: string) => {}),
   status: { phase: 'ready', detail: null as string | null },
   reveal: null as ((location: SourceLocation) => void) | null,
+  latest: undefined as { id: number; commandLine: string; running?: boolean } | undefined,
+  events: [] as { type: string; filename?: string }[],
+  finish: null as ((result: { commandLine: string; status: number; events: [] }) => void) | null,
 }))
 
 vi.mock('@kernelfall/machine/hooks', () => ({
@@ -17,6 +20,11 @@ vi.mock('@kernelfall/machine/hooks', () => ({
   useMachineStatus: () => machine.status,
   useRevealRequests: (listener: (location: SourceLocation) => void) => {
     machine.reveal = listener
+  },
+  useSyscallTrace: () => ({ latest: machine.latest }),
+  useRunEvents: (id: number | null) => (id === null ? [] : machine.events),
+  useCommandResults: (listener: (result: { commandLine: string; status: number; events: [] }) => void) => {
+    machine.finish = listener
   },
 }))
 
@@ -30,6 +38,8 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
   machine.status = { phase: 'ready', detail: null }
+  machine.latest = undefined
+  machine.events = []
 })
 
 afterEach(() => {
@@ -37,6 +47,28 @@ afterEach(() => {
 })
 
 describe('useEditorWorkspace', () => {
+  it('shows Run building, then running the program, until its command finishes', async () => {
+    const line = 'gcc a.c -o a && ./a'
+    const { result, rerender } = workspace({ runCommand: line })
+    expect(result.current.run).toEqual({ kind: 'idle' })
+    await act(async () => result.current.onRun())
+    expect(result.current.run).toMatchObject({ kind: 'busy', label: 'Building…' })
+    expect(machine.run).toHaveBeenCalledTimes(1)
+    act(() => result.current.onRun())
+    expect(machine.run).toHaveBeenCalledTimes(1)
+
+    machine.latest = { id: 7, commandLine: line, running: true }
+    machine.events = [{ type: 'sched_process_exec', filename: '/usr/bin/gcc' }]
+    rerender()
+    expect(result.current.run).toMatchObject({ label: 'Building…' })
+    machine.events = [...machine.events, { type: 'sched_process_exec', filename: '/home/you/a' }]
+    rerender()
+    expect(result.current.run).toMatchObject({ kind: 'busy', label: 'Running…' })
+
+    act(() => machine.finish?.({ commandLine: line, status: 0, events: [] }))
+    expect(result.current.run).toEqual({ kind: 'idle' })
+  })
+
   it('opens the starter and writes it into the VM once Linux is ready', () => {
     const { result } = workspace()
     expect(result.current.files.map((file) => file.path)).toEqual(['a.c', 'Makefile'])

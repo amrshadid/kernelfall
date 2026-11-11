@@ -1,0 +1,17 @@
+/* A drawing's hatch sliding through the red: Run is busy with the player's code, not switched off. */
+.editor-run--working {
+  background-color: var(--red, #c8201a);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    color-mix(in srgb, var(--on-red, #fafaf7) 28%, transparent) 6px 8px
+  );
+  background-size: 22.6px 22.6px;
+  animation: editor-run-hatch 0.9s linear infinite;
+}
+
+@keyframes editor-run-hatch {
+  to {
+    background-position: 22.6px 0;
+  }
+}

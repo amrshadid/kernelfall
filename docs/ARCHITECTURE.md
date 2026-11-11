@@ -140,14 +140,14 @@ program runs on the real kernel, traced like any other command.
 
 Everything stays in the player's browser.
 
-| Data                         | Where                                                         |
-| ---------------------------- | ------------------------------------------------------------- |
-| Settings, recording consent  | localStorage `kernelfall:v1:settings`                         |
-| Progress, Taint, hints, code | localStorage `kernelfall:v1:profile:<slot>`                   |
-| The booted Machine           | IndexedDB `kernelfall-vm`, store `boots`, per image version   |
-| The image's files            | Cache Storage `kernelfall-vm-files-v1`                        |
-| The app, for offline play    | Cache Storage `kernelfall-app-<build>`, by the service worker |
-| The image's last manifest    | Cache Storage `kernelfall-offline-v1`, used only offline      |
+| Data                                       | Where                                                         |
+| ------------------------------------------ | ------------------------------------------------------------- |
+| Settings, recording consent                | localStorage `kernelfall:v1:settings`                         |
+| Progress, Taint, hints, code, recall marks | localStorage `kernelfall:v1:profile:<slot>`                   |
+| The booted Machine                         | IndexedDB `kernelfall-vm`, store `boots`, per image version   |
+| The image's files                          | Cache Storage `kernelfall-vm-files-v1`                        |
+| The app, for offline play                  | Cache Storage `kernelfall-app-<build>`, by the service worker |
+| The image's last manifest                  | Cache Storage `kernelfall-offline-v1`, used only offline      |
 
 - The service worker (`apps/web/src/sw.ts`, production builds only) precaches the built
   app and serves it when the network is gone; the manifest stays network-first. A new

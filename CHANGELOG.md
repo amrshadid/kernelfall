@@ -21,6 +21,11 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   happens. No score. When the question is about something you are about to run, your
   call is kept and the answer is marked only after you run it. 14 of the 16 levels ask
   one; level authors write it as a list under the question in `story.md`.
+- **Recall cards when a level ends.** The level-complete screen names what the level
+  taught and deals three Codex cards from earlier levels, face down: say what each one
+  is, turn it, and mark it "I knew it" or "Not yet". No score; a card you missed comes
+  back first. The last level of a region deals five cards from the whole region. Your
+  marks are saved with your progress.
 - **A missed objective says what your last run did instead**, for example "Your program
   exited with status 3, not 0".
 - `make` on the Machine, the loopback interface up, and `/dev/fd`, so bash's `<(…)`

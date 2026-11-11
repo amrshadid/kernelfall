@@ -142,7 +142,27 @@ export interface LevelGuide {
   readonly note: string | null
 }
 
+export interface RecallCard {
+  readonly id: string
+  readonly term: string
+  readonly answer: string
+  /** The level that filed it, "P.1 Power On". */
+  readonly seenIn: string
+}
+
+/** Cards from earlier levels to recall before going on; the player marks each one themselves. */
+export interface LevelRecall {
+  readonly title: string
+  readonly note: string
+  readonly cards: readonly RecallCard[]
+  onMark(cardId: string, knew: boolean): void
+}
+
 export interface LevelCard {
+  /** The terms this level taught, as the player met them. */
+  readonly learned: readonly string[]
+  /** Null when there is nothing earlier to recall. */
+  readonly recall: LevelRecall | null
   readonly cards: readonly CodexCardData[]
   readonly simplified: readonly string[]
   readonly seenIn: string

@@ -1,4 +1,5 @@
 import type { LevelDefinition, LevelId } from '#types/definitions/level'
+import type { RecallMark } from '#types/definitions/recall'
 import type { CompletionVia, LevelPhase, LevelRunState, RunCheckpoint } from '#types/definitions/runner'
 import type { TaintLedger } from '#types/definitions/taint'
 
@@ -62,6 +63,8 @@ export interface Progress {
   readonly taint: TaintLedger
   readonly achievements: readonly UnlockedAchievement[]
   readonly lastActive: LastActive | null
+  /** How the player did on the recall cards; left out until the first one is answered. */
+  readonly recall?: readonly RecallMark[]
 }
 
 /** Status of a level on the map and the progress screen. */

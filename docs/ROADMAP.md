@@ -43,7 +43,8 @@ one question each, a third of the words, and ideas that link from level to level
   `pnpm content:report`. P.1 and P.6 are the pilot.
 - **One vocabulary:** the Section drawing's parts and the game's words (the Gate, floors,
   doors) in LEVELS.md, with a lint for stray metaphors.
-- **Region recaps:** each region ends with the drawing it lit and quick recall cards.
+- **Region recaps:** a region's last level already deals recall cards from the whole
+  region; it should also show the drawing the region lit.
 - **Then Act I**, in play order, starting with 1.0.
 
 ### Later acts: gaps the public kernel roadmaps point to

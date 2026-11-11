@@ -9,7 +9,14 @@ import { levelLayoutOf } from '@features/level/utils/layout'
 import { panelsFor, UNAVAILABLE_REASONS } from '@features/level/utils/view'
 import { shortcutLabelOf } from '@features/shortcuts/utils/keys'
 import { useTourScreen } from '@features/tour/hooks/tour'
-import { useActiveLevel, useLevelActions, useLevelCheck, useProgress, useRunAsCues } from '@kernelfall/game/hooks'
+import {
+  useActiveLevel,
+  useLevelActions,
+  useLevelCheck,
+  useProgress,
+  useRecall,
+  useRunAsCues,
+} from '@kernelfall/game/hooks'
 import type { LevelId } from '@kernelfall/game/types'
 import { placementOfferAt } from '@kernelfall/game/utils'
 import { labelOf } from '@kernelfall/levels/utils'
@@ -40,6 +47,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   const continueWithReference = useReferenceRun(levelId)
   const active = useActiveLevel()
   const check = useLevelCheck()
+  const recall = useRecall(levelId)
   const { saveState, lastSavedAt } = useSaveStatus()
   const content = useContent()
   const chrome = useScreenChrome()
@@ -139,6 +147,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
         },
         restart: () => void reboot(),
         pace,
+        recall,
         placement: offer
           ? {
               offer: offer.check.offer,

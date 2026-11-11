@@ -37,6 +37,122 @@
   font-weight: 700;
 }
 
+/* Overrides the green result line above it: these are terms, not a verdict. */
+.level-card__head .level-card__learned {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.level-card__learned > span:first-child {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.level-card__learned > :not(:first-child) {
+  padding: 0 0.375rem;
+  border: var(--rule-thin);
+}
+
+.level-recall {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem 1rem;
+  border: 2px solid var(--red);
+}
+
+.level-recall__head h3 {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.level-recall__head p {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.level-recall__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.level-recall__card {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem 0.75rem;
+  border: var(--rule);
+  background: var(--sheet);
+}
+
+.level-recall__term {
+  display: grid;
+  gap: 0.125rem;
+  font-weight: 800;
+}
+
+.level-recall__seen {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.level-recall__answer {
+  font-size: 0.9375rem;
+}
+
+.level-recall__turn,
+.level-recall__marks button {
+  min-height: 2.5rem;
+  padding: 0.375rem 0.625rem;
+  border: var(--rule);
+  background: var(--sheet);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.level-recall__turn {
+  border-style: dashed;
+  text-align: start;
+}
+
+.level-recall__turn:hover,
+.level-recall__turn:focus-visible,
+.level-recall__marks button:hover,
+.level-recall__marks button:focus-visible {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.level-recall__marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.level-recall__mark {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.level-recall__mark--knew {
+  color: var(--green);
+}
+
 .level-card__actions {
   display: flex;
   flex-wrap: wrap;

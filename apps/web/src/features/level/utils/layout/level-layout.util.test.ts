@@ -66,6 +66,7 @@ function input(levelId: string, run: Partial<LevelRunState> = {}, fields: Partia
     runChip: vi.fn(),
     placement: null,
     pace: { shown: 1, picks: {}, advance: vi.fn(), pick: vi.fn() },
+    recall: { deck: { region: null, cards: [] }, mark: vi.fn() },
     replay: vi.fn(),
     ...fields,
   } as unknown as LevelLayoutInput

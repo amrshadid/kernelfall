@@ -109,6 +109,8 @@ export type {
   ProcessExit,
   SyscallRecord,
 } from '#types/definitions/queries'
+export type { RecallDeck, RecallMark, RecallRegion } from '#types/definitions/recall'
+export { RECALL_LEVEL_CARDS, RECALL_REGION_CARDS } from '#types/definitions/recall'
 export type {
   CompletionVia,
   LevelOutcome,

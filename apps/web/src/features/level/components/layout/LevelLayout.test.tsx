@@ -106,6 +106,8 @@ describe('LevelLayout', () => {
       seenIn: 'P.3',
       headline: 'Now you can speak to a shell',
       result: 'Level complete',
+      learned: [],
+      recall: null,
       next: null,
       onMap: noop,
       onReplay: noop,

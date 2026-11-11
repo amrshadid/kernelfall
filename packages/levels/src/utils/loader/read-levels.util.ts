@@ -1,4 +1,4 @@
-import type { ActFile, LevelLocation } from '@kernelfall/game/types'
+import type { ActFile, ConceptCatalogue, LevelLocation } from '@kernelfall/game/types'
 import { validateLevel } from '@kernelfall/game/utils'
 import type { ContentFiles, LevelFolder } from '#types/index'
 import { ACT_FILE, LEVEL_FILE, STARTER_DIR, STORY_FILE } from '#types/index'
@@ -37,20 +37,25 @@ export function locationOf(
   return { act: act.id, region: orderOf(regionFolder)?.name ?? leafOf(regionFolder) }
 }
 
-/** Every level folder that reads cleanly, by folder; the rest add their problems to `errors`. */
+/**
+ * Every level folder that reads cleanly, by folder; the rest add their problems to `errors`.
+ * Given the concept catalogue, a level's `teaches` and `uses` must name its concepts.
+ */
 export function readLevels(
   files: ContentFiles,
   acts: ReadonlyMap<string, ActFile>,
-  errors: string[]
+  errors: string[],
+  concepts?: ConceptCatalogue | null
 ): ReadonlyMap<string, LevelFolder> {
   const levels = new Map<string, LevelFolder>()
+  const conceptIds = concepts ? new Set(concepts.concepts.map((concept) => concept.id)) : undefined
   for (const [path, text] of Object.entries(files.levels)) {
     const folder = folderOf(path)
     const location = locationOf(folder, files, acts, errors)
     if (!location) {
       continue
     }
-    const level = readYaml(text, path, (input) => validateLevel(input, location), errors)
+    const level = readYaml(text, path, (input) => validateLevel(input, location, conceptIds), errors)
     const storyPath = `${folder}/${STORY_FILE}`
     const storyText = files.stories[storyPath]
     if (storyText === undefined) {

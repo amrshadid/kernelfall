@@ -7,6 +7,8 @@ minutes: 20
 tracks: [userland, kernel]
 skills: [sys-user-kernel-mode]
 prerequisites: [sys-computer-basics]
+teaches: [syscall, exec, fd, user-kernel-mode, compiler, library-function, builtin]
+uses: [kernel, process, shell, hex, c-basics]
 objectives:
   - id: fixed-an-error
     text: "A build failed with an error, and a later build of `hello.c` succeeded."

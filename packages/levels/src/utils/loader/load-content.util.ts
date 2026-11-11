@@ -2,12 +2,13 @@ import type { ActFile, GameContent, LevelChecker, LevelId, MapLayerText, Validat
 import {
   createGameContent,
   validateAct,
+  validateConcepts,
   validateFieldGuide,
   validateMapLayer,
   validateSkills,
 } from '@kernelfall/game/utils'
 import type { ContentFiles, LevelFolder, LevelPlace, LoadedContent, Story } from '#types/index'
-import { ACT_FILE, BEDROCK_FILE, FIELD_GUIDE_FILE, SKILLS_FILE } from '#types/index'
+import { ACT_FILE, BEDROCK_FILE, CONCEPTS_FILE, FIELD_GUIDE_FILE, SKILLS_FILE } from '#types/index'
 import { folderOf } from '#utils/loader/content-paths.util'
 import { childFolders, readLevels } from '#utils/loader/read-levels.util'
 import { checkLayers, readOutline } from '#utils/loader/read-outline.util'
@@ -78,12 +79,13 @@ export function loadContent(files: ContentFiles): Validated<LoadedContent> {
   const skills = readYaml(files.skills, SKILLS_FILE, validateSkills, errors)
   const bedrock = readYaml(files.bedrock, BEDROCK_FILE, validateMapLayer, errors)
   const fieldGuide = readYaml(files.fieldGuide, FIELD_GUIDE_FILE, validateFieldGuide, errors)
+  const concepts = readYaml(files.concepts, CONCEPTS_FILE, validateConcepts, errors)
   const acts = readActs(files, errors)
-  const levels = readLevels(files, acts, errors)
+  const levels = readLevels(files, acts, errors, concepts)
   const outline = readOutline(files, acts, levels, errors)
   const layers = bedrock ? [...outline.layers, bedrock] : outline.layers
   checkLayers(outline.acts, layers, errors)
-  if (!skills || !fieldGuide || errors.length > 0) {
+  if (!skills || !fieldGuide || !concepts || errors.length > 0) {
     return { ok: false, errors }
   }
   const game = createGameContent({
@@ -92,6 +94,7 @@ export function loadContent(files: ContentFiles): Validated<LoadedContent> {
     skills,
     checkers: checkersOf(files, outline.folders),
     fieldGuide,
+    concepts,
   })
   if (!game.ok) {
     return { ok: false, errors: game.errors }

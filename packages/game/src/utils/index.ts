@@ -12,6 +12,7 @@ export {
   priceTaint,
 } from '#utils/checker/index'
 export { codexChapters, collectCodex } from '#utils/codex/index'
+export { conceptChain } from '#utils/concepts/index'
 export { createGameContent } from '#utils/content/index'
 export { fieldGuideView } from '#utils/field-guide/index'
 export {
@@ -89,6 +90,7 @@ export { summarizeProgress } from '#utils/summary/index'
 export { levelTaint, replaceLevelTaint, selectEnding, totalTaint } from '#utils/taint/index'
 export {
   validateAct,
+  validateConcepts,
   validateFieldGuide,
   validateLevel,
   validateMapLayer,

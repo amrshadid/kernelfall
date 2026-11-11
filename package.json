@@ -14,6 +14,7 @@
     "vm:syscalls": "node packages/machine/scripts/vm-image/syscall-table.ts",
     "vm:record": "pnpm --filter @kernelfall/levels vm:record",
     "vm:facts": "pnpm --filter @kernelfall/levels vm:facts",
+    "content:report": "pnpm --filter @kernelfall/levels --silent content:report",
     "vm:mirror": "node packages/machine/scripts/vm-image/build.ts --mirror-out node_modules/.cache/kernelfall-vm-mirror",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --workspace-concurrency=1 --if-present test",
@@ -21,7 +22,7 @@
     "check": "biome check . && pnpm check:c",
     "check:c": "git ls-files '*.c' '*.h' | xargs clang-format --dry-run --Werror",
     "format": "biome check --write . && git ls-files '*.c' '*.h' | xargs clang-format -i",
-    "verify": "pnpm check && pnpm type-check && pnpm test && pnpm build"
+    "verify": "pnpm check && pnpm type-check && pnpm test && pnpm content:report && pnpm build"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",

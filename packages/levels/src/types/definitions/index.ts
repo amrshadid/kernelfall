@@ -12,6 +12,7 @@ export type {
 export {
   ACT_FILE,
   BEDROCK_FILE,
+  CONCEPTS_FILE,
   FIELD_GUIDE_FILE,
   LEVEL_FILE,
   PLACEMENT_FILE,
@@ -20,4 +21,5 @@ export {
   STARTER_DIR,
   STORY_FILE,
 } from '#types/definitions/content'
+export type { BannedUse, CardWords, LevelLint, StepWords } from '#types/definitions/lint'
 export * from '#types/definitions/xray'

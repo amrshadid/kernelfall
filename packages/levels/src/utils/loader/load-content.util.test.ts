@@ -220,3 +220,24 @@ describe('loadContent: the Field Guide', () => {
     expect(errors).toContain('field guide: opens at "P.99", which is no slot of the outline')
   })
 })
+
+describe('loadContent: the concept catalogue', () => {
+  it('reads concepts.yaml, and every built level says what it teaches and uses', () => {
+    const content = loaded()
+    expect(content.game.concepts?.concepts.some((concept) => concept.id === 'syscall')).toBe(true)
+    expect(content.game.levels.filter((level) => !level.teaches || !level.uses).map((level) => level.id)).toEqual([])
+  })
+
+  it('reports a level that names a concept the catalogue lacks, with its file and field', () => {
+    const files = edited('levels', `${FIRST_WORDS}/level.yaml`, (text) =>
+      text.replace('teaches: [syscall,', 'teaches: [syscalls,')
+    )
+    expect(errorsOf(files)).toContain(
+      `${FIRST_WORDS}/level.yaml: teaches[0]: "syscalls" is not a concept of concepts.yaml`
+    )
+  })
+
+  it('reports a missing catalogue', () => {
+    expect(errorsOf({ ...CONTENT_FILES, concepts: '' })).toContain('concepts.yaml: expected an object, got null')
+  })
+})

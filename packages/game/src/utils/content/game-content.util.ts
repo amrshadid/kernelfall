@@ -1,5 +1,6 @@
 import type { Validated } from '@kernelfall/core/types'
 import type { LevelChecker, LevelCheckers } from '#types/definitions/checker'
+import type { ConceptCatalogue } from '#types/definitions/concepts'
 import type { GameContent, GameContentParts } from '#types/definitions/content'
 import type { FieldGuide } from '#types/definitions/field-guide'
 import type { LevelDefinition, LevelId } from '#types/definitions/level'
@@ -77,6 +78,16 @@ function checkFieldGuide(guide: FieldGuide, acts: readonly ActOutline[], errors:
   }
 }
 
+/** Every Codex card the catalogue names is a card of some level. */
+function checkConceptCards(catalogue: ConceptCatalogue, levels: readonly LevelDefinition[], errors: string[]): void {
+  const cards = new Set(levels.flatMap((level) => level.codex.map((card) => card.id)))
+  for (const concept of catalogue.concepts) {
+    if (concept.codex !== undefined && !cards.has(concept.codex)) {
+      errors.push(`concepts: ${concept.id} names the Codex card "${concept.codex}", which no level has`)
+    }
+  }
+}
+
 /**
  * The built levels in the order the outline lists them. Every level sits in
  * exactly one slot, in the act and region it names.
@@ -147,8 +158,9 @@ function buildCheckers(
 /**
  * Bundles the outline, its levels, the skill tree and the levels' checkers.
  * Reports duplicate levels, levels and slots that don't match, bad skill
- * references, checkers that are missing or belong to no level, and placement
- * tasks that name a level or objective the region doesn't have.
+ * references, checkers that are missing or belong to no level, placement
+ * tasks that name a level or objective the region doesn't have, and concepts
+ * that name a Codex card no level has.
  */
 export function createGameContent({
   acts,
@@ -156,6 +168,7 @@ export function createGameContent({
   skills,
   checkers = {},
   fieldGuide,
+  concepts,
 }: GameContentParts): Validated<GameContent> {
   const errors: string[] = []
   const byId = indexLevels(levels, errors)
@@ -163,6 +176,9 @@ export function createGameContent({
   checkPlacements(acts, byId, errors)
   if (fieldGuide) {
     checkFieldGuide(fieldGuide, acts, errors)
+  }
+  if (concepts) {
+    checkConceptCards(concepts, levels, errors)
   }
   const ordered = playOrder(acts, byId, errors)
   errors.push(...validateSkillTree(skills, ordered))
@@ -177,6 +193,7 @@ export function createGameContent({
       levels: ordered,
       skills,
       fieldGuide: fieldGuide ?? null,
+      concepts: concepts ?? null,
       level: (id) => byId.get(id),
       checker: (id) => checkerOf.get(id),
     },

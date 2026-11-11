@@ -7,6 +7,8 @@ minutes: 25
 tracks: [kernel]
 skills: [drv-hardware-discovery]
 prerequisites: [sys-kernel-role]
+teaches: [bus, driver, sysfs, mmio, interrupt, device-tree]
+uses: [device, kernel, module, proc-fs, device-file, scheduler]
 objectives:
   - id: reads-disk-driver
     text: "Read the disk controller's `driver` link in `/sys/bus/pci/devices/0000:00:1e.0`: it names the controller's driver."

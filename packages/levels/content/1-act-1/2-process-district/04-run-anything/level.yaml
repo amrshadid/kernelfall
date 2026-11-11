@@ -9,6 +9,30 @@ skills: [proc-lifecycle, sys-errno]
 # The spec needs c-build-warnings (1.3) and sys-shell-basics (P.3). Until those
 # levels ship nothing grants them, so P.2's skill gates 1.4 instead.
 prerequisites: [sys-user-kernel-mode]
+teaches: [wait, copy-on-write, virtual-memory]
+uses:
+  [
+    process,
+    pid,
+    parent,
+    fork,
+    exec,
+    zombie,
+    exit-status,
+    signal,
+    errno,
+    path-search,
+    argv,
+    builtin,
+    working-directory,
+    syscall,
+    page,
+    pipe,
+    background-job,
+    c-basics,
+    compiler,
+    library-function,
+  ]
 objectives:
   - id: runs-ls
     text: "`ls /` prints the listing before the next prompt."

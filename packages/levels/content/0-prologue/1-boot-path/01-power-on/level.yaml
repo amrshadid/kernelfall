@@ -10,6 +10,26 @@ minutes: 20
 tracks: [userland]
 skills: [sys-computer-basics]
 prerequisites: []
+teaches:
+  [
+    cpu,
+    ram,
+    storage,
+    device,
+    encoding,
+    os,
+    kernel,
+    process,
+    pid,
+    file-tree,
+    device-file,
+    proc-fs,
+    terminal,
+    shell,
+    command,
+    builtin,
+  ]
+uses: []
 objectives:
   - id: echo-hello
     text: "`echo hello` prints `hello`: the shell answers by itself."

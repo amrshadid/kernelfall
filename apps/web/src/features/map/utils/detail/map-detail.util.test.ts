@@ -50,7 +50,7 @@ describe('mapDetailOf', () => {
       place: 'Act I · Process District · 1.4',
       title: 'Run Anything',
       play: null,
-      time: TYPICAL_LEVEL_TIME,
+      time: 'About 30 min',
       bestTaint: 'Not finished yet',
       note: PLAN_NOTES.locked,
     })

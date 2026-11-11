@@ -4,7 +4,7 @@
 
 > **init:** Welcome to the Process District. My home. Look at it. Empty doorways. Nobody running.
 >
-> **init:** Your shell can do four tricks. A real shell can run _anything_. Here's how every process in this city was born.
+> **init:** On the Surface you watched bash start programs all day. Here you build a shell of your own, `ksh-lite`. It already reads a line, cuts it into words and knows one builtin, `exit`. It can't run a program yet. A real shell can run _anything_. Here's how every process in this city was born.
 >
 > **init:** First, a process copies itself. That's `fork`. Two of you, each with a copy of the same memory, same code. Only the return value differs: the child gets 0.
 >
@@ -28,9 +28,9 @@
 >
 > **init:** The exit status travels back. `wait4` fills an `int status`, and `WIFEXITED` and `WEXITSTATUS` read the 0 back out. A shell keeps it as `$?`, with two numbers of its own: 127 for "command not found", 128 + n for "killed by signal n".
 >
-> **init:** Errors come back as numbers. Run `nosuch`: the Kernel answers `execve` with `-ENOENT`, and the C library turns that into `-1` with `errno` set to `ENOENT`, 2. `strerror()` turns it into "No such file or directory".
+> **init:** Errors come back as numbers. Run `nosuch`: the kernel answers `execve` with `-ENOENT`, and the C library turns that into `-1` with `errno` set to `ENOENT`, 2. `strerror()` turns it into "No such file or directory".
 >
-> **init:** One more thing. Right after `fork`, look at the memory panel: the same variable at the same address in parent and child. The child changes it; the parent's copy doesn't move. Same address, different memory. Each process has its own _virtual address space_, and `fork` gives the child a copy. Linux shares the pages until one side writes: _copy-on-write_.
+> **init:** One more thing. Right after `fork`, look at the memory panel: the same variable at the same address in parent and child. The child changes it; the parent's copy doesn't move. Same address, different memory. You met _virtual addresses_ in P.8: each process has its own address space, and `fork` gives the child a copy. Linux shares the pages until one side writes: _copy-on-write_.
 
 ## Build it
 
@@ -38,7 +38,7 @@
 >
 > **init:** `fork()`. In the child, `execvp()`; if it returns, it failed, so print why and `_exit(127)`. In the parent, `waitpid()` for that child and keep its status. `exit` with no argument ends the shell with the last command's status.
 >
-> **The Watchdog:** And `fork()` can fail too. Check it. Zombies. Ugh. Wait for your children, kid.
+> **The Watchdog:** And `fork()` can fail too. Check it.
 >
 > **init:** Run it, and live in it for a while: `ls /`, `/bin/echo a b`, a command that doesn't exist, ten commands or more, then `false` and `exit`. Then once more: `nosuch` and `exit`. I watch every process it starts.
 >
@@ -46,17 +46,20 @@
 
 ## Watch it
 
-> **init:** Before you run the little `fork` demo: how many lines will it print, and what will the child's copy of `count` hold after the child adds one?
+> **init:** Before you type `nosuch`: who prints "command not found", your shell or the child it forked?
 
 ---
 
 ```
 ksh$ ls /
-bin  dev  etc  home  proc  sys  tmp  usr
+bin    dev    home   media  opt    root   sbin   sys    usr
+boot   etc    lib    mnt    proc   run    srv    tmp    var
 ksh$ nosuch
 ksh-lite: nosuch: command not found
 ```
 
+> **init:** The child. Its `execvp` failed, so it printed why and called `_exit(127)`; your shell only read the 127 from `waitpid`.
+>
 > **init:** Each command you type walks out of your shell's door as a new process, does its job, and comes back to be counted by `waitpid`.
 >
 > **init:** No zombies. Good.
@@ -69,7 +72,7 @@ ksh-lite: nosuch: command not found
 >
 > **The Watchdog:** People walking around with no address. Lost, the lot of them.
 >
-> **init:** Every process carries a few things of its own: where it stands, what it's called. Tomorrow I'll show you where the Kernel keeps them, and how to read them.
+> **init:** Every process carries a few things of its own: where it stands, what it's called. Next I'll show you where the kernel keeps them, and how to read them.
 
 ## Real world
 
@@ -80,4 +83,4 @@ bash -c 'sleep 1 & exec sleep 30' &
 sleep 2; ps -e -o pid,ppid,stat,comm | grep sleep   # the child shows state Z
 ```
 
-After 1.5, come back and run your program under `strace -f ./a.out` to find the `fork`, `execve` and `wait4` lines.
+Run your program under `strace -f ./a.out` to find the `fork`, `execve` and `wait4` lines.

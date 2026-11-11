@@ -38,6 +38,12 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 ### Changed
 
 - The Machine runs kernel 6.18.63. `tcc` is gone: it could never link a program there.
+- **A quieter Guide.** The Scene shows only its story: the objectives appear with the
+  first thing you are asked to do, and the level's Codex cards fold to one line until
+  Watch it.
+- **X-ray fits a small laptop screen.** On a 1280×720 screen its drawing is larger and the
+  sentence under it is no longer hidden: the controls keep to one row, and on a short
+  screen the title block gives its height to the drawing.
 - The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p

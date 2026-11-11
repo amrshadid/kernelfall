@@ -168,6 +168,21 @@ describe('guideOf', () => {
     expect(guide.beats[0]?.[0]).toMatchObject({ picked: null, revealed: true, onPick: null })
   })
 
+  it('keeps the scene to its story: objectives come with the first task, the Codex opens at Watch it', () => {
+    const todo = [{ id: 'a', text: 'Run it.', passed: false }]
+    const at = (shown: GuideInput['shown'], objectives = todo) => guideOf(guideInput({ shown, objectives }))
+    expect(at('scene')).toMatchObject({ showObjectives: false, codexOpen: false })
+    expect(at('see').showObjectives).toBe(false)
+    // A command run while watching ticks one: the list shows what is left.
+    expect(at('see', [{ ...todo[0], id: 'a', text: 'Run it.', passed: true }]).showObjectives).toBe(true)
+    expect(at('build')).toMatchObject({ showObjectives: true, codexOpen: false })
+    expect(at('watch')).toMatchObject({ showObjectives: true, codexOpen: true })
+    expect(guideOf(guideInput({ shown: 'scene', reviewing: 'scene' }))).toMatchObject({
+      showObjectives: true,
+      codexOpen: true,
+    })
+  })
+
   it('shows every beat of a step looked back at', () => {
     const guide = guideOf(guideInput({ blocks: PACED, shown: 'build', reviewing: 'build' }))
     expect(guide.beats).toHaveLength(3)

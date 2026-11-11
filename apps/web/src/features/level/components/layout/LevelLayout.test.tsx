@@ -40,6 +40,7 @@ function props(fields: Partial<LevelLayoutProps> = {}): LevelLayoutProps {
       hints: [],
       seeAlso: [],
       codex: [],
+      codexOpen: false,
       actions: [],
       note: null,
     },

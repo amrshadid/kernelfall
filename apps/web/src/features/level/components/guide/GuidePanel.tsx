@@ -178,7 +178,21 @@ export function GuidePanel({ guide }: GuidePanelProps) {
           </section>
         )}
 
-        {guide.codex.length > 0 && (
+        {guide.codex.length > 0 && !guide.codexOpen && (
+          <details className="level-guide__codex-fold">
+            <summary>
+              Codex <span>{guide.codex.length} cards for this level</span>
+            </summary>
+            <p className="level-guide__chips">
+              {guide.codex.map((card) => (
+                <Chip key={card.id} href={card.href}>
+                  {card.term}
+                </Chip>
+              ))}
+            </p>
+          </details>
+        )}
+        {guide.codex.length > 0 && guide.codexOpen && (
           <section aria-labelledby="level-codex-h">
             <SectionHead id="level-codex-h">Codex</SectionHead>
             <p className="level-guide__chips">

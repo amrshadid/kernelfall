@@ -133,6 +133,8 @@ export interface LevelGuide {
   readonly hints: readonly GuideHint[]
   readonly seeAlso: readonly { readonly term: string; readonly href: string }[]
   readonly codex: readonly { readonly id: string; readonly term: string; readonly href: string }[]
+  /** The cards lie open once the level's terms have been met; before, they fold to one line. */
+  readonly codexOpen: boolean
   readonly actions: readonly GuideAction[]
   readonly note: string | null
 }

@@ -127,7 +127,9 @@ export function guideOf(input: GuideInput): LevelGuide {
       )
     ),
     onContinue: reached < beats.length && !asking ? pace.advance : null,
-    showObjectives: true,
+    // The scene is read first; the list comes with the first thing the player is asked to do.
+    showObjectives:
+      reviewing !== null || (shown !== 'scene' && (shown !== 'see' || input.objectives.some((o) => o.passed))),
     objectives: input.objectives,
     checkReport: reviewing ? null : checkReportOf(run, check, level.objectives.length),
     chips: building ? chipsOf(level.chips ?? [], input.runChip) : [],
@@ -145,6 +147,7 @@ export function guideOf(input: GuideInput): LevelGuide {
       // Over the level, not the Codex screen: reading a card never leaves the mission.
       href: hrefOf({ name: 'play', levelId: level.id, card: card.id }),
     })),
+    codexOpen: reviewing !== null || shown === 'watch' || shown === 'card',
     actions: input.actions,
     note: buildNoteOf(building, check.hasChecker),
   }

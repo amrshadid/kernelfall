@@ -89,6 +89,9 @@ mount -t tmpfs tmpfs /tmp
 mount -t tmpfs tmpfs /run
 mount -t tracefs tracefs ${TRACING} 2>/dev/null
 hostname kernelfall
+ifconfig lo 127.0.0.1 up
+# devtmpfs has no /dev/fd: bash's <(…) and the kernel's scripts open it.
+ln -s /proc/self/fd /dev/fd
 # No hotplug helper loads drivers for new devices: the data disk's sd driver is loaded here, and
 # ext4, as busybox mount only tries the filesystems the kernel already has.
 modprobe -q sd_mod

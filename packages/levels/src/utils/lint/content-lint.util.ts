@@ -26,7 +26,14 @@ const escaped = (phrase: string) => phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'
 const BANNED = BANNED_PHRASES.map((phrase) => ({ phrase, pattern: new RegExp(`\\b${escaped(phrase)}\\b`, 'i') }))
 
 function proseOf(story: Story, section: string): string[] {
-  return (story.get(section) ?? []).flatMap((block) => (block.kind === 'line' ? [block.text] : []))
+  // A question and its answers are read like any line.
+  return (story.get(section) ?? []).flatMap((block) =>
+    block.kind === 'line'
+      ? [block.text]
+      : block.kind === 'predict'
+        ? [block.text, ...block.options.map((option) => option.text)]
+        : []
+  )
 }
 
 function cardWords(level: LevelDefinition): CardWords[] {

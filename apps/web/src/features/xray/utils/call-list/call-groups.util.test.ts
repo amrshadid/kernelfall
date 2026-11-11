@@ -106,20 +106,22 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
     expect(outline(groups[1])).toEqual(["▸ bash's bookkeeping · 36", 'writev', 'writev', 'writev', 'exit_group'])
   })
 
-  it('S.4 find /: the redirect stays in sight and 46,720 calls of the walk are one row', async () => {
+  it('S.4 find /: the redirect stays in sight and the whole walk is one row', async () => {
     const { groups, calls } = await groupsOf(S4, 'find / -name passwd 2>/dev/null')
     expect(calls.length).toBeGreaterThan(40_000)
     const find = groups[1]
     expect(find?.title).toBe(`the program (find, PID ${find?.pid})`)
-    expect(outline(find)).toEqual([
+    const rows = outline(find)
+    expect(rows.slice(0, -1)).toEqual([
       "▸ bash's bookkeeping · 36",
       'open',
       'dup2',
       'close',
       'execve',
       '▸ start-up · 17',
-      '▸ statx, getdents64, open and 8 more · 46720',
     ])
+    // The count follows the image's file count, so it changes with every image.
+    expect(rows.at(-1)).toMatch(/^▸ statx, getdents64, open and 8 more · \d{5,}$/)
   })
 
   it("S.4 a fresh shell: readline's terminfo lookup is its own row, not a PATH search", async () => {
@@ -199,6 +201,19 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
     expect(outline(groups[0]).filter((row) => row === '*pipe')).toHaveLength(2)
     expect(outline(groups[0])).toContain('*setpgid')
     expect(groups[1]?.open).toBe(true)
+  })
+
+  it("after gcc … && ./hello, starts on the program's write, not the compiler's", async () => {
+    const P2 = 'prologue-boot-path-02-first-words'
+    const run = 'gcc -Wall -Wextra hello.c -o hello && ./hello'
+    const { groups, calls } = await groupsOf(P2, run, levelFocus(P2))
+    const lead = calls.find((c) => c.id === leadCallId(groups))
+    expect(lead).toMatchObject({ program: 'hello', name: 'write' })
+    // A build that fails prints only the compiler's error, so that is where it starts.
+    const broken = await groupsOf(P2, run, levelFocus(P2), 'broken')
+    const error = broken.calls.find((c) => c.id === leadCallId(broken.groups))
+    expect(error?.program).not.toBe('hello')
+    expect(error?.console).not.toBeNull()
   })
 
   it("with no lesson, starts on the output that reached the terminal: cat's sendfile64", async () => {

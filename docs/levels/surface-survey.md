@@ -7,7 +7,7 @@ path is in [LEVELS.md](../LEVELS.md#4-the-journey).
 
 Kernel source paths follow Linux 6.18 (LTS). Every output, message and syscall below
 was copied from a run on the Machine (one CPU, i386, Alpine 3.24, kernel
-`6.18.59-0-virt`, bash 5.3, BusyBox, musl); the level files hold the same text.
+`6.18.63-0-virt`, bash 5.3, BusyBox, musl); the level files hold the same text.
 
 **Five levels, about 1 hour 45 minutes,** played after the Prologue's capstone
 (P.10). The shell itself is taught earlier, in the Prologue's

@@ -1,6 +1,7 @@
 import type { LevelCard } from '@features/level/types'
 import { CodexCard } from '@shared/components/codex'
-import { Button } from '@shared/components/ui'
+import { Button, InlineText } from '@shared/components/ui'
+import { RecallDeck } from './RecallDeck'
 import './CardOverlay.css'
 
 export interface CardOverlayProps {
@@ -16,6 +17,14 @@ export function CardOverlay({ card }: CardOverlayProps) {
       <header className="level-card__head">
         <h2 id="level-card-h">{card.headline}</h2>
         <p>{card.result}</p>
+        {card.learned.length > 0 && (
+          <p className="level-card__learned">
+            <span>New in this level</span>
+            {card.learned.map((term) => (
+              <InlineText key={term} text={term} />
+            ))}
+          </p>
+        )}
         <div className="level-card__actions">
           {card.next && (
             <Button variant="primary" onClick={card.next.onSelect}>
@@ -29,6 +38,7 @@ export function CardOverlay({ card }: CardOverlayProps) {
         </div>
       </header>
       <div className="level-card__cards">
+        {card.recall && <RecallDeck recall={card.recall} />}
         {card.cards.map((data, index) => (
           <div key={data.id} className="level-card__feed" style={{ animationDelay: `${index * FEED_STAGGER_MS}ms` }}>
             <CodexCard

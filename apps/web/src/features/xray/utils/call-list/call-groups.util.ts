@@ -458,13 +458,21 @@ function defaultLeadId(groups: readonly CallGroup[]): number | null {
 
 const BUILTIN_WORK = new Set(['chdir', 'fchdir', 'kill', 'umask', 'prlimit64', 'setrlimit'])
 
-/** The call the drawing starts on: the lesson's first output, else its first call, else defaultLeadId's pick. */
+/**
+ * The call the drawing starts on: the lesson's first output on the terminal, from the last process
+ * that printed (after `gcc … && ./hello`, the program, not the compiler's writes to its own files);
+ * else its first output, else its first call, else defaultLeadId's pick.
+ */
 export function leadCallId(groups: readonly CallGroup[]): number | null {
   const focused = lessonCalls(groups)
   if (focused.length === 0) {
     return defaultLeadId(groups)
   }
-  return (focused.find((call) => OUTPUT_CALLS.has(call.name)) ?? focused[0])?.id ?? null
+  const printed = focused.filter(reachesTerminal)
+  const last = printed.at(-1)?.pid
+  const lead =
+    printed.find((call) => call.pid === last) ?? focused.find((call) => OUTPUT_CALLS.has(call.name)) ?? focused[0]
+  return lead?.id ?? null
 }
 
 /** Every call the level teaches, in the order they were made. */

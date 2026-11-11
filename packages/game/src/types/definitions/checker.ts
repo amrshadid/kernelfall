@@ -43,6 +43,8 @@ export interface CheckInput {
 export interface CheckReport {
   readonly objectivesMet: readonly string[]
   readonly taint: readonly TaintEvent[]
+  /** For unmet objectives, by id: what the Machine saw instead, one sentence, never the fix. */
+  readonly observed?: Readonly<Record<string, string>>
 }
 
 /** Judges behavior in the event stream, never the player's source. Must be pure. */
@@ -59,4 +61,6 @@ export interface CheckVerdict {
   readonly passed: boolean
   readonly missing: readonly Objective[]
   readonly taint: readonly TaintEvent[]
+  /** By the id of a missing objective: what the latest run showed instead. */
+  readonly observed?: Readonly<Record<string, string>> | undefined
 }

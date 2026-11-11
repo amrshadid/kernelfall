@@ -238,7 +238,7 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
         edits: [
           [
             '\tif (uname(&u) < 0)\n\t\treturn 1;\n\tprintf("%s %s %s\\n", u.sysname, u.release, u.machine);',
-            '\t(void)u;\n\tprintf("Linux 6.18.59-0-virt i686\\n");',
+            '\t(void)u;\n\tprintf("Linux 6.18.63-0-virt i686\\n");',
           ],
         ],
       },

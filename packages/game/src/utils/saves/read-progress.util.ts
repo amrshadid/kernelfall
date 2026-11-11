@@ -1,6 +1,7 @@
 import { type Issues, ObjectReader } from '@kernelfall/core/utils'
 import { HINT_TIERS } from '#types/definitions/hints'
 import type { LastActive, LevelProgress, LevelResult, Progress, UnlockedAchievement } from '#types/definitions/progress'
+import type { RecallMark } from '#types/definitions/recall'
 import type { RunCheckpoint } from '#types/definitions/runner'
 import { COMPLETION_VIAS, LEVEL_PHASES } from '#types/definitions/runner'
 import type { TaintEntry } from '#types/definitions/taint'
@@ -15,6 +16,18 @@ export function readProgress(value: unknown, path: string, issues: Issues): Prog
     taint: progress.list('taint', (entry, at) => readTaint(new ObjectReader(entry, at, issues))),
     achievements: progress.list('achievements', (entry, at) => readAchievement(new ObjectReader(entry, at, issues))),
     lastActive: progress.nullable('lastActive', (key) => readLastActive(progress.object(key))),
+    ...(progress.has('recall') && {
+      recall: progress.list('recall', (entry, at) => readRecall(new ObjectReader(entry, at, issues))),
+    }),
+  }
+}
+
+function readRecall(mark: ObjectReader): RecallMark {
+  return {
+    cardId: mark.string('cardId'),
+    knew: mark.flag('knew'),
+    asked: mark.integer('asked', 1),
+    at: mark.integer('at', 0),
   }
 }
 

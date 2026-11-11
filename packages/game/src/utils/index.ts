@@ -68,6 +68,7 @@ export {
   writesTo,
   writtenTo,
 } from '#utils/queries/index'
+export { markRecall, recallDeck } from '#utils/recall/index'
 export {
   activeTimeSince,
   allowedEvents,

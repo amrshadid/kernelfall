@@ -161,6 +161,13 @@
   box-shadow: inset 0 0 0 3px var(--red);
 }
 
+/* On a short screen the drawing needs the height more than its title block, which repeats the top bar. */
+@media (max-height: 50rem) {
+  .level-xray > .kf-title-block {
+    display: none;
+  }
+}
+
 .level-taint-list {
   display: grid;
   gap: 0.75rem;

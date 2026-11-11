@@ -33,7 +33,7 @@ function returned(call: SyscallRecord, ret: number | undefined, errno: number | 
 const endOf = (events: readonly LabEvent[], pid: Pid): number => exitOf(events, pid)?.seq ?? Number.POSITIVE_INFINITY
 
 /** What reached the terminal from `pid`'s first execve() to its exit. */
-function terminalOf(events: readonly LabEvent[], pid: Pid): string {
+export function terminalOf(events: readonly LabEvent[], pid: Pid): string {
   const start = execsOf(events, pid)[0]?.seq ?? BEFORE_FIRST_SEQ
   return consoleBetween(events, start, endOf(events, pid))
 }

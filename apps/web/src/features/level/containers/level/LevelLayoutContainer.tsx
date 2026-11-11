@@ -3,13 +3,20 @@ import { useSaveStatus } from '@features/chrome/hooks/save'
 import { useScreenChrome } from '@features/chrome/hooks/screen'
 import { useContent } from '@features/content/hooks/content'
 import { LevelScreenPresentation } from '@features/level/components/layout'
-import { useLevelDialogs, useLevelShortcuts } from '@features/level/hooks/layout'
+import { useGuidePace, useLevelDialogs, useLevelShortcuts } from '@features/level/hooks/layout'
 import { useLevelRun, useReferenceRun } from '@features/level/hooks/run'
 import { levelLayoutOf } from '@features/level/utils/layout'
 import { panelsFor, UNAVAILABLE_REASONS } from '@features/level/utils/view'
 import { shortcutLabelOf } from '@features/shortcuts/utils/keys'
 import { useTourScreen } from '@features/tour/hooks/tour'
-import { useActiveLevel, useLevelActions, useLevelCheck, useProgress, useRunAsCues } from '@kernelfall/game/hooks'
+import {
+  useActiveLevel,
+  useLevelActions,
+  useLevelCheck,
+  useProgress,
+  useRecall,
+  useRunAsCues,
+} from '@kernelfall/game/hooks'
 import type { LevelId } from '@kernelfall/game/types'
 import { placementOfferAt } from '@kernelfall/game/utils'
 import { labelOf } from '@kernelfall/levels/utils'
@@ -40,6 +47,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   const continueWithReference = useReferenceRun(levelId)
   const active = useActiveLevel()
   const check = useLevelCheck()
+  const recall = useRecall(levelId)
   const { saveState, lastSavedAt } = useSaveStatus()
   const content = useContent()
   const chrome = useScreenChrome()
@@ -61,6 +69,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   // Every level starts from the clean Machine with its own accounts, files and cwd; a replay too.
   const [replays, setReplays] = useState(0)
   useMachineSetup(level?.lab, `${levelId}#${replays}`)
+  const pace = useGuidePace(`${levelId}#${replays}#${phase}`)
   // A level's other users act once an objective is met (S.2's neighbour knocking).
   const { runAs } = useRunAs()
   useRunAsCues((cue) => void runAs(cue.user, cue.command))
@@ -137,6 +146,8 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
           setReplays((count) => count + 1)
         },
         restart: () => void reboot(),
+        pace,
+        recall,
         placement: offer
           ? {
               offer: offer.check.offer,

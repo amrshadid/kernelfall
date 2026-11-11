@@ -49,7 +49,7 @@ export const FACT_COMMANDS = [
   'cat /etc/group',
   'ls /home',
   'gcc --version | head -1',
-  'which man lspci lscpu lsblk dtc runuser setpriv strace tcc file tree',
+  'which man lspci lscpu lsblk dtc runuser setpriv strace make file tree',
   'man -w ls',
   'grub-install --version',
 ]

@@ -213,7 +213,8 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
   })
 
   it('close, and close refused: fd 4 is not open', async () => {
-    const ok = await recordedBoard(P1, 'other-paths', CMDLINE, named('close'))
+    const closes3 = (c: XrayCall) => named('close')(c) && c.args[0]?.value === '3'
+    const ok = await recordedBoard(P1, 'other-paths', CMDLINE, closes3)
     expect(shown(ok)).toMatchObject({ request: 'close fd~3', answer: '0 / fd 3 is closed', predict: null })
     const bad = await recordedBoard(P4, 'kept-quiet', DMESG, named('close', 'EBADF'))
     expect(shown(bad).kernel).toBe("The kernel tries, and stops: fd 4 isn't open.")
@@ -410,7 +411,9 @@ describe('crossingStoryboard on every kind of call The Surface makes, as the Mac
     const pipe = await recordedBoard(P1, 'other-paths', CMDLINE, named('pipe'))
     expect(shown(pipe)).toMatchObject({ request: 'make a pipe', answer: '0 / two new fds', predict: null })
     expect(pipe.parts.find((p) => p.served)?.id).toBe('ipc')
-    const dup2 = await recordedBoard(P3, 'near-misses', '/usr/local/bin/hello', named('dup2'))
+    // dmesg's side of the pipeline: its stdout becomes the pipe.
+    const ontoStdout = (c: XrayCall) => named('dup2')(c) && c.args[1]?.value === '1'
+    const dup2 = await recordedBoard(P4, 'kept-quiet', DMESG, ontoStdout)
     const old = dup2.call.args[0]?.value ?? ''
     expect(shown(dup2)).toMatchObject({
       request: `make fd~1 a copy of fd~${old}`,

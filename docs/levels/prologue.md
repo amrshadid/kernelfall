@@ -113,8 +113,8 @@ the player's browser. Level text quotes what it prints, never another Linux's ou
   random.trust_cpu=on log_buf_len=128K quiet`. Levels usually start from a saved
   boot. GRUB on the data disk is planned for P.4 and P.10.
 - **Linux:** Alpine Linux v3.24 (musl and BusyBox, so not "GNU/Linux"), kernel
-  `6.18.59-0-virt`, `#1-Alpine SMP PREEMPT_DYNAMIC`, hostname `kernelfall`. `/boot`
-  holds `vmlinuz-virt`, `config-6.18.59-0-virt` and `System.map-6.18.59-0-virt`.
+  `6.18.63-0-virt`, `#1-Alpine SMP PREEMPT_DYNAMIC`, hostname `kernelfall`. `/boot`
+  holds `vmlinuz-virt`, `config-6.18.63-0-virt` and `System.map-6.18.63-0-virt`.
 - **PCI:** `00:00.0` 440FX host bridge (`8086:1237`), `00:01.0` PIIX3 ISA bridge
   (`8086:7000`), `00:06.0` virtio 9P transport (`1af4:1049`, the root filesystem),
   `00:0a.0` virtio network card (`1af4:1041`, `virtio_net`, as `eth0`, down, no
@@ -252,8 +252,8 @@ boot text scrolls past; one burnt line flashes `Kernel panic - not syncing`.
 ### See it
 
 1. **Do** (within the first 30 words): `cat /proc/version`. **See:** the Machine's
-   real line, `Linux version 6.18.59-0-virt … #1-Alpine SMP PREEMPT_DYNAMIC
-   2026-10-27 14:58:36`. **Name:** _kernel_. **Why:** the one program with full
+   real line, `Linux version 6.18.63-0-virt … #1-Alpine SMP PREEMPT_DYNAMIC
+   2026-11-11 03:02:54`. **Name:** _kernel_. **Why:** the one program with full
    control of the hardware; every other program asks it, and `cat` just did. No disk
    holds that line: the kernel wrote it as `cat` read it.
 2. The narrator reads the **Section drawing**'s labels, top to bottom: Userland, the
@@ -1114,7 +1114,7 @@ The level opens on GRUB's real menu. init walks the stages; after the boot, X-ra
    and the console. Its first lines (the Machine's `dmesg`):
 
    ```
-   [    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+   [    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
    [    0.000000] BIOS-provided physical RAM map:
    [    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
    ```
@@ -1424,7 +1424,7 @@ count** (how many things use the module now: often the modules named after it, l
 `ext4` using `jbd2`; `9p`'s `1 -` is the mounted root filesystem), then the address,
 shown as zeros for anyone but root.
 
-**Part 4: Linux and the distribution.** `uname -sr` prints `Linux 6.18.59-0-virt`:
+**Part 4: Linux and the distribution.** `uname -sr` prints `Linux 6.18.63-0-virt`:
 that's the kernel. `cat /etc/os-release` prints `PRETTY_NAME="Alpine Linux v3.24"`:
 that's the **distribution**, Linux plus everything around it. init: "Linux is only
 the kernel. I, the shell, the C library, `ls` and `cat`: we're the rest." Alpine
@@ -1494,9 +1494,9 @@ uname({sysname="Linux", nodename="kernelfall", ...}) = 0
 
 ```
 $ ./myuname
-Linux 6.18.59-0-virt i686
+Linux 6.18.63-0-virt i686
 $ uname -srm
-Linux 6.18.59-0-virt i686
+Linux 6.18.63-0-virt i686
 ```
 
 `i686` is a 32-bit x86 CPU of the Pentium Pro family or later; the Machine's calls
@@ -2474,7 +2474,7 @@ None beyond the shared Machine. Engine: `sendfile64` data in the trace would let
    drivers wrote while taking their devices:
 
    ```
-   [    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+   [    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
    ...
    [    1.588336] scsi host0: ata_piix
    ...

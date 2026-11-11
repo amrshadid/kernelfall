@@ -19,7 +19,9 @@
 ## See it
 
 > **init:** You ran `ls` a dozen times. Who started it? Watch the processes view: `init(1)`, then bash under it.
->
+
+---
+
 > **init:** `fork` returns twice: a second box appears with a new PID, and the syscalls view shows `fork() = 412` in the parent, `= 0` in the child.
 >
 > **init:** Then `execve("/bin/ls", ...)` in the child: same PID, new name. When `ls` calls `exit_group(0)` it becomes a zombie, until the parent's `wait4` reaps it.
@@ -45,6 +47,8 @@
 ## Watch it
 
 > **init:** Before you type `nosuch`: who prints "command not found", your shell or the child it forked?
+
+---
 
 ```
 ksh$ ls /

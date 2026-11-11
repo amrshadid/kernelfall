@@ -1,4 +1,5 @@
 import type { CheckVerdict } from '#types/definitions/checker'
+import { observedOf } from '#utils/checker/evaluate-check.util'
 
 /**
  * The verdict of a play-through so far: an objective met by any run stays met,
@@ -12,5 +13,5 @@ export function mergeVerdicts(previous: CheckVerdict | null, latest: CheckVerdic
   }
   const stillMissing = new Set(previous.missing.map((objective) => objective.id))
   const missing = latest.missing.filter((objective) => stillMissing.has(objective.id))
-  return { passed: missing.length === 0, missing, taint: latest.taint }
+  return { passed: missing.length === 0, missing, taint: latest.taint, observed: observedOf(missing, latest.observed) }
 }

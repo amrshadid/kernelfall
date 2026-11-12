@@ -30,11 +30,8 @@ one question each, a third of the words, and ideas that link from level to level
 
 ### Engine
 
-- **Routes in the trace:** which filesystem or driver served each call, so X-ray names
-  the real kernel part.
-- **A boot record for a boot that stops** in the initramfs (P.10).
-- **The terminal's real size** for the guest, so `less` and `top` fill the panel.
-- **gcc's diagnostics in the editor**, as marks on the lines they name (0.2.0).
+- **The kernel's build tree in the image** (`linux-virt-dev`, already pinned and
+  mirrored), for the module levels (0.3.0).
 
 ### Content
 

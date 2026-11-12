@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { EditorFile, EditorHandlers, RevealRequest } from '@features/editor/types'
+import type { DiagnosticSet, EditorFile, EditorHandlers, RevealRequest } from '@features/editor/types'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type CodeEditorOptions, useCodeEditor } from './useCodeEditor.hook'
@@ -9,6 +9,7 @@ const engine = vi.hoisted(() => ({
     showFile: vi.fn(),
     format: vi.fn(),
     reveal: vi.fn(),
+    setDiagnostics: vi.fn(),
     destroy: vi.fn(),
   },
   handlers: null as EditorHandlers | null,
@@ -22,6 +23,7 @@ vi.mock('@features/editor/utils/codemirror', () => ({
 }))
 
 const A: EditorFile = { path: 'a.c', content: 'int a;' }
+const CLEAN: DiagnosticSet = { id: 0, items: [] }
 
 function handlers(): EditorHandlers {
   return { onChange: vi.fn(), onRun: vi.fn(), onSave: vi.fn(), onFormatted: vi.fn() }
@@ -29,7 +31,13 @@ function handlers(): EditorHandlers {
 
 async function mounted(options: Partial<CodeEditorOptions> = {}) {
   const container = { current: document.createElement('div') }
-  const initialProps: CodeEditorOptions = { file: A, reveal: null, handlers: handlers(), ...options }
+  const initialProps: CodeEditorOptions = {
+    file: A,
+    reveal: null,
+    diagnostics: CLEAN,
+    handlers: handlers(),
+    ...options,
+  }
   const hook = renderHook((props: CodeEditorOptions) => useCodeEditor(container, props), { initialProps })
   await waitFor(() => expect(hook.result.current.loaded).toBe(true))
   return hook
@@ -51,9 +59,9 @@ describe('useCodeEditor', () => {
     const reveal: RevealRequest = { id: 1, path: 'a.c', line: 3, column: 2 }
     const { rerender, result } = await mounted({ reveal })
     expect(engine.handle.reveal).toHaveBeenCalledWith(3, 2)
-    rerender({ file: A, reveal: { ...reveal }, handlers: handlers() })
+    rerender({ file: A, reveal: { ...reveal }, diagnostics: CLEAN, handlers: handlers() })
     expect(engine.handle.reveal).toHaveBeenCalledTimes(1)
-    rerender({ file: A, reveal: { ...reveal, id: 2, path: 'b.c' }, handlers: handlers() })
+    rerender({ file: A, reveal: { ...reveal, id: 2, path: 'b.c' }, diagnostics: CLEAN, handlers: handlers() })
     expect(engine.handle.reveal).toHaveBeenCalledTimes(1)
     act(() => result.current.format())
     expect(engine.handle.format).toHaveBeenCalled()
@@ -62,9 +70,20 @@ describe('useCodeEditor', () => {
   it('calls the latest handlers without rebuilding the editor', async () => {
     const { rerender } = await mounted()
     const next = handlers()
-    rerender({ file: A, reveal: null, handlers: next })
+    rerender({ file: A, reveal: null, diagnostics: CLEAN, handlers: next })
     engine.handlers?.onRun()
     expect(next.onRun).toHaveBeenCalled()
+  })
+
+  it("hands the editor each build's errors and warnings", async () => {
+    const { rerender } = await mounted()
+    expect(engine.handle.setDiagnostics).toHaveBeenLastCalledWith(CLEAN)
+    const built: DiagnosticSet = {
+      id: 1,
+      items: [{ path: 'a.c', line: 1, column: 5, severity: 'error', message: "expected ';'" }],
+    }
+    rerender({ file: A, reveal: null, diagnostics: built, handlers: handlers() })
+    expect(engine.handle.setDiagnostics).toHaveBeenLastCalledWith(built)
   })
 
   it('destroys the editor on unmount', async () => {
@@ -80,7 +99,9 @@ describe('useCodeEditor', () => {
     })
     const { useCodeEditor: useFreshCodeEditor } = await import('./useCodeEditor.hook')
     const container = { current: document.createElement('div') }
-    const { result } = renderHook(() => useFreshCodeEditor(container, { file: A, reveal: null, handlers: handlers() }))
+    const { result } = renderHook(() =>
+      useFreshCodeEditor(container, { file: A, reveal: null, diagnostics: CLEAN, handlers: handlers() })
+    )
     await waitFor(() => expect(result.current.failed).toBe(true))
     expect(result.current.loaded).toBe(false)
     vi.doUnmock('@features/editor/utils/codemirror')

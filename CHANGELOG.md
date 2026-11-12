@@ -33,6 +33,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   works.
 - **Run shows its progress:** "Building…" while gcc compiles, "Running…" while the
   program runs (an interactive one until it exits), then Run again.
+- **gcc's errors and warnings are marked in the editor.** After Run, each line gcc named
+  is ruled in red (an error) or ink (a warning), the token it points at is underlined,
+  and hovering it shows gcc's message. The marks follow your typing and clear on the
+  next Run. gcc's full output is still in the terminal.
 - `pnpm vm:facts` records what the Machine prints for the commands levels quote (uname,
   lspci, /proc, ps, BusyBox errors) into `packages/levels/src/test/machine-facts.json`.
 - **Usage recordings with Microsoft Clarity** on the public site, only with the player's

@@ -25,6 +25,14 @@ const building = (fields: Partial<LevelRunState> = {}): LevelRunState => ({
   ...fields,
 })
 
+const paceAt = (shown: number, fields: Partial<GuideInput['pace']> = {}): GuideInput['pace'] => ({
+  shown,
+  picks: {},
+  advance: () => undefined,
+  pick: () => undefined,
+  ...fields,
+})
+
 function guideInput(fields: Partial<GuideInput> = {}): GuideInput {
   return {
     level: runAnything(),
@@ -40,9 +48,32 @@ function guideInput(fields: Partial<GuideInput> = {}): GuideInput {
     actions: [],
     runChip: () => undefined,
     placement: null,
+    pace: paceAt(1),
     ...fields,
   }
 }
+
+const ASKED: GuideInput['blocks'] = [
+  {
+    kind: 'predict',
+    speaker: 'init',
+    text: 'Who read the file?',
+    options: [
+      { text: '`cat` itself', right: false },
+      { text: 'the kernel', right: true },
+    ],
+  },
+  { kind: 'line', speaker: 'init', text: 'The kernel.' },
+]
+
+const PACED: GuideInput['blocks'] = [
+  { kind: 'line', speaker: 'init', text: 'Break it and press Run.' },
+  { kind: 'pause' },
+  { kind: 'code', text: 'error: expected ;' },
+  { kind: 'line', speaker: 'init', text: 'Read it part by part.' },
+  { kind: 'pause' },
+  { kind: 'line', speaker: 'init', text: 'Now fix it.' },
+]
 
 describe('checkReportOf', () => {
   it('reports nothing before the first judged run, or outside Build it', () => {
@@ -52,10 +83,18 @@ describe('checkReportOf', () => {
   })
 
   it("lists what's still missing and the Taint the run would add, with init's word on a held pass", () => {
-    const verdict = { passed: false, missing: [{ id: 'reaps', text: 'Reaps its children.' }], taint: [TAINT] }
+    const missing = [
+      { id: 'reaps', text: 'Reaps its children.' },
+      { id: 'exits', text: 'Exits with 0.' },
+    ]
+    const observed = { exits: 'Your program exited with status 1, not 0.' }
+    const verdict = { passed: false, missing, taint: [TAINT], observed }
     expect(checkReportOf(building({ attempts: 2 }), { ...NO_CHECK, verdict, heldTaint: [TAINT] }, 3)).toEqual({
-      heading: 'run 2 · 2 of 3 met',
-      missing: ['Reaps its children.'],
+      heading: 'run 2 · 1 of 3 met',
+      missing: [
+        { text: 'Reaps its children.', observed: null },
+        { text: 'Exits with 0.', observed: observed.exits },
+      ],
       taint: ['zombies-left: 1 child never reaped'],
       held: HELD_PASS_LINE,
     })
@@ -71,14 +110,110 @@ describe('buildNoteOf', () => {
 })
 
 describe('guideOf', () => {
-  it("splits the step's story into lines and code, and links the level's Codex cards over the level", () => {
+  it("shows a step's story with no pause as one beat, and links the level's Codex cards over the level", () => {
     const guide = guideOf(guideInput())
     expect(guide.stepLabel).toBe('Build it')
-    expect(guide.lines).toEqual([{ speaker: 'init', text: 'Run anything.' }])
-    expect(guide.code).toEqual(['fork();'])
+    expect(guide.beats).toEqual([
+      [
+        { kind: 'lines', lines: [{ speaker: 'init', text: 'Run anything.' }] },
+        { kind: 'code', text: 'fork();' },
+      ],
+    ])
+    expect(guide.onContinue).toBeNull()
     expect(guide.codex.every((card) => card.href.startsWith(`#/play/${RUN_ANYTHING}`))).toBe(true)
     expect(guide.seeAlso.every((page) => /\(\d\)$/.test(page.term))).toBe(true)
     expect(guide.note).toBe(BUILD_NOTES.checked)
+  })
+
+  it('shows a paced story up to the beat the player reached, and offers the next one', () => {
+    const advance = vi.fn()
+    const first = guideOf(guideInput({ blocks: PACED, pace: paceAt(1, { advance }) }))
+    expect(first.beats).toEqual([[{ kind: 'lines', lines: [{ speaker: 'init', text: 'Break it and press Run.' }] }]])
+    expect(first.onContinue).toBe(advance)
+
+    // In the story's order: the error first, then init reading it.
+    const second = guideOf(guideInput({ blocks: PACED, pace: paceAt(2, { advance }) }))
+    expect(second.beats.at(-1)).toEqual([
+      { kind: 'code', text: 'error: expected ;' },
+      { kind: 'lines', lines: [{ speaker: 'init', text: 'Read it part by part.' }] },
+    ])
+
+    // More commands than beats: the last beat stays, with nothing left to show.
+    const last = guideOf(guideInput({ blocks: PACED, pace: paceAt(9, { advance }) }))
+    expect(last.beats).toHaveLength(3)
+    expect(last.onContinue).toBeNull()
+  })
+
+  it('holds the story at a question until the player answers, then shows their call', () => {
+    const pick = vi.fn()
+    // Commands run meanwhile (shown: 5) don't get past it, and Continue isn't offered.
+    const asking = guideOf(guideInput({ blocks: ASKED, pace: paceAt(5, { pick }) }))
+    expect(asking.beats).toHaveLength(1)
+    expect(asking.onContinue).toBeNull()
+    const question = asking.beats[0]?.[0]
+    expect(question).toMatchObject({ kind: 'predict', picked: null, revealed: false })
+    if (question?.kind === 'predict') {
+      question.onPick?.(0)
+    }
+    expect(pick).toHaveBeenCalledWith(0, 0, 2)
+
+    const answered = guideOf(guideInput({ blocks: ASKED, pace: paceAt(2, { picks: { 0: 0 } }) }))
+    expect(answered.beats).toHaveLength(2)
+    expect(answered.beats[0]?.[0]).toMatchObject({ picked: 0, revealed: true, onPick: null })
+  })
+
+  it('keeps a call made before a run, and marks what happens only once the run brought the answer', () => {
+    // A pause after the question: the story says "before you run it".
+    const held: GuideInput['blocks'] = [ASKED[0] as GuideInput['blocks'][number], { kind: 'pause' }, ...ASKED.slice(1)]
+    const pick = vi.fn()
+    const asking = guideOf(guideInput({ blocks: held, pace: paceAt(1, { pick }) }))
+    const question = asking.beats[0]?.[0]
+    if (question?.kind === 'predict') {
+      question.onPick?.(1)
+      question.onPick?.(null)
+    }
+    // A pick stays on the question; Just show me goes on.
+    expect(pick.mock.calls).toEqual([
+      [0, 1, 1],
+      [0, null, 2],
+    ])
+
+    const advance = vi.fn()
+    const kept = guideOf(guideInput({ blocks: held, pace: paceAt(1, { picks: { 0: 1 }, advance }) }))
+    expect(kept.beats).toHaveLength(1)
+    expect(kept.beats[0]?.[0]).toMatchObject({ picked: 1, revealed: false, onPick: null })
+    expect(kept.onContinue).toBe(advance)
+
+    const ran = guideOf(guideInput({ blocks: held, pace: paceAt(2, { picks: { 0: 1 } }) }))
+    expect(ran.beats).toHaveLength(2)
+    expect(ran.beats[0]?.[0]).toMatchObject({ picked: 1, revealed: true })
+  })
+
+  it('shows a question as answered, with no call, on a step looked back at', () => {
+    const guide = guideOf(guideInput({ blocks: ASKED, reviewing: 'build' }))
+    expect(guide.beats).toHaveLength(2)
+    expect(guide.beats[0]?.[0]).toMatchObject({ picked: null, revealed: true, onPick: null })
+  })
+
+  it('keeps the scene to its story: objectives come with the first task, the Codex opens at Watch it', () => {
+    const todo = [{ id: 'a', text: 'Run it.', passed: false }]
+    const at = (shown: GuideInput['shown'], objectives = todo) => guideOf(guideInput({ shown, objectives }))
+    expect(at('scene')).toMatchObject({ showObjectives: false, codexOpen: false })
+    expect(at('see').showObjectives).toBe(false)
+    // A command run while watching ticks one: the list shows what is left.
+    expect(at('see', [{ ...todo[0], id: 'a', text: 'Run it.', passed: true }]).showObjectives).toBe(true)
+    expect(at('build')).toMatchObject({ showObjectives: true, codexOpen: false })
+    expect(at('watch')).toMatchObject({ showObjectives: true, codexOpen: true })
+    expect(guideOf(guideInput({ shown: 'scene', reviewing: 'scene' }))).toMatchObject({
+      showObjectives: true,
+      codexOpen: true,
+    })
+  })
+
+  it('shows every beat of a step looked back at', () => {
+    const guide = guideOf(guideInput({ blocks: PACED, shown: 'build', reviewing: 'build' }))
+    expect(guide.beats).toHaveLength(3)
+    expect(guide.onContinue).toBeNull()
   })
 
   it('shows only the hints revealed, each named by its tier', () => {

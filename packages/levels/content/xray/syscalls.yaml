@@ -573,3 +573,40 @@ clock_gettime64:
   sources:
     - { path: kernel/time/posix-timers.c, fn: clock_gettime }
   desk: Reads one of the kernel's clocks into your buffer
+
+writev:
+  args: [fd, vec, vlen]
+  pointers: [1]
+  path: [__ia32_sys_writev, do_writev, vfs_writev]
+  sources:
+    - { path: fs/read_write.c, fn: "do_writev(), vfs_writev()" }
+  desk: Writes several buffers to an open file, in order, as one request
+  returns: the number of bytes written
+
+sendfile64:
+  args: [out_fd, in_fd, offset, count]
+  pointers: [2]
+  path: [__ia32_sys_sendfile64, do_sendfile]
+  sources:
+    - { path: fs/read_write.c, fn: "sendfile64, do_sendfile()" }
+  desk: Copies bytes from one open file to another inside the kernel, never through your memory
+  returns: the number of bytes copied
+
+readlink:
+  args: [path, buf, bufsiz]
+  pointers: [0, 1]
+  pathArg: 0
+  path: [__ia32_sys_readlink, do_readlinkat, vfs_readlink]
+  sources:
+    - { path: fs/stat.c, fn: "readlink, do_readlinkat()" }
+    - { path: fs/namei.c, fn: vfs_readlink() }
+  desk: Copies the path a symbolic link points to into your buffer
+  returns: the number of bytes copied
+
+syslog:
+  args: [type, buf, len]
+  pointers: [1]
+  path: [__ia32_sys_syslog, do_syslog]
+  sources:
+    - { path: kernel/printk/printk.c, fn: "syslog, do_syslog()" }
+  desk: Reads the kernel's log, or works on it, depending on the request type

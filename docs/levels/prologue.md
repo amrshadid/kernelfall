@@ -113,8 +113,8 @@ the player's browser. Level text quotes what it prints, never another Linux's ou
   random.trust_cpu=on log_buf_len=128K quiet`. Levels usually start from a saved
   boot. GRUB on the data disk is planned for P.4 and P.10.
 - **Linux:** Alpine Linux v3.24 (musl and BusyBox, so not "GNU/Linux"), kernel
-  `6.18.59-0-virt`, `#1-Alpine SMP PREEMPT_DYNAMIC`, hostname `kernelfall`. `/boot`
-  holds `vmlinuz-virt`, `config-6.18.59-0-virt` and `System.map-6.18.59-0-virt`.
+  `6.18.63-0-virt`, `#1-Alpine SMP PREEMPT_DYNAMIC`, hostname `kernelfall`. `/boot`
+  holds `vmlinuz-virt`, `config-6.18.63-0-virt` and `System.map-6.18.63-0-virt`.
 - **PCI:** `00:00.0` 440FX host bridge (`8086:1237`), `00:01.0` PIIX3 ISA bridge
   (`8086:7000`), `00:06.0` virtio 9P transport (`1af4:1049`, the root filesystem),
   `00:0a.0` virtio network card (`1af4:1041`, `virtio_net`, as `eth0`, down, no
@@ -182,8 +182,8 @@ to its card. Levels use a word only after this line has been shown.
 | distribution           | Linux plus everything around it: init, shell, tools, a way to install software                             | Debian, Fedora, Ubuntu; Alpine, the Machine's                              | P.5       |
 | driver                 | the part of the kernel that knows how to operate one kind of device                                        | `virtio_net` (network card); `ata_piix` (disk); the tty driver (terminal)  | P.6       |
 | bus                    | the wiring and rules that connect devices to the CPU                                                       | PCI (cards inside a PC); USB; I²C on small boards                          | P.6       |
-| register (of a device) | a small slot in a device that a driver reads or writes to control it                                       | "start sending"; "how many bytes arrived"; "lamp on"                       | P.6       |
-| interrupt              | a device's signal to the CPU: stop and deal with me now                                                    | a key pressed; a packet arrived; a timer went off                          | P.6       |
+| register (of a device) | a small slot in a device that a driver reads or writes to control it                                       | "start sending"; "how many bytes arrived"; "lamp on"                       | P.6 Codex |
+| interrupt              | a device's signal to the CPU: stop and deal with me now                                                    | a key pressed; a packet arrived; a timer went off                          | P.6 Codex |
 | kernel thread          | a worker of the kernel's own, run by the scheduler like a process, but only running kernel code            | `kswapd0`, `ksoftirqd/0`, `kthreadd`                                       | P.7       |
 | scheduler              | the part of the kernel that decides which process runs on each CPU, and for how long                       | three `yes` programs on one CPU; you waiting while init runs               | P.7       |
 | memory address         | the number of one byte of memory; a process's addresses are its own (virtual), not the RAM's               | `0x004a6000`; `0xbff3e000`                                                 | P.8       |
@@ -207,7 +207,7 @@ parts."
 | Memory                           | `mm/`, `arch/x86/mm/`                                           | `/proc/meminfo`, `/proc/<pid>/maps` (P.8)     | Slab Mines (2.8a–b); Page-Table Labyrinth (3.3–3.5)                                                  | kswapd                           |
 | VFS and filesystems              | `fs/`                                                           | one `read` on ext4, procfs and sysfs (P.9)    | Surface Survey; Into the Archive (1.6); The Aqueducts (1.7, `fs/pipe.c`); Archive Stacks (3.16–3.17) | init                             |
 | Devices and drivers              | `drivers/`                                                      | `/dev`, major and minor numbers (P.9)         | Device Quarter (2.4–2.7)                                                                             | udev                             |
-| Interrupts, timers, softirqs     | `kernel/irq/`, `kernel/time/`, `kernel/softirq.c`               | `/proc/interrupts` (P.6)                      | Interrupt Spire (2.10a–c)                                                                            | ksoftirqd                        |
+| Interrupts, timers, softirqs     | `kernel/irq/`, `kernel/time/`, `kernel/softirq.c`               | `/proc/interrupts` (P.6 Codex)                | Interrupt Spire (2.10a–c)                                                                            | ksoftirqd                        |
 | Locking                          | `kernel/locking/`                                               | a picture: two processes, one counter (P.7)   | Lock Cathedral (2.9, 2.9b); Grace Halls (3.12–3.13)                                                  | the Verger                       |
 | Networking                       | `net/`, `drivers/net/`                                          | `/sys/class/net`, `/proc/net/dev` (P.9)       | Socket Harbor (1.9, 1.10); Netfilter Wall (2.11); Packet Abyss (3.18–3.19)                           | the Harbormaster, the Tollkeeper |
 | IPC                              | `ipc/`, `fs/pipe.c`, `kernel/signal.c`                          | one line (P.9)                                | The Aqueducts (1.7), Alarm Bells (1.8)                                                               | —                                |
@@ -228,153 +228,76 @@ Userland that reacts to the kernel's device announcements, and the drawing says 
 
 ## P.1 — Power On
 
-- **Id:** `prologue-boot-path-01-power-on` · **Region / NPC:** the Machine, from the outside, then init's house / the Watchdog, init · **Tracks:** `userland` · **Time:** ~20 min · **Prerequisites:** none · **Skills unlocked:** `sys-computer-basics`
+- **Id:** `prologue-boot-path-01-power-on` · **Region / NPC:** the Machine, from the outside, then init's house / the Watchdog, init · **Tracks:** `userland` · **Time:** ~15 min · **Prerequisites:** none · **Skills unlocked:** `sys-computer-basics`
 
-No code and no syscalls yet. The player learns what a computer is made of, what an
-operating system is for, what the kernel is, and walks the file tree from `/` down
-to `/proc`, where the kernel answers for itself.
+**Question:** Who is in charge of the Machine? The Machine answers in `/proc/version`.
+
+No code and no syscalls yet. The player asks the kernel its name, meets the Section
+drawing (Userland, the Gate, the kernel's parts, the hardware) and walks the file
+tree from `/` to init's note. **Teaches:** `kernel`, `process`, `file-tree`.
+**Tools:** `cat`, `ls`, `/`, `/etc/motd`, `/proc/version`. The drawing's other labels
+(the hardware's four parts, the terminal and shell, the operating system) are Codex
+cards, not lessons; `/proc` as a whole is P.7's. The story text is the level's
+`story.md`; this section lists its beats.
 
 ### Scene
 
-The screen is black, except for a drawing of a power button. The player presses it
-(**the first thing happens within seconds**): a fan spins up, and the Machine draws
-itself in outline, part by part, as it starts. Lines of text scroll past too fast to
-read ("You'll read these properly soon"). Near the end, one burnt, garbled line
-flashes: `...fade...` and `Kernel panic - not syncing`, and a shadow (the Dangling)
-slips out of frame. Then a voice.
+A power button on a black screen. Pressed, the Machine draws itself in section as
+boot text scrolls past; one burnt line flashes `Kernel panic - not syncing`.
 
-> **The Watchdog:** Tick. Tick. Oh good, something's awake. You. You're new.
+> **The Watchdog:** The Machine's core crashed tonight: the Kernelfall. I restarted everything. I can't promise it holds.
 >
-> **The Watchdog:** I'm the Watchdog. A timer, really. If nobody resets me in time, I restart the whole Machine. Tonight I had to.
->
-> **The Watchdog:** The core of the Machine crashed. Everything stopped mid-step. We call it the Kernelfall. I restarted us, and... well. Look around.
->
-> **init:** Easy, old dog. Hello, little one. I'm init. I'm the first program the Machine ran today, and I look after everyone who runs after me. Including you.
->
-> **init:** Here's the plan. The core that crashed is called the _kernel_, and together we're going to bring it back, part by part. You can't fix what you've never seen, so tonight you'll just look around.
->
-> **init:** You don't know what any of this is yet. That's fine. First what a computer is made of, then a walk through the Machine's folders, top to bottom, until we reach the kernel itself.
+> **init:** Easy, old dog. Hello. I'm init: I start the Machine's programs and look after them. Before we bring its core back, let's ask who is in charge.
 
 ### See it
 
-The **Section drawing** (a cutaway of the Machine, like a page from a service
-manual) is shown from the outside. It lights one part at a time.
-
-**Part 1: what a computer is made of.** Four kinds of parts, each with examples:
-
-- the **CPU**, the chip that carries out instructions (add these, compare those,
-  copy this there), millions a second even in the Machine. It has one, so it runs
-  one program at a time and switches between them so fast they seem to run at once;
-- **memory (RAM)**, fast storage for whatever is running right now. It forgets
-  everything when the power goes off. The Machine has 256 MiB, room for about 268
-  million **bytes**. One byte holds one number from 0 to 255; text is stored as
-  numbers by an encoding: in UTF-8 `hello` is five bytes, and `é` takes two;
-- **storage**, a disk or SSD, slower, which keeps **files** when the power is off;
-- **devices**: everything else. The keyboard, the screen, the network card, the
-  disk itself.
-
-A phone, a laptop and the Machine all have these four.
-
-**Part 2: what an operating system is for.** Many programs want the same CPU, memory
-and devices at once. The **operating system** (OS) is the software that runs the
-computer for all of them. It:
-
-- starts programs and stops them;
-- shares the CPU and memory between them, and keeps them out of each other's way;
-- keeps files in folders;
-- talks to the devices, so programs don't each need to know every keyboard and disk.
-
-Windows, macOS and Android are operating systems; so are Ubuntu and the Machine's
-own, Alpine Linux.
-
-**Part 3: the kernel.** The **kernel** is the core of the operating system: the one
-part with full control of the hardware. Every other program has to ask it for what
-it needs. **Linux** is a kernel; Android, Ubuntu and the Machine all run it.
-
-> **init:** Think of a city's public works. You don't dig up the street to get water: you ask, and they open the valve.
-
-Where the picture stops being true (shown on the card): public works is a crew that
-is always busy somewhere. The kernel isn't a separate worker running beside your
-program: it is code that runs only when something calls on it (a program's
-request, a device needing attention, a timer). Between those moments, the CPU runs
-your program, not the kernel.
-
-**Part 4: programs and processes.** A **program** is instructions saved in a file,
-waiting: `/bin/ls`, `/bin/cat`, a game you installed. A **process** is a program
-while it runs, with its own memory and its own number, a **PID** (process ID).
-
-> **init:** A program is a recipe. A process is someone cooking from it right now. Two cooks can follow the same recipe at the same time: one program, two processes.
-
-Where it stops being true: a process doesn't do the work itself; the CPU does,
-switching between processes many times a second. And a process owns more than a
-recipe card: memory, open files, a number. init is a process (PID 1). So are you.
-
-**Part 5: the file tree.** Linux keeps every file in one tree of folders whose top,
-the **root**, is written `/`. A path like `/etc/motd` means: start at `/`, go into
-`etc`, take the file `motd`. Each top folder has one job: `/bin` programs, `/etc`
-settings as plain text, `/home` each person's folder (`/home/you`). Two are
-strange: `/dev` shows devices as files (write to the terminal's file and the text
-appears), and `/proc` holds nothing stored anywhere: the kernel writes each answer
-when it is read. Where it stops being true: the Machine has no disk of its own; its
-files come from the game through a virtio share, so `/dev` shows no disk (a laptop
-has `sda` or `nvme0n1`).
-
-**Part 6: the terminal, the shell and commands.** The **terminal** is a window for
-typing text and reading text back (this game's terminal; Terminal on a Mac; the
-console of a Linux server). Inside it runs a **shell**, a program that reads each
-line you type and runs the program you named. The Machine's shell is `bash`. That line is a **command**: the
-program's name, then what it should work on.
+1. **Do** (within the first 30 words): `cat /proc/version`. **See:** the Machine's
+   real line, `Linux version 6.18.63-0-virt … #1-Alpine SMP PREEMPT_DYNAMIC
+   2026-11-11 03:02:54`. **Name:** _kernel_. **Why:** the one program with full
+   control of the hardware; every other program asks it, and `cat` just did. No disk
+   holds that line: the kernel wrote it as `cat` read it.
+2. The narrator reads the **Section drawing**'s labels, top to bottom: Userland, the
+   Gate (the red line every request crosses), the kernel's floor (dark, lit part by
+   part as the game goes on), the hardware (CPU, memory, storage, devices).
+3. **Name:** _process_: while `cat` ran, it was a program running, with memory of
+   its own. **Why:** the kernel tracks every process, so it knows who is asking.
+   init is one too.
 
 ### Build it
 
-The player walks the Machine's file tree in bash, from the top down to the kernel.
-Each command is offered as a chip carrying a one-line explanation; the player may
-type it or click it.
-
-- **Starter provides:** bash, open in `/home/you`, and chips for each command below.
-- **Player does:**
-  - Name their process (the name init will call them by).
-  - `echo hello`, then `echo` with their own words: the shell's builtin.
-  - `ls /`: the root, the top of the tree.
-  - `ls /bin`: the programs; most are links to BusyBox, which does each job by the
-    name it is called with.
-  - `cat /etc/motd` and `cat /etc/hostname`: settings files, plain text.
-  - `ls /dev`: devices as files; `ttyS0` is the terminal's line.
-  - `cat /proc/version`: the kernel writes its own version as `cat` reads.
-  - `pwd` (a chip, no objective): the folder they are in.
-- **Checker verifies (behavior):**
-  - `echo` printed `hello`, and other words.
-  - `ls` listed `/`, `/bin` and `/dev`.
-  - `cat` read `/etc/motd`, `/etc/hostname` and `/proc/version` to the end.
+- **Starter provides:** bash in `/home/you`, and a chip for each command, with a
+  one-line explanation.
+- **Player does:** `ls /` (**name:** _file tree_, its top the root `/`; `etc` holds
+  settings as plain text), then `cat /etc/motd` (a path names the way down). init's
+  note is the Machine's real `/etc/motd`. Contrast: someone saved `/etc/motd`;
+  nobody saved `/proc/version`.
+- **Checker verifies (behavior, all declared `read-to-end` checks):** `cat` read
+  `/proc/version` and `/etc/motd` to the end; `ls` listed `/`.
+- **Golden runs:** `solution` (`cat /proc/version`, `ls /`, `cat /etc/motd`);
+  `other-paths` (`cat /proc/cmdline`, `ls /home`, `cat /etc/hostname`: meets none).
 
 ### Watch it
 
-**Predict:** "When you typed `cat /etc/motd`, who put my message on the screen? The
-shell, the program `cat`, or the kernel?" The answer, shown as three lit parts of the
-drawing: the shell started `cat`; `cat` asked for the file and passed its text on;
-the kernel, the only part allowed to touch the storage and the terminal's device,
-did both for it. For `/proc/version` there was no file: the kernel made the text up
-as `cat` asked.
-
-In the world: on the outside of the Section drawing, one part lights and stays lit:
-"console" (the terminal's device).
+**Predict:** "When `cat` showed my note, who read the file: `cat` itself, or the
+kernel?" On the drawing, two lines run from `cat` down through the Gate into the
+kernel. The answer: the kernel. BusyBox `cat` asks it to open the file, then to copy
+it to the terminal (`open`, `sendfile64` in the recorded run); its other requests
+wait for First Words. Only the kernel reaches the hardware.
 
 ### Debrief
 
-> **init:** CPU, memory, storage, devices. An operating system that runs them for everyone. A kernel at its core that everyone must ask, and a tree of folders where `/dev` and `/proc` lead straight to it.
->
-> **init:** You asked the kernel for something with every command just now, without seeing it. Next, in First Words, you switch on X-ray and watch the asking itself. Then you write your own first request, in C.
+> **init:** So the kernel is in charge. You can find any file by its path, and ask the kernel its name. Every command you ran crossed the Gate to ask it for something. How does a program ask? In First Words, you watch one do it, request by request.
 
 P.2 begins.
 
 ### Hints
 
-1. Nudge: "Each chip is a command. Go in order: from the top of the folder tree
-   down to the kernel."
-2. Concept: "A command is a program's name, then what it should work on. `ls /dev`:
-   the program `ls`, working on the folder `/dev`."
-3. Point at the spot: "The last one is `cat /proc/version`: type it and press
-   Enter."
+1. Nudge: "Each chip is a command: a program's name, then what it should work on.
+   Click it, or type it and press Enter."
+2. Concept: "A path names the way down from `/`, one folder at a time: `/etc/motd`
+   is the file `motd` inside the folder `etc`."
+3. Point at the spot: "Three commands, in this order: `cat /proc/version`, `ls /`,
+   `cat /etc/motd`."
 
 ### Codex (chapter: First Boot)
 
@@ -382,74 +305,106 @@ Each card has a **Simple** line, a **Deep** text and an optional **Read** line; 
 card marked `deepens: <id>` adds to an earlier card's chain instead of starting a
 new one. Card ids are unique across the game.
 
-- **The parts of a computer** (`computer-parts`)
-  - **Simple:** A CPU that runs instructions, memory for what's running now,
-    storage that keeps files, and devices for everything else.
-  - **Deep:** The CPU reads instructions and data from RAM; storage and other
-    devices sit on buses (P.6) and are worked through their drivers. RAM is
-    counted in bytes: 1 KiB = 1024 bytes, 1 MiB = 1024 KiB, so the Machine's 256 MiB
-    is 268,435,456 bytes.
-  - **Read:** https://docs.kernel.org/admin-guide/mm/concepts.html. Deepened by
-    P.6 (finding the hardware) and P.8 (memory).
-- **Operating system** (`operating-system`)
-  - **Simple:** The software that runs the computer for every other program: starts
-    them, shares the hardware between them, keeps the files.
-  - **Deep:** An OS is a kernel plus the programs and libraries around it: an init
-    system, a shell, a C library, tools. On Linux systems these come together as a
-    distribution (P.5); the Machine runs Alpine Linux.
-  - **Read:** man 7 `intro` (overview pages).
+Three cards for the core concepts (`kernel`, `program-process`, `files`), and four
+for the drawing's labels, which the story names but does not teach.
+
 - **The kernel** (`kernel`)
-  - **Simple:** The core of the operating system: the only part with full control
-    of the hardware. Every program asks it for what it needs.
-  - **Deep:** The kernel runs when something enters it: a program's syscall, a
-    device's interrupt, a fault, a timer; it also keeps a few helper threads of its
-    own (P.7). The city-works picture stops being true there: it is code that runs
-    on request, not a separate worker always on duty. — `arch/x86/entry/`,
-    `init/main.c`.
+  - **Simple:** The one program with full control of the hardware; every other
+    program asks it. `cat /proc/version` names the Machine's: Linux 6.18.
+  - **Deep:** The kernel runs only when something enters it: a program's request, a
+    device that needs attention, a timer, a fault. Otherwise the CPU runs programs,
+    the kernel's own threads, in brackets in `ps`, or waits in the kernel's idle loop.
+    Linux is one kernel; Windows runs NT and macOS runs XNU. Android, Ubuntu and the
+    Machine's Alpine all run Linux. — `arch/x86/entry/`, `init/main.c`.
   - **Read:** man 2 `intro`. Deepened by P.5 (the kernel up close).
 - **Program and process** (`program-process`)
-  - **Simple:** A program is instructions in a file. A process is a program while it
-    runs, with its own memory and a PID.
+  - **Simple:** A program is instructions in a file, like `/bin/cat`; a process is a
+    program running, with its own memory and a PID.
   - **Deep:** The kernel starts a program in a process with `execve()` and keeps one
-    `struct task_struct` per running task. One program can run as many processes
-    at once. — `fs/exec.c`, `include/linux/sched.h`.
+    `struct task_struct` for each. One program can run as many processes at once.
+    init is PID 1, and `ls /proc` shows a numbered folder for every process. Most
+    names in the Machine's `/bin` are links to one program, BusyBox, which does the
+    job its name asks for. — `fs/exec.c`, `include/linux/sched.h`.
   - **Read:** man 2 `execve`, man 1 `ps`. Deepened by P.7 (who runs) and 1.4
     (`fork`, `exec`, `wait`).
 - **The file tree** (`files`)
-  - **Simple:** One tree of folders from the root, `/`: programs in `/bin`, settings
-    in `/etc`, people's folders in `/home`, devices in `/dev`, the kernel's own view
-    in `/proc`.
-  - **Deep:** A file's data and details (size, owner) live in an inode; folders map
-    names to inodes. Other filesystems join the tree where they are mounted: `/proc`
-    and `/dev` are filled by the kernel itself. — `fs/namei.c`, `include/linux/fs.h`.
+  - **Simple:** One tree of folders from the root, `/`. A path names the way down:
+    `/etc/motd` is the file `motd` in the folder `etc`.
+  - **Deep:** Each top folder has one job: `/bin` and `/usr/bin` hold programs,
+    `/etc` settings as plain text, `/home` people's folders, `/proc` and `/sys` the
+    kernel's own views, `/dev` devices as files: `null` swallows what is written to
+    it, `zero` gives zeros, `random` gives random bytes. A file's details, and where
+    its data is, live in an inode; folders map names to inodes. Other filesystems join the tree where
+    they are mounted: `/proc` and `/dev` are filled by the kernel itself. —
+    `fs/namei.c`, `include/linux/fs.h`.
   - **Read:** man 7 `hier`. Deepened by P.9 (everything is a file) and S.1.
 - **`/proc`, the kernel's window** (`proc`)
-  - **Simple:** Files that no disk holds: when a program reads one, the kernel writes
-    the answer on the spot, about itself and every process.
-  - **Deep:** procfs is generated on each read. `/proc/version` comes from
-    `fs/proc/version.c`; each process gets `/proc/<pid>` with its memory map, open
-    files and state. — `fs/proc/version.c`, `fs/proc/base.c`.
+  - **Simple:** Files no disk holds: the kernel writes each one when a program reads
+    it. `cat /proc/version` prints the kernel's version.
+  - **Deep:** procfs is a filesystem the kernel generates on each read, mounted at
+    `/proc` at boot. `/proc/version` comes from `fs/proc/version.c`. Each running
+    program gets a folder, `/proc/<pid>`, with its memory map, open files and state.
   - **Read:** man 5 `proc`. Deepened by P.7 (who runs).
+- **The parts of a computer** (`computer-parts`)
+  - **Simple:** The hardware floor: a CPU runs instructions, memory holds what is
+    running, storage keeps files, devices do the rest. The Machine: one CPU, 256 MiB.
+  - **Deep:** The CPU reads instructions and data from memory; with one CPU it runs
+    one program at a time and switches between them many times a second. Memory
+    forgets everything at power off; storage keeps it. Memory is counted in bytes,
+    each a number from 0 to 255: 1 MiB is 1,048,576 bytes, so 256 MiB is
+    268,435,456. Text is stored as numbers too: in UTF-8, `h` is 104 and `é` takes
+    two bytes.
+  - **Read:** https://docs.kernel.org/admin-guide/mm/concepts.html.
+- **Operating system** (`operating-system`)
+  - **Simple:** The kernel plus the programs around it that run a computer for
+    everyone: Windows, macOS, Android and the Machine's Alpine Linux.
+  - **Deep:** An operating system starts and stops programs, shares the CPU and
+    memory between them, keeps files in folders and talks to the devices, so no
+    program has to know every disk ever made. Around the kernel sit an init system, a
+    shell, a C library and tools; on Linux these come together as a distribution.
+  - **Read:** man 7 `intro`. Deepened by P.5 (Linux and distributions).
 - **Terminal, shell and command** (`terminal`)
-  - **Simple:** The terminal is the window; the shell is the program in it that
-    reads your line; a command is that line: a program's name and what to work on.
-  - **Deep:** The terminal is a device (a tty). The shell reads your line from it,
-    starts the program you named, and waits for it to finish. —
-    `drivers/tty/tty_io.c`.
+  - **Simple:** The terminal is the window; the shell, bash here, reads each line you
+    type; a command is that line, like `ls /`.
+  - **Deep:** The terminal is a device, a tty; the Machine's is the serial line
+    `ttyS0`. The shell reads your line from it, starts the program you named and
+    waits for it to finish. A few commands, like `echo` and `pwd`, the shell runs
+    itself: builtins. — `drivers/tty/tty_io.c`.
   - **Read:** man 4 `tty`. Deepened by P.3 (the shell).
+
+### Moved out of the story
+
+| Fact (old story)                                                     | Now                                                      |
+| -------------------------------------------------------------------- | -------------------------------------------------------- |
+| the four parts: CPU, memory, storage, devices                        | the drawing's labels (story) and `computer-parts` Simple |
+| one CPU switches between programs fast                               | `computer-parts` Deep; taught in P.7                     |
+| bytes, 256 MiB = 268,435,456 bytes, UTF-8 (`h` = 104, `é` two bytes) | `computer-parts` Deep                                    |
+| what an operating system does; Windows, macOS, Android, Ubuntu       | `operating-system` Simple and Deep                       |
+| Linux runs in Android and Ubuntu                                     | `kernel` Deep                                            |
+| the kernel runs only when called on (the city-works limits line)     | `kernel` Deep; the analogy is gone                       |
+| program as a recipe, two cooks, PID, init is PID 1                   | `program-process` Simple and Deep; the analogy is gone   |
+| each top folder's job: `/bin`, `/home`, `/dev`                       | `files` Deep (`/etc` stays in the story)                 |
+| `/proc` in general: files written when read                          | `proc` Simple; taught in P.7                             |
+| the Machine's files come over a virtio share, not a disk             | `fidelity`                                               |
+| terminal, shell, `bash`, command                                     | `terminal` Simple and Deep; P.3 is the shell's level     |
+| `echo` and `pwd` are builtins                                        | `terminal` Deep; taught in P.2                           |
+| `/dev`: `ttyS0`, `null`, `zero`, `random`; `sda`, `nvme0n1`          | `files` Deep, `terminal` Deep, the real-world card; P.9  |
+| most of `/bin` is links to BusyBox                                   | `program-process` Deep                                   |
+| `/etc/hostname`, the Machine's name                                  | the real-world card                                      |
 
 ### Real-world card
 
-On a Linux machine (or a Mac's Terminal, which works the same for most of these):
+On a Linux machine:
 
 ```sh
-ls /
+cat /proc/version                            # the kernel's own words
+ls /                                         # the top of the file tree
 cat /etc/hostname 2>/dev/null || hostname    # your computer's name
-cat /proc/version                            # Linux only: the kernel's own words
-ls /dev
+lsblk                                        # your disks: sda, nvme0n1 or similar
 ```
 
-On Windows, the Windows Subsystem for Linux (WSL) gives you a real Linux terminal.
+A Mac's Terminal lists `/` too, but has no `/proc`: macOS runs a different kernel,
+XNU. On Windows, the Windows Subsystem for Linux gives you a real Linux terminal.
 
 ### Taint
 
@@ -457,15 +412,16 @@ No Taint rules are live in the Prologue.
 
 ### Fidelity
 
-- **Faithful:** the four kinds of parts; what an OS and a kernel do; a real Linux
-  6.18 kernel with bash and BusyBox, so every command prints as on Linux.
-- **Simplified:** the power-on animation is a drawing (P.4 has the real boot).
+- **Faithful:** a real Linux 6.18 kernel writing `/proc/version` as it is read;
+  bash and BusyBox, so every command prints as on Linux.
+- **Simplified:** the power-on animation is a drawing (P.4 has the real boot); the
+  Machine's root filesystem is not on a disk: the browser serves it to Linux over a
+  virtio 9p share.
 
 ### Lab needs
 
 The power-on animation with the burnt pstore frame; the Section drawing's outside
-view; the real VM's bash, `/etc/motd` with init's message and `/etc/hostname`
-(`kernelfall`).
+view with its four labels; the real VM's bash and `/etc/motd` with init's message.
 
 ---
 
@@ -1158,7 +1114,7 @@ The level opens on GRUB's real menu. init walks the stages; after the boot, X-ra
    and the console. Its first lines (the Machine's `dmesg`):
 
    ```
-   [    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+   [    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
    [    0.000000] BIOS-provided physical RAM map:
    [    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
    ```
@@ -1468,7 +1424,7 @@ count** (how many things use the module now: often the modules named after it, l
 `ext4` using `jbd2`; `9p`'s `1 -` is the mounted root filesystem), then the address,
 shown as zeros for anyone but root.
 
-**Part 4: Linux and the distribution.** `uname -sr` prints `Linux 6.18.59-0-virt`:
+**Part 4: Linux and the distribution.** `uname -sr` prints `Linux 6.18.63-0-virt`:
 that's the kernel. `cat /etc/os-release` prints `PRETTY_NAME="Alpine Linux v3.24"`:
 that's the **distribution**, Linux plus everything around it. init: "Linux is only
 the kernel. I, the shell, the C library, `ls` and `cat`: we're the rest." Alpine
@@ -1538,9 +1494,9 @@ uname({sysname="Linux", nodename="kernelfall", ...}) = 0
 
 ```
 $ ./myuname
-Linux 6.18.59-0-virt i686
+Linux 6.18.63-0-virt i686
 $ uname -srm
-Linux 6.18.59-0-virt i686
+Linux 6.18.63-0-virt i686
 ```
 
 `i686` is a 32-bit x86 CPU of the Pentium Pro family or later; the Machine's calls
@@ -1673,39 +1629,29 @@ Run button.
 
 ## P.6 — Finding the Hardware
 
-- **Id:** `prologue-machine-in-section-06-finding-the-hardware` · **Region / NPC:** The Machine in Section, the bottom floor / init; on the drawing: ksoftirqd · **Tracks:** `kernel` · **Time:** ~25 min · **Prerequisites:** `sys-kernel-role` · **Skills unlocked:** `drv-hardware-discovery`
+- **Id:** `prologue-machine-in-section-06-finding-the-hardware` · **Region / NPC:** The Machine in Section, the hardware floor / init · **Tracks:** `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-kernel-role` · **Skills unlocked:** `drv-hardware-discovery`
+
+**Question:** How does the kernel give each device its driver? The Machine answers
+with `lspci -k` and a `driver` link in `/sys`; the lighthouse board with a device
+tree.
+
+**Teaches:** `bus`, `sysfs`, `device-tree`. **Uses:** `kernel`, `driver` (P.4),
+`device`, `hex` (P.5), `file-tree`. **Tools:** `lspci`, `/sys`, `readlink`, `dtc`,
+`board`. Registers, MMIO, interrupts, ACPI and the driver core's functions are Codex
+cards here, with pointers to the levels that build them. The story text is the
+level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** You asked how the kernel knows what hardware it has. Nobody tells it at the factory. The same 6.18 source is built for laptops, phones and servers, so at every boot the kernel has to find out what it's sitting on.
+> **init:** The Kernel Up Close ended on a question. The kernel owns every device, but who tells it which devices it has?
 >
-> **The Watchdog:** And give every part a driver. A part without a driver is furniture.
+> **init:** Mostly, nobody. The same Linux runs on laptops, phones and servers, so at every boot it finds most of its hardware itself, and hands each device to a driver, the kernel code you saw set up in The Boot Path.
 >
-> **init:** A _driver_ is the piece of the kernel that knows how to work one kind of device: this network card, that disk. Without one, the kernel can see the device but can't use it.
->
-> **init:** On machines like ours, the kernel asks around. On small boards, someone wrote the description by hand. You'll read both.
+> **The Watchdog:** A part without a driver is furniture.
 
 ### See it (X-ray)
 
-**Part 1: how the kernel learns its hardware.** Devices are connected to the CPU by
-**buses**: the wiring and rules for talking over it (PCI for cards inside a PC, USB
-for plugged-in devices, I²C for small chips on a board). Two ways to find what's
-there, depending on the machine:
-
-- **x86 PCs and servers:** the firmware usually provides **ACPI** tables
-  that describe the board (CPUs, memory, power buttons, devices that can't announce
-  themselves), and the kernel **enumerates** buses that can: on **PCI**, every
-  device answers with a vendor ID (who made it) and a device ID (which model). x86
-  normally uses no device tree.
-- **Most ARM and RISC-V boards** (phones, Raspberry Pi, routers): many devices sit
-  at fixed addresses and can't announce themselves, so a **device tree** describes
-  them. It is written as text (`.dts`), compiled by a tool called `dtc` into a
-  binary `.dtb`, and handed to the kernel by the bootloader. (Arm servers usually
-  use ACPI instead.)
-
-**Part 2: the Machine's buses.** The Machine's firmware (SeaBIOS under v86) gives
-no ACPI tables: `ls /sys/firmware` shows only `memmap`. The kernel finds its devices
-on the PCI bus and at the old PC's fixed places. Real output:
+1. **Do** (first line): `lspci -k`. **See** (real output):
 
 ```
 $ lspci -k
@@ -1722,67 +1668,49 @@ $ lspci -k
 00:1e.0 IDE interface: Intel Corporation 82371SB PIIX3 IDE [Natoma/Triton II]
 	Subsystem: ASUSTeK Computer Inc. Device 82d4
 	Kernel driver in use: ata_piix
-$ cat /sys/bus/pci/devices/0000:00:1e.0/vendor /sys/bus/pci/devices/0000:00:1e.0/device
-0x8086
-0x7010
-$ ls -l /sys/bus/pci/devices/0000:00:1e.0/driver
-lrwxrwxrwx    1 root     root             0 Oct 31 16:17 /sys/bus/pci/devices/0000:00:1e.0/driver -> ../../../bus/pci/drivers/ata_piix
 ```
 
-The chips are a 1990s PC's (Intel 440FX and PIIX3), played by v86; the two virtio
-devices were designed for virtual machines. `/sys` is a folder the kernel fills with
-what it knows about devices, one small file per fact. `0x8086` is Intel's vendor
-number. The last line is a **link** (a file that points to another path, shown with
-`->`): the disk controller's driver is `ata_piix`.
+2. **Name:** _bus_: the wiring that joins devices to the CPU, and the rules for
+   talking over it. At boot the kernel asks every PCI slot what is there; each
+   device answers with its maker's and its model's numbers; the bus offers it to the
+   drivers, and one whose list holds those numbers takes it. **Why:** one kernel runs
+   on any PC. The two bridges join the bus to the CPU, memory and the PC's oldest
+   parts, run by the kernel's core; `ata_piix` took the disk controller; the display
+   controller at `00:12.0` has no driver line: its driver, `bochs`, sits unloaded in
+   a module file. The drawing's hardware floor fills in: six parts, three joined to a
+   driver.
+3. **Name:** _/sys_: a tree of small files, one fact each, where the kernel writes
+   what it found, so programs like `lspci` can read it. **Do:**
 
-**Part 3: binding.** The Section drawing shows the **driver model**: a **bus**
-(PCI), its **devices** (what was found) and its **drivers** (code that can run a
-kind of device). When a device and a driver appear on the same bus, the bus
-**matches** them (for PCI, the device's IDs against a list of IDs in the driver);
-the driver's `probe()` function then takes the device over, and the `driver` link
-appears. On most systems udev, a program in Userland, hears each new device, loads
-its module and names its door in `/dev`; the Machine runs no udev (init loads its few
-modules at boot, and devtmpfs makes the doors).
+   ```
+   $ cat /sys/bus/pci/devices/0000:00:1e.0/vendor /sys/bus/pci/devices/0000:00:1e.0/device
+   0x8086
+   0x7010
+   ```
 
-**Part 4: interrupts and MMIO, in one picture.** A driver controls its device
-through the device's **registers**: small slots it can read or write ("start
-sending", "how many bytes arrived", "lamp on"). On most hardware these appear at
-memory addresses (**MMIO**, memory-mapped I/O), so the driver reads and writes
-them like memory. The device gets the CPU's attention with an **interrupt**: a
-signal that makes the CPU pause what it's doing and run the driver's handler.
-Examples: a key pressed, a network packet arrived, a timer went off.
+   `0x8086` is Intel; `0x7010` is its PIIX3 disk controller, on `ata_piix`'s list.
 
-Where the "tap on the shoulder" picture stops being true: the CPU doesn't decide to
-look; the hardware forces a jump into the kernel's code between two instructions,
-whatever was running, as long as interrupts are enabled. The kernel switches them
-off for a few instructions at a time (`cli`, `local_irq_disable()`) where it must
-not be interrupted, and the device waits until they're back on.
+### Build it
 
-```
-$ cat /proc/interrupts
-           CPU0
-  0:      62321   XT-PIC      timer
-  1:         10   XT-PIC      i8042
-  2:          0   XT-PIC      cascade
-  3:      58481   XT-PIC      ttyS1
-  4:       6214   XT-PIC      ttyS0
-  8:          0   XT-PIC      rtc0
- 10:      21671   XT-PIC      virtio0, virtio1
- 12:          5   XT-PIC      i8042
- 14:          2   XT-PIC      ata_piix
- 15:          3   XT-PIC      ata_piix
-...
-```
+- **Starter provides:** chips for `lspci`, `cat`, `readlink`, `dtc` and `board`; the
+  `lighthouse.dts` file in the editor (a made-up ARM board written with real
+  bindings; the LED child is `led-0`, as `leds-gpio.yaml` asks); **`board`**, a lab
+  program (`lab.files` puts its C source in `/usr/local/src`, `lab.bin` builds it)
+  that reads a real `.dtb` and matches each node of the root against the real
+  `of_match_table` strings of `pinctrl-bcm2835` and `leds-gpio`, printing one line
+  per device and the board's `/sys/class/leds`.
+- **Player does:**
+  - On the Machine: `readlink` the disk controller's `driver` link, a file that
+    points to another path.
+  - On the board: **name:** _device tree_, the hand-written description of devices
+    that can't announce themselves; each node names its device with a `compatible`
+    text, and a driver takes the node if that text is on its list.
+    `dtc -I dts -O dtb -o lighthouse.dtb lighthouse.dts`, then `board lighthouse.dtb`
+    (real output with the starter: `leds: no driver matches "gpio-led"`). init shows
+    the `of_match_table` of `drivers/leds/leds-gpio.c` (`"gpio-leds"`); the player
+    fixes the node, compiles and boots again.
 
-One column (one CPU); `XT-PIC` is the oldest PC interrupt controller; `ttyS1`
-carries the trace to X-ray. ksoftirqd, on the drawing: "The handler does the urgent
-part. The rest, I finish later." (Interrupt Spire, 2.10.)
-
-**Part 5: a device tree.** init opens `lighthouse.dts` in the editor, the
-description of a small ARM board, Socket Harbor's lighthouse controller. It is a
-made-up board written with real bindings: real `compatible` names drivers
-recognize, and node names as the bindings ask (the LED child is `led-0`, the
-pattern in `leds-gpio.yaml`; its `label` names it in `/sys/class/leds`):
+The starter tree:
 
 ```dts
 /dts-v1/;
@@ -1811,55 +1739,30 @@ pattern in `leds-gpio.yaml`; its `label` names it in `/sys/class/leds`):
 };
 ```
 
-Each `{ }` block is a **node** (one device or group). `reg` gives a device's
-register addresses; `compatible` names what the device is. At boot, the kernel
-matches each node's `compatible` text against every driver's `of_match_table` (its
-list of names it can handle). The GPIO controller is a chip whose pins software can
-switch on and off; the lamp is wired to pin 4.
+The list init shows, from `drivers/leds/leds-gpio.c`:
 
-### Build it
+```c
+static const struct of_device_id of_gpio_leds_match[] = {
+	{ .compatible = "gpio-leds", },
+	{},
+};
+```
 
-- **Starter provides:** chips for `lspci`, `readlink`, `cat`, `dtc` and `board`; the
-  `lighthouse.dts` file in the editor; **`board`**, a lab program (`lab.files` puts
-  its C source in `/usr/local/src`, `lab.bin` builds it) that reads a real `.dtb`
-  and matches each node of the root against the real `of_match_table` strings of
-  `pinctrl-bcm2835` and `leds-gpio`, printing one line per device and the board's
-  `/sys/class/leds`; and the `of_match_table` of the kernel's GPIO LED driver:
-
-  ```c
-  static const struct of_device_id of_gpio_leds_match[] = {
-  	{ .compatible = "gpio-leds", },
-  	{},
-  };
-  ```
-
-- **Player does:**
-  - On the Machine: read the disk controller's `driver` link with `readlink`.
-  - On the lighthouse board: `dtc -I dts -O dtb -o lighthouse.dtb lighthouse.dts`,
-    then `board lighthouse.dtb` (real output with the starter):
-
-    ```
-    OF: fdt: Machine model: Socket Harbor lighthouse
-    pinctrl-bcm2835 7e200000.gpio: probed
-    leds: no driver matches "gpio-led"
-    /sys/class/leds: (none)
-    ```
-
-    Read the two `compatible` texts, fix the one in `lighthouse.dts`, compile and
-    boot again.
 - **Checker verifies (behavior):**
-  - The `driver` link of `0000:00:1e.0` was read (`readlink`/`readlinkat`) and
-    names `ata_piix` (checked against `machine-facts.json`).
-  - `dtc` compiled `lighthouse.dts` without errors.
-  - `board` printed `leds-gpio leds: probed` and `lighthouse:lamp`.
-- **Golden runs:** `solution`; `starter` (the unfixed tree: rejected for
-  `lamp-binds`).
+  - `asks-pci-bus` (declared `ran` check): `lspci` ran with `-k` and exited 0.
+  - `reads-disk-driver`: the `driver` link of `0000:00:1e.0` was read
+    (`readlink`/`readlinkat`) and names `ata_piix` (checked against
+    `machine-facts.json`).
+  - `compiles-dts`: `dtc` compiled `lighthouse.dts` without errors.
+  - `lamp-binds`: `board` printed `leds-gpio leds: probed` and `lighthouse:lamp`.
+- **Golden runs:** `solution` (`lspci -k`, `readlink`, `dtc`, `board`); `starter`
+  (the unfixed tree, without the Machine's errands: rejected for `asks-pci-bus`,
+  `lamp-binds` and `reads-disk-driver`).
 
 ### Watch it
 
-**Predict:** "The node says `gpio-led`; the driver's list says `gpio-leds`. Will
-the kernel treat them as the same?" No: matching compares the whole text. After the
-fix (real output):
+**Predict:** "The node said `gpio-led`, the list says `gpio-leds`. Close enough for
+the kernel?" No: the kernel compares the whole text. After the fix (real output):
 
 ```
 $ board lighthouse.dtb
@@ -1869,88 +1772,141 @@ leds-gpio leds: probed
 /sys/class/leds: lighthouse:lamp
 ```
 
-In the world: at the bottom of the Section drawing, the hardware floor fills in: a
-CPU, 256 MiB of RAM, the disk, the network card, each with a line to its driver.
-Far away on the map, a tiny light blinks at Socket Harbor, then goes out again:
-"That board's not ours yet. 1.9."
+With the match, `leds-gpio` takes the lamp, as `ata_piix` took the disk controller:
+on a PC the bus matches numbers, on a board the device tree's names. The lamp's
+`label` is its name in the board's `/sys/class/leds`. Far away on the map, a light
+blinks once at Socket Harbor, then goes out.
 
 ### Debrief
 
-> **init:** So the kernel finds its hardware: by asking the PCI bus here, from a device tree on boards like that one. Buses match devices to drivers, drivers take them over.
->
-> **init:** Now the floor above the hardware. Who gets to use the CPU? Let's count who's running, in Who Runs.
+> **init:** You can find which driver runs a device, and give a board's device its driver. Each device goes to a driver whose list matches it. Next, another part of the kernel: one CPU, and many programs that want it. Who decides? Find out in Who Runs.
 
 P.7 begins.
 
 ### Hints
 
-1. Nudge: "In `/sys`, a device that has a driver has a link called `driver`. Where
-   does the disk's link point?"
-2. Concept: "A device tree node binds when its `compatible` text is exactly one of
-   the texts in a driver's `of_match_table`. One letter off and nothing happens."
+1. Nudge: "In `/sys`, a device that has a driver has a link named `driver`. For the
+   lamp, compare two texts: its node's `compatible` and the driver's list."
+2. Concept: "A node binds when its `compatible` text is one of the texts in a
+   driver's `of_match_table`, whole and letter for letter; only upper and lower case
+   may differ."
 3. Point at the spot: "The `leds` node says `\"gpio-led\"`. The driver's list says
    `\"gpio-leds\"`."
 
 ### Codex (chapter: The Machine in Section)
 
-- **Drivers** (`drivers`)
-  - **Simple:** The part of the kernel that knows how to work one kind of device.
-    Without one, a device is seen but can't be used.
-  - **Deep:** Most of the kernel's code is drivers, under `drivers/`. A driver
-    registers with a bus and is offered every matching device; it can be built in
-    or a module. — `drivers/`, `include/linux/device/driver.h`.
-  - **Read:** https://docs.kernel.org/driver-api/. Deepened by 2.4 (the Lantern).
-- **Finding hardware: ACPI and PCI** (`acpi-pci`)
-  - **Simple:** On PCs the firmware describes the board (ACPI) and the kernel asks
-    each PCI slot what's there: vendor and device IDs.
-  - **Deep:** ACPI tables (the DSDT and others) come from firmware and are parsed
-    by the kernel's ACPI core. PCI devices are found by reading each slot's
-    configuration space; each gets a `struct pci_dev` and a folder in
-    `/sys/bus/pci/devices`. — `drivers/acpi/`, `drivers/pci/probe.c`
-    (`pci_scan_device()`), `include/linux/pci.h`.
-  - **Read:** man 8 `lspci`, https://docs.kernel.org/PCI/pci.html.
-- **The device tree** (`device-tree`)
-  - **Simple:** A text description of a board's hardware, compiled to a binary and
-    given to the kernel at boot. Used by most ARM and RISC-V boards, not by PCs.
-  - **Deep:** A `.dts` is a tree of nodes with properties (`compatible`, `reg`,
-    `interrupts`, links like `<&gpio 4 0>`); `dtc` compiles it to a `.dtb` that the
-    bootloader passes to the kernel. Drivers list the strings they handle in an
-    `of_match_table` of `struct of_device_id`; bindings are documented in
-    `Documentation/devicetree/bindings/`. A running system shows its tree in
-    `/sys/firmware/devicetree/base` (also `/proc/device-tree`). —
-    `drivers/of/`, `arch/arm64/boot/dts/`, `drivers/leds/leds-gpio.c`.
-  - **Read:** https://docs.kernel.org/devicetree/usage-model.html, man 1 `dtc`.
+Three cards for the core concepts (`driver-model`, `sysfs`, `device-tree`); `drivers`
+for the concept P.4 named; two depth cards that hold what the story no longer
+teaches, each pointing at the level that builds it.
+
 - **Buses, devices and drivers** (`driver-model`)
-  - **Simple:** A bus matches each device it finds with a driver that can run it;
-    the driver's `probe()` then takes the device over.
+  - **Simple:** A bus finds its devices and offers each to the drivers; one whose
+    list matches takes it. `lspci -k` prints `Kernel driver in use: ata_piix`.
   - **Deep:** The driver model has `struct bus_type`, `struct device` and
     `struct device_driver`. When either side is added, the core calls the bus's
-    `match()`, then the driver's `probe()`; `/sys/bus/<bus>/devices` and
-    `/sys/bus/<bus>/drivers` show both sides, `/sys/devices` the physical tree.
-    udev, in user space, hears each new device as a uevent and loads its module by
-    `modalias`. — `drivers/base/dd.c` (`driver_attach()`, `really_probe()`),
-    `drivers/base/bus.c`, `drivers/pci/pci-driver.c` (`pci_bus_match()`).
+    `match()`, then the driver's `probe()`, which takes the device over, in
+    `really_probe()`. PCI joins cards inside a PC, USB plugged-in devices, I²C a
+    board's small chips; PCI matches the IDs in a driver's `id_table`. On most systems udev, in Userland, hears each new device as
+    a uevent and loads its module by `modalias`; the Machine runs no udev. —
+    `drivers/base/dd.c`, `drivers/base/bus.c`, `drivers/pci/pci-driver.c`.
   - **Read:** https://docs.kernel.org/driver-api/driver-model/overview.html, man 7
     `udev`. Deepened by 2.4 (the Lantern's device).
+- **`/sys`, the devices' tree** (`sysfs`)
+  - **Simple:** Files the kernel fills with what it knows about devices, one fact
+    each: `/sys/bus/pci/devices/0000:00:1e.0/vendor` holds `0x8086`, Intel.
+  - **Deep:** sysfs is made by the kernel from its own objects, on read, like
+    `/proc`. `/sys/bus/<bus>/devices` and `/sys/bus/<bus>/drivers` show a bus's two
+    sides, `/sys/devices` the physical tree, `/sys/class` devices by kind. A bound
+    device's `driver` entry is a symbolic link into its driver's folder. A PCI
+    device's folder is named by its address: domain `0000`, bus `00`, slot `1e`,
+    function `0`. `lspci` reads its answers from `/sys/bus/pci`. In 2.7 the Lantern gets files of its own
+    here. — `fs/sysfs/`, `drivers/base/core.c`.
+  - **Read:** https://docs.kernel.org/filesystems/sysfs.html. Deepened by 2.7.
+- **The device tree** (`device-tree`)
+  - **Simple:** A text description of a board's devices, compiled by `dtc` and
+    handed to the kernel at boot. Most ARM and RISC-V boards use one.
+  - **Deep:** A `.dts` is a tree of nodes with properties: `compatible`, `reg` for
+    register addresses, links like `<&gpio 4 0>`, the lamp on pin 4 of a GPIO
+    controller, a chip whose pins software switches. Drivers list their strings in
+    an `of_match_table`; `of_compat_cmp()` compares whole strings, ignoring case. A
+    node with `reg` becomes a device named address.node, like `7e200000.gpio`. A
+    running system shows its tree in `/sys/firmware/devicetree/base`. You write the
+    lighthouse beacon's driver in 3.14. — `drivers/of/`, `arch/arm64/boot/dts/`,
+    `drivers/leds/leds-gpio.c`.
+  - **Read:** https://docs.kernel.org/devicetree/usage-model.html, man 1 `dtc`.
+    Deepened by 3.14.
+- **Drivers** (`drivers`)
+  - **Simple:** The kernel code that knows how to work one kind of device:
+    `ata_piix` runs the Machine's disk controller.
+  - **Deep:** Most of the kernel's code is drivers, under `drivers/`. A driver
+    registers with a bus and is offered every matching device; it can be built in
+    or a module. Without a bound driver, the kernel sees a device but can't run it.
+    The Machine's display controller at `00:12.0` has one, `bochs`, as a module
+    nothing loads: no udev. — `drivers/`,
+    `include/linux/device/driver.h`.
+  - **Read:** https://docs.kernel.org/driver-api/. Deepened by P.9 and 2.4.
+- **Finding hardware: ACPI and PCI** (`acpi-pci`)
+  - **Simple:** On PCs, firmware tables called ACPI describe what can't announce
+    itself, and the kernel asks each PCI slot for its vendor and device IDs.
+  - **Deep:** The kernel's ACPI core parses the firmware's tables, the DSDT and
+    others; `/sys/firmware/acpi/tables` shows them. Arm servers use ACPI too. PCI
+    devices are found by reading each slot's configuration space in
+    `pci_scan_device()`; each gets a `struct pci_dev`. A host bridge joins PCI to the
+    CPU and memory; an ISA bridge leads to old PC parts like the keyboard. The
+    Machine's firmware gives no ACPI tables: `/sys/firmware` holds only `memmap`. You write a
+    PCI driver in 3.15. — `drivers/acpi/`, `drivers/pci/probe.c`,
+    `include/linux/pci.h`.
+  - **Read:** man 8 `lspci`, https://docs.kernel.org/PCI/pci.html. Deepened by 3.14
+    (`acpi-hid`) and 3.15 (`pci-driver`).
 - **Interrupts and MMIO** (`interrupts-mmio`)
-  - **Simple:** A driver works a device by reading and writing its registers at
-    memory addresses; the device calls for attention with an interrupt.
-  - **Deep:** A driver maps the device's register range with `ioremap()` (or
-    `pci_iomap()`) and uses `readl()`/`writel()`. An interrupt (an IRQ line or a
-    PCI MSI message) makes the CPU run the kernel's interrupt entry, which calls
-    the handler the driver registered with `request_irq()`; slow work is deferred
-    to softirqs or workqueues. `/proc/interrupts` counts them per CPU. —
-    `kernel/irq/`, `kernel/softirq.c`, `include/linux/io.h`.
+  - **Simple:** A driver works its device through registers, often at memory
+    addresses; the device calls for attention with an interrupt.
+    `cat /proc/interrupts` counts them.
+  - **Deep:** A driver maps its device's registers with `ioremap()` and uses
+    `readl()` and `writel()`; old PC parts use I/O ports, `inb()` and `outb()`. An
+    interrupt makes the CPU jump into the kernel between two instructions and run the
+    handler given to `request_irq()`; `local_irq_disable()` holds them off.
+    Deferrable work goes to softirqs, run as the interrupt ends or by `ksoftirqd`, or
+    to workqueues, which may sleep. On the Machine's XT-PIC, line 0 is the timer.
+    Built in 2.10a–2.10c and 3.15. —
+    `kernel/irq/`, `kernel/softirq.c`, `include/linux/io.h`,
+    `arch/x86/kernel/i8259.c`.
   - **Read:** https://docs.kernel.org/core-api/genericirq.html. Deepened by
-    2.10a–2.10c (the Interrupt Spire).
+    2.10a–2.10c (the Interrupt Spire) and 3.15 (`pci-bar`).
+
+### Moved out of the story
+
+| Fact (old story)                                                          | Now                                                  |
+| ------------------------------------------------------------------------- | ---------------------------------------------------- |
+| USB and I²C as other buses                                                | `driver-model` Deep                                  |
+| ACPI tables describe the board; Arm servers use ACPI                      | `acpi-pci` Simple and Deep; 3.14                     |
+| the Machine's firmware gives no ACPI; `/sys/firmware` holds only `memmap` | `acpi-pci` Deep; `fidelity`                          |
+| PCI enumeration, configuration space                                      | `acpi-pci` Deep; 3.15                                |
+| what the host bridge and ISA bridge do                                    | one clause in the story; detail in `acpi-pci` Deep   |
+| 440FX and PIIX3 are 1990s chips, emulated; virtio IDs from Red Hat        | `fidelity`                                           |
+| `rev` is a revision, `Subsystem` who built the card                       | `fidelity`                                           |
+| `probe()`, the driver model's three structures                            | `driver-model` Deep; 2.4                             |
+| udev loads modules and names devices; the Machine runs none               | `driver-model` Deep; P.9                             |
+| registers, MMIO, I/O ports                                                | `interrupts-mmio` Simple and Deep; 3.15              |
+| interrupts, the jump between two instructions, `cli`/`local_irq_disable`  | `interrupts-mmio` Deep; 2.10a–2.10c                  |
+| `/proc/interrupts`, XT-PIC, one CPU column, line 0 the timer              | `interrupts-mmio` Simple and Deep, `fidelity`; 2.10b |
+| `ttyS1` carries the trace                                                 | `fidelity` (game internals)                          |
+| ksoftirqd's cameo: "the handler does the urgent part"                     | `interrupts-mmio` Deep; 2.10b                        |
+| `reg`, nodes, `of_match_table`, `7e200000.gpio`, GPIO pin 4               | `device-tree` Deep; 3.14                             |
+| the LED child `led-0` as the binding asks                                 | `fidelity`                                           |
+| `-I dts -O dtb -o` explained                                              | the `dtc` chip                                       |
+| a PCI address: bus, slot, function                                        | `sysfs` Deep                                         |
+| the 9P transport carries the Machine's files                              | `fidelity`                                           |
+| which interrupt line each device uses                                     | the real-world card's `/proc/interrupts`, 2.10b      |
+| "a link: a file that points to another path"                              | stays in the story (Build it)                        |
 
 ### Real-world card
 
 ```sh
 lspci -k                                   # PCI devices and their drivers
 ls /sys/bus/pci/drivers                    # every PCI driver the kernel has now
-cat /proc/interrupts                       # who interrupts the CPU, and how often
-ls /sys/firmware/devicetree/base 2>/dev/null || echo "no device tree (normal on x86)"
+cat /proc/interrupts                       # which device interrupts the CPU, how often
+ls /sys/firmware/devicetree/base 2>/dev/null || echo "no device tree, as on most PCs"
 ```
 
 On a Raspberry Pi or another ARM board, `ls /proc/device-tree` shows the live
@@ -1963,16 +1919,25 @@ No Taint rules are live in the Prologue.
 ### Fidelity
 
 - **Faithful:** the Machine's real PCI devices, IDs and drivers as `lspci -k`
-  prints them; no ACPI tables under SeaBIOS/v86; the `/sys` layout and `driver`
-  links; `/proc/interrupts` on one CPU through the XT-PIC; the device tree syntax,
-  real `dtc`, the `gpio-leds` and `brcm,bcm2835-gpio` compatible strings,
+  prints them: a 1990s PC's chips, Intel's 440FX and PIIX3, emulated, and two virtio
+  devices designed for virtual machines, with IDs Red Hat registered (`rev` is a
+  chip's revision, `Subsystem` who built the card around it); the 440FX is also the
+  memory controller, and the PIIX3's ISA side holds the timer, the interrupt
+  controllers and DMA; no ACPI tables from the firmware (dmesg: no valid RSDP):
+  `/sys/firmware` holds only `memmap`; the `/sys` layout and `driver` links, and no
+  driver bound to the display controller (`bochs.ko` is on the image, unloaded; the
+  VGA text console still writes to it through the old VGA ports); `/proc/interrupts`
+  on one CPU through the XT-PIC (most PCs use an IO-APIC and MSI, a column per CPU);
+  the device tree
+  syntax, real `dtc`, the `gpio-leds` and `brcm,bcm2835-gpio` compatible strings,
   whole-string matching that ignores case (`of_compat_cmp()`); the LED child named
   `led-0` as the leds-gpio binding asks; platform device names from nodes
   (`7e200000.gpio`) and LED names from labels.
 - **Simplified:** the lighthouse board is made up (real bindings, invented board);
   `board` matches a real `.dtb` against two drivers' real tables but runs no ARM
   kernel, and its probe lines are its own (the driver core logs bindings only at
-  debug level).
+  debug level); the serial line `ttyS1` and its interrupts carry the kernel's trace
+  to the browser.
 
 ### Lab needs
 
@@ -2509,7 +2474,7 @@ None beyond the shared Machine. Engine: `sendfile64` data in the trace would let
    drivers wrote while taking their devices:
 
    ```
-   [    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+   [    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
    ...
    [    1.588336] scsi host0: ata_piix
    ...

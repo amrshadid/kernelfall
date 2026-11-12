@@ -25,10 +25,11 @@ import { bootViewOf } from '@features/xray/utils/boot'
 import { callGroupsOf, leadCallId, lessonCalls } from '@features/xray/utils/call-list'
 import { toXrayCalls } from '@features/xray/utils/calls'
 import { cpuLanesOf } from '@features/xray/utils/cpus'
+import { crossingStoryboard } from '@features/xray/utils/crossing'
 import { toLogRun } from '@features/xray/utils/log'
 import { isWholeRun } from '@features/xray/utils/panel'
 import { isEpisodeOver, processEpisodes, processStoryboard } from '@features/xray/utils/processes'
-import { routeOf, routesOf } from '@features/xray/utils/route'
+import { filesOf, routeOf, routesOf } from '@features/xray/utils/route'
 import { sectionOf } from '@features/xray/utils/section'
 import { syscallStoryboard } from '@features/xray/utils/syscalls'
 import { xrayContent } from '@kernelfall/levels/utils'
@@ -108,7 +109,20 @@ export function useXrayBoard({
     runId: run?.id ?? null,
   })
   const episode = pickEpisode(episodes, state.pick, live)
-  const callBoard = useMemo(() => (call ? syscallStoryboard(call, content.narration) : null), [call, content])
+  const simple = state.depth === 'simple'
+  const callBoard = useMemo(
+    () => (call && !simple ? syscallStoryboard(call, content.narration) : null),
+    [call, content, simple]
+  )
+  const routes = useMemo(() => routesOf(events), [events])
+  const files = useMemo(() => filesOf(calls), [calls])
+  const crossingBoard = useMemo(
+    () =>
+      call && simple
+        ? crossingStoryboard(call, content.narration, { route: routes.get(call.id), file: files.get(call.id) })
+        : null,
+    [call, content, simple, routes, files]
+  )
   const episodeBoard = useMemo(
     () => (episode ? processStoryboard(episode, content.narration) : null),
     [episode, content]
@@ -121,12 +135,14 @@ export function useXrayBoard({
     if (state.lens === 'boot') {
       return bootView && { kind: 'boot', view: bootView }
     }
+    // init's drawing hangs there before any command: every part dark.
+    if (state.lens === 'section') {
+      return { kind: 'section', view: sectionOf(run ?? null, routes), commandLine: run?.commandLine ?? '' }
+    }
     if (!run) {
       return null
     }
     switch (state.lens) {
-      case 'section':
-        return { kind: 'section', view: sectionOf(run, routesOf(events)), commandLine: run.commandLine }
       case 'route':
         return { kind: 'route', view: routeOf(run.commandLine, calls, events) }
       case 'cpus':
@@ -134,14 +150,19 @@ export function useXrayBoard({
       default:
         return null
     }
-  }, [state.lens, run, events, calls, cpus, bootView])
+  }, [state.lens, run, events, calls, cpus, bootView, routes])
 
   const figure: XrayFigure | null = whole
     ? wholeFigure
     : syscalls
-      ? callBoard && { kind: 'syscalls', storyboard: callBoard }
+      ? crossingBoard
+        ? { kind: 'crossing', storyboard: crossingBoard }
+        : callBoard && { kind: 'syscalls', storyboard: callBoard }
       : episodeBoard && { kind: 'processes', storyboard: episodeBoard }
-  const storyboard = figure?.kind === 'syscalls' || figure?.kind === 'processes' ? figure.storyboard : null
+  const storyboard =
+    figure?.kind === 'syscalls' || figure?.kind === 'crossing' || figure?.kind === 'processes'
+      ? figure.storyboard
+      : null
   const pickId = whole ? null : syscalls ? (call ? String(call.id) : null) : (episode?.key ?? null)
   const picks = picksOf(state.lens, calls, episodes)
   const nextPick = syscalls
@@ -195,6 +216,7 @@ export function useXrayBoard({
       pickLegend: syscalls ? 'Call' : 'Child',
       log: syscalls ? log : null,
       callList: syscalls && run ? callList.view : null,
+      allCalls: callList.all,
       expanded: state.expanded,
     },
     controlActions: {
@@ -205,6 +227,7 @@ export function useXrayBoard({
       select: state.select,
       setExpanded: state.setExpanded,
       toggleRow: callList.toggle,
+      toggleAllCalls: callList.toggleAll,
     },
     figure,
     emptyText,

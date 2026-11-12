@@ -35,6 +35,8 @@
 
 > **init:** On a laptop you'd see more: the kernel from before the last update, kept in case the new one fails, and a `Windows Boot Manager` entry if Windows shares the disk. Press `e`, and you see what an entry really is: a few lines of commands.
 
+---
+
 ```
 setparams 'Alpine, with Linux virt'
 
@@ -53,7 +55,7 @@ initrd        /boot/initramfs-virt
 > **init:** Third, the _kernel_. It unpacks itself, then its first function, `start_kernel()`, sets up the CPU, memory, interrupts, the scheduler and the console. Its first lines say who it is, and what memory the BIOS reported.
 
 ```
-[    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+[    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
 [    0.000000] BIOS-provided physical RAM map:
 [    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
 ```
@@ -73,6 +75,8 @@ initrd        /boot/initramfs-virt
 > **init:** Take `quiet` away, so the kernel's messages print. Add `initcall_debug`, so the kernel logs every initcall's name and how long it took. And add a word of your own, for me: `greeting=hello`. The kernel doesn't know that one, so it will pass it on to me, and say so.
 >
 > **init:** Boot with Ctrl-X. Without `quiet` the kernel's lines scroll past on your terminal. Then `cat /proc/cmdline` shows the command line this boot really used, and `dmesg` prints the kernel's log: everything it said since it started, even what never reached the screen. It's thousands of lines, so let `grep` pick the ones you want.
+
+---
 
 ```
 $ cat /proc/cmdline
@@ -97,6 +101,9 @@ $ dmesg | grep -m 4 "calling  "
 ## Watch it
 
 > **init:** Before we go: did your edit change anything for the next boot?
+>
+> - yes, the next boot uses it
+> - [x] no, it was for this boot only
 
 GRUB's editor worked on a copy of the entry in memory. The entry itself is in `/boot/grub/grub.cfg` on `/dev/sda1`, and nobody wrote to it.
 

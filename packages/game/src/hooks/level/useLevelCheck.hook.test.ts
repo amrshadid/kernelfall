@@ -144,6 +144,51 @@ describe('useLevelCheck', () => {
     spy.mockRestore()
   })
 
+  it('passes the typed line and the commands finished before it, and forgets them on a replay', async () => {
+    installTestGame()
+    const actions = renderGameActions()
+    await toBuild(actions)
+    const spy = vi.spyOn(EXAMPLE_CHECKER, 'check')
+    const { result } = renderHook(() => useLevelCheck())
+    const run = (commandLine: string, status: number) =>
+      act(async () => void (await result.current.check({ command: { commandLine, status }, events: exitOnly(status) })))
+
+    await run('chmod -x hi', 0)
+    await run('./hi', 126)
+    await act(async () => {
+      await actions.level.replay(EXAMPLE_LEVEL.id)
+      await actions.level.next()
+      await actions.level.next()
+    })
+    await run('./hi', 0)
+
+    expect(spy.mock.calls.map(([input]) => [input.commandLine, input.history])).toEqual([
+      ['chmod -x hi', []],
+      ['./hi', [{ commandLine: 'chmod -x hi', status: 0 }]],
+      ['./hi', []],
+    ])
+    spy.mockRestore()
+  })
+
+  it('keeps a command finished outside "build it" in the history: it still changed the Machine', async () => {
+    installTestGame()
+    const actions = renderGameActions()
+    await actions.saves.open()
+    await actions.level.start(EXAMPLE_LEVEL.id)
+    const spy = vi.spyOn(EXAMPLE_CHECKER, 'check')
+    const { result } = renderHook(() => useLevelCheck())
+
+    await act(async () => void (await result.current.check(finished(exitOnly(0)))))
+    await act(async () => {
+      await actions.level.next()
+      await actions.level.next()
+      await result.current.check(finished(exitOnly(0)))
+    })
+
+    expect(spy.mock.calls.map(([input]) => input.history)).toEqual([[{ commandLine: './hello', status: 0 }]])
+    spy.mockRestore()
+  })
+
   it('judges a boot by its summary, with no events and no build', async () => {
     const check = vi.fn(() => ({ objectivesMet: [], taint: [] }))
     const bootChecker: LevelChecker = { applies: ({ boot }) => boot !== undefined, check }

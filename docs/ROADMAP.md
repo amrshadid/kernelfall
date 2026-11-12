@@ -5,17 +5,18 @@ issue before you start, so two people don't build the same thing.
 
 ## Where it stands
 
-The engine is done: a real Linux 6.18 machine runs in the browser, and levels are judged
-by what its kernel really did. The content is not: of the 66 levels in v1.0, 16 are
-built, and only P.1 is checked against the real Machine.
+A real Linux 6.18 machine runs in the browser, and levels are judged by what its kernel
+really did. All 16 built levels play on it and are fact-checked against it. They are now
+being rewritten to the content standard ([LEVELS.md](LEVELS.md#concepts-and-budgets)):
+one question each, a third of the words, and ideas that link from level to level.
 
-| Region                 | Levels   | Built   | Plays on the real Machine | Text checked against it |
-| ---------------------- | -------- | ------- | ------------------------- | ----------------------- |
-| First Boot             | P.1–P.4  | 4       | P.1–P.3                   | P.1                     |
-| The Machine in Section | P.5–P.10 | 6       | P.5, P.7, P.8, P.9        | none yet                |
-| Surface Survey         | S.1–S.5  | 5       | all                       | none yet                |
-| Act I: Userland        | 1.0–1.B  | 1 (1.4) | 1.4                       | none yet                |
-| Acts II and III        | 39       | 0       |                           |                         |
+| Region                 | Levels   | Built   | Fact-checked on the Machine | To the content standard |
+| ---------------------- | -------- | ------- | --------------------------- | ----------------------- |
+| First Boot             | P.1–P.4  | 4       | all                         | P.1                     |
+| The Machine in Section | P.5–P.10 | 6       | all                         | P.6                     |
+| Surface Survey         | S.1–S.5  | 5       | all                         | none yet                |
+| Act I: Userland        | 1.0–1.B  | 1 (1.4) | 1.4                         | none yet                |
+| Acts II and III        | 39       | 0       |                             |                         |
 
 ## Milestones
 
@@ -29,21 +30,31 @@ built, and only P.1 is checked against the real Machine.
 
 ### Engine
 
-- **GRUB on the data disk**, so P.4 and P.10 can edit and repair a real boot.
-- **P.6's board program** and its device tree (`dtc` is on the Machine).
-- **Offline play:** a service worker that keeps the app itself, like the Machine's files.
-- **`sendfile64` data in the trace**, so `cat` into a pipe or file can be judged.
-- **X-ray's boot view** from the real boot record (`useBootRecord()`), for P.4.
-- **gcc's diagnostics in the editor**, as marks on the lines they name.
+- **Routes in the trace:** which filesystem or driver served each call, so X-ray names
+  the real kernel part.
+- **A boot record for a boot that stops** in the initramfs (P.10).
+- **The terminal's real size** for the guest, so `less` and `top` fill the panel.
+- **gcc's diagnostics in the editor**, as marks on the lines they name (0.2.0).
 
 ### Content
 
-- **Rewrite P.2–P.10 and S.1–S.5 for the real Machine:** one CPU, 256 MiB, i386, BusyBox
-  output, bash (there is no limited "rescue shell"), the real PCI devices and disk.
-- **Fact-check each level** against Linux 6.18, the man pages and the Machine itself,
-  following the quality gate in [LEVELS.md](LEVELS.md).
-- **Close the gap after S.5:** its debrief leads to 1.0, which isn't built yet.
-- **Then Act I**, in play order.
+- **Rewrite P.2–P.5, P.7–P.10, S.1–S.5 and 1.4 to the content standard**, one region at a
+  time, each fact-checked, with golden runs and a play-through, then enforced by
+  `pnpm content:report`. P.1 and P.6 are the pilot.
+- **One vocabulary:** the Section drawing's parts and the game's words (the Gate, floors,
+  doors) in LEVELS.md, with a lint for stray metaphors.
+- **Region recaps:** a region's last level already deals recall cards from the whole
+  region; it should also show the drawing the region lit.
+- **Then Act I**, in play order, starting with 1.0.
+
+### Later acts: gaps the public kernel roadmaps point to
+
+- **Kernel linked lists** (`list_head`) in 2.9b's message history.
+- **A syzbot-style crash report** to read and fix, the Linux Foundation mentorship's entry
+  task, in 2.12.
+- **A reviewer's reply and `git send-email --dry-run`** in 2.13's patch.
+- **debugfs** beside sysfs and procfs in 2.7.
+- **Kernel GDB, kselftest and sparse** as pointers in the take-home kits.
 
 ## Good first contributions
 

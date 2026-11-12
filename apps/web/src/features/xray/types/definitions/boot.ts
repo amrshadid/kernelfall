@@ -11,6 +11,8 @@ export interface BootStageView {
   readonly time: number | null
   readonly lines: readonly KernelLogLine[]
   readonly failed: boolean
+  /** mount's own message, verbatim, when the initramfs couldn't mount the root. */
+  readonly mountError: string | null
 }
 
 export interface BootParam {

@@ -77,7 +77,9 @@ The game is an engine; the levels are data.
 
 - **The VM.** v86 0.5.471 emulates a 32-bit PC with one CPU and 256 MiB of memory.
   The guest is Alpine 3.24 (i386) with kernel 6.18 (`linux-virt`), bash 5.3, BusyBox,
-  gcc 15, tcc, musl, man pages and strace. The root filesystem is served over
+  gcc 15, make, musl, man pages and strace. The loopback interface is up. The kernel's
+  build tree (`linux-virt-dev`) is pinned and mirrored with the kernel, for the module
+  levels, and is not in the image yet. The root filesystem is served over
   virtio-9p. A 16 MiB data disk is the first IDE disk: GRUB 2.14 in its MBR, and an
   ext4 `/dev/sda1` holding `/boot` (not mounted at boot). On a restart SeaBIOS boots
   GRUB from it, which loads the kernel and initramfs; the root stays on 9p. eth0 is a
@@ -89,22 +91,30 @@ The game is an engine; the levels are data.
   guest's console.
 - **The trace.** At boot, the guest sets up tracefs: the syscall tracepoints,
   scheduler and signal events, return probes that read user buffers, a kprobe on
-  `n_tty_write` for what reaches the terminal, and an eprobe for execve's argv. Only
-  the player's shell and its children are traced. Bash writes a marker into
-  `trace_marker` before and after each command line, so the events split by command. The trace goes out on COM2; the
-  worker parses it into one `TracedCommand` per command line, with the i386 syscall
-  table generated from Linux v6.18's `syscall_32.tbl` (`pnpm vm:syscalls`).
-- **Live runs.** While a command runs, the worker sends its events as
+  `n_tty_write` for what reaches the terminal, an eprobe for execve's argv, and kprobes
+  on the VFS hooks (`vfs_read`, `vfs_write`, `do_dentry_open`, `iterate_dir`…) that read
+  each file's filesystem and handler, so a call carries its `route` (9p, procfs, the tty
+  driver…). The kernel has no BTF, so those probes use struct offsets measured on
+  linux-virt 6.18: a new kernel means measuring them again. Only the player's shell and
+  its children are traced. Bash writes a marker into `trace_marker` before and after each
+  command line, so the events split by command. The trace goes out on COM2; the worker
+  parses it into one `TracedCommand` per command line, with the i386 syscall table
+  generated from Linux v6.18's `syscall_32.tbl` (`pnpm vm:syscalls`).
+- **Live runs.** While a command runs, the worker sends its new events as
   `LAB_COMMAND_PROGRESS` (throttled, and at once when the program waits for input), so
   X-ray follows an interactive program live. The finished command goes out as
   `LAB_COMMAND_FINISHED`, which replaces the live run. Once Linux is up, a report over
   the control channel (dmesg, sysfs, `/proc`) gives the CPU count and the boot record
-  as `LAB_BOOTED`.
+  as `LAB_BOOTED`. A boot that stops in the initramfs (a `root=` it can't mount) sends
+  that report itself, with the root that failed.
 - **The control channel.** A root shell on COM3 takes one command line at a time and
-  answers each with `kf-done <status>`. The page never shows it.
-- **Level setup.** The worker restores the clean boot saved in the browser, runs the
-  level's setup lines as root on the control channel, then restarts the player's shell
-  so it starts in the level's session (user, cwd, environment).
+  answers each with `kf-done <status>`. The page never shows it. It also tells the
+  console its size (`stty rows … cols 80`) whenever the terminal resizes, and after
+  every restore, setup and boot.
+- **Level setup.** The worker restores the clean boot saved in the browser, unless the
+  Machine is still exactly that boot, runs the level's setup lines as root on the
+  control channel, then restarts the player's shell so it starts in the level's session
+  (user, cwd, environment).
 - **The first visit.** Linux boots from scratch, then the worker saves the booted
   state. Later visits and every level restore it.
 
@@ -130,14 +140,14 @@ program runs on the real kernel, traced like any other command.
 
 Everything stays in the player's browser.
 
-| Data                         | Where                                                         |
-| ---------------------------- | ------------------------------------------------------------- |
-| Settings, recording consent  | localStorage `kernelfall:v1:settings`                         |
-| Progress, Taint, hints, code | localStorage `kernelfall:v1:profile:<slot>`                   |
-| The booted Machine           | IndexedDB `kernelfall-vm`, store `boots`, per image version   |
-| The image's files            | Cache Storage `kernelfall-vm-files-v1`                        |
-| The app, for offline play    | Cache Storage `kernelfall-app-<build>`, by the service worker |
-| The image's last manifest    | Cache Storage `kernelfall-offline-v1`, used only offline      |
+| Data                                       | Where                                                         |
+| ------------------------------------------ | ------------------------------------------------------------- |
+| Settings, recording consent                | localStorage `kernelfall:v1:settings`                         |
+| Progress, Taint, hints, code, recall marks | localStorage `kernelfall:v1:profile:<slot>`                   |
+| The booted Machine                         | IndexedDB `kernelfall-vm`, store `boots`, per image version   |
+| The image's files                          | Cache Storage `kernelfall-vm-files-v1`                        |
+| The app, for offline play                  | Cache Storage `kernelfall-app-<build>`, by the service worker |
+| The image's last manifest                  | Cache Storage `kernelfall-offline-v1`, used only offline      |
 
 - The service worker (`apps/web/src/sw.ts`, production builds only) precaches the built
   app and serves it when the network is gone; the manifest stays network-first. A new

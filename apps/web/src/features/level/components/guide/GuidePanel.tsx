@@ -1,12 +1,17 @@
 import type { LevelGuide } from '@features/level/types'
 import { speakerOf } from '@features/level/utils/speakers'
 import { Button, Checklist, Chip, Dialogue, InlineText, SectionHead } from '@shared/components/ui'
+import { Fragment } from 'react'
 import './GuidePanel.css'
+import { GuidePredict } from './GuidePredict'
 import { speakerWithPortraits } from './Portraits'
 
 export interface GuidePanelProps {
   guide: LevelGuide
 }
+
+// A beat that appears after a command is brought into view; the first one is already there.
+const showBeat = (beat: HTMLDivElement | null) => beat?.scrollIntoView({ block: 'nearest' })
 
 export function GuidePanel({ guide }: GuidePanelProps) {
   const passing = guide.objectives.filter((objective) => objective.passed).length
@@ -22,20 +27,44 @@ export function GuidePanel({ guide }: GuidePanelProps) {
             <a href={guide.placement.href}>Take the placement check (about {guide.placement.minutes} minutes)</a>
           </aside>
         )}
-        {guide.lines.length > 0 && (
-          <Dialogue
-            label={`${guide.stepLabel}: transcript`}
-            lines={guide.lines.map((line) => ({
-              speaker: speakerWithPortraits(speakerOf(line.speaker)),
-              text: <InlineText text={line.text} />,
-            }))}
-          />
+        {guide.beats.map((beat, index) => {
+          const current = index === guide.beats.length - 1
+          return (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: beats of a step never reorder
+              key={index}
+              ref={current && index > 0 ? showBeat : undefined}
+              className={current ? 'level-guide__beat' : 'level-guide__beat level-guide__beat--read'}
+            >
+              {beat.map((part, at) =>
+                part.kind === 'code' ? (
+                  <pre key={part.text} className="level-guide__code">
+                    {part.text}
+                  </pre>
+                ) : (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: parts of a beat never reorder
+                  <Fragment key={at}>
+                    <Dialogue
+                      label={`${guide.stepLabel}: transcript`}
+                      // Only the step's first lines introduce the speaker.
+                      continued={index > 0 || beat.findIndex((other) => other.kind !== 'code') !== at}
+                      lines={(part.kind === 'predict' ? [part.line] : part.lines).map((line) => ({
+                        speaker: speakerWithPortraits(speakerOf(line.speaker)),
+                        text: <InlineText text={line.text} />,
+                      }))}
+                    />
+                    {part.kind === 'predict' && <GuidePredict predict={part} />}
+                  </Fragment>
+                )
+              )}
+            </div>
+          )
+        })}
+        {guide.onContinue !== null && (
+          <button type="button" className="level-guide__continue" onClick={guide.onContinue}>
+            Continue
+          </button>
         )}
-        {guide.code.map((block) => (
-          <pre key={block} className="level-guide__code">
-            {block}
-          </pre>
-        ))}
 
         {guide.showObjectives && (
           <section aria-labelledby="level-objectives-h">
@@ -84,9 +113,14 @@ export function GuidePanel({ guide }: GuidePanelProps) {
             </SectionHead>
             {guide.checkReport.missing.length > 0 ? (
               <ul>
-                {guide.checkReport.missing.map((text) => (
+                {guide.checkReport.missing.map(({ text, observed }) => (
                   <li key={text}>
                     <InlineText text={text} />
+                    {observed !== null && (
+                      <p className="level-guide__check-observed">
+                        <span>Last run</span> <InlineText text={observed} />
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -144,7 +178,21 @@ export function GuidePanel({ guide }: GuidePanelProps) {
           </section>
         )}
 
-        {guide.codex.length > 0 && (
+        {guide.codex.length > 0 && !guide.codexOpen && (
+          <details className="level-guide__codex-fold">
+            <summary>
+              Codex <span>{guide.codex.length} cards for this level</span>
+            </summary>
+            <p className="level-guide__chips">
+              {guide.codex.map((card) => (
+                <Chip key={card.id} href={card.href}>
+                  {card.term}
+                </Chip>
+              ))}
+            </p>
+          </details>
+        )}
+        {guide.codex.length > 0 && guide.codexOpen && (
           <section aria-labelledby="level-codex-h">
             <SectionHead id="level-codex-h">Codex</SectionHead>
             <p className="level-guide__chips">

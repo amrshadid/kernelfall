@@ -30,4 +30,7 @@ export const BANNED_PHRASES: readonly string[] = [
 ]
 
 // Rewritten to the standard: their budgets fail the tests; the others only warn.
-export const ENFORCED_LEVELS: readonly LevelId[] = []
+export const ENFORCED_LEVELS: readonly LevelId[] = [
+  'prologue-boot-path-01-power-on',
+  'prologue-machine-in-section-06-finding-the-hardware',
+]

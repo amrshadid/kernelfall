@@ -59,7 +59,7 @@ export interface XrayCall {
   readonly console: string | null
   /** The kernel functions after `ia32_sys_call`, outermost first. */
   readonly kernelPath: readonly string[]
-  /** One plain sentence for the "In the kernel now" desk. */
+  /** What the call does, in one plain sentence from the content. */
   readonly desk: string
   /** The kernel files its handler is checked against. */
   readonly sources: readonly StageSource[]

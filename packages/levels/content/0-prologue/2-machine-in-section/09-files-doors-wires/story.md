@@ -10,6 +10,8 @@
 
 **One tree, many filesystems.** A **filesystem** is the way files and folders are laid out and found. Several kinds are **mounted**, attached, into the one tree, each at its own folder. `cat /proc/mounts` lists them, one per line: what was mounted, where, and which kind of filesystem it is.
 
+---
+
 ```
 dev /dev devtmpfs rw,relatime,size=110896k,nr_inodes=27724,mode=755 0 0
 host9p / 9p rw,relatime,cache=0x5,access=client,msize=512000,trans=virtio 0 0
@@ -44,6 +46,8 @@ $ cat /sys/class/net/lo/mtu
 
 **Devices.** `ls -l /dev/null /dev/tty /dev/sda`:
 
+---
+
 ```
 crw-rw-rw-    1 root     root        1,   3 Oct 31 16:16 /dev/null
 brw-------    1 root     root        8,   0 Oct 31 16:16 /dev/sda
@@ -67,7 +71,7 @@ The drawing shows one message's trip down: a program's **socket**, a file descri
 **The kernel's own log.** `dmesg` shows the boot again, and the lines drivers wrote while they took their devices:
 
 ```
-[    0.000000] Linux version 6.18.59-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-10-27 14:58:36
+[    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
 ...
 [    1.588336] scsi host0: ata_piix
 ...
@@ -91,6 +95,12 @@ Then the Section drawing is complete: every part of the kernel gets its label, i
 ## Watch it
 
 > **init:** Before the `/sys` run: which filesystem will answer?
+>
+> - 9p
+> - procfs
+> - [x] sysfs
+
+---
 
 ```
 $ ./look

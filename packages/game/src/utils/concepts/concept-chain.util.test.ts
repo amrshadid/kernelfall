@@ -21,6 +21,25 @@ describe('conceptChain', () => {
     expect(conceptChain(levels)).toEqual([])
   })
 
+  it('lets a level use what an earlier level only named, and teach it properly later', () => {
+    const levels = [
+      exampleLevel({ id: 'prologue-boot-path-01-level', teaches: ['kernel'], names: ['shell'] }, PROLOGUE),
+      prologueLevel(2, ['syscall'], ['shell', 'kernel']),
+      prologueLevel(3, ['shell'], ['syscall']),
+      exampleLevel({ uses: ['shell', 'syscall', 'kernel'] }),
+    ]
+
+    expect(conceptChain(levels)).toEqual([])
+  })
+
+  it('still asks a named concept to return later', () => {
+    const levels = [exampleLevel({ id: 'prologue-boot-path-01-level', names: ['cpu'] }, PROLOGUE)]
+
+    expect(conceptChain(levels)).toEqual([
+      { kind: 'never-used-again', concept: 'cpu', levelId: 'prologue-boot-path-01-level', other: null },
+    ])
+  })
+
   it('reports a use before the level that teaches it, and a use no level ever teaches', () => {
     const levels = [
       prologueLevel(1, [], ['pipe', 'hex']),

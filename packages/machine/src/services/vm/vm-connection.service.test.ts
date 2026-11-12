@@ -8,6 +8,7 @@ import {
   disconnectVm,
   onVmOutput,
   rebootVm,
+  resizeVmTerminal,
   runVmCommandAs,
   sendToVm,
   setupVmLevel,
@@ -30,18 +31,22 @@ function fakeVm() {
     reboots: 0,
     facts: 0,
     runAs: [] as [string, string][],
+    sizes: [] as [number, number][],
     stops: 0,
   }
   let console: ((bytes: Uint8Array) => void) | null = null
   let status: ((status: VmStatus) => void) | null = null
   let command: ((command: TracedCommand) => void) | null = null
+  let stoppedBoot: ((facts: VmFacts) => void) | null = null
   const session: VmSession = {
-    async start(options, onOutput, onStatus, onCommand) {
+    async start(options, onOutput, onStatus, onCommand, onStoppedBoot) {
       calls.started.push(options)
       console = onOutput
       status = onStatus
       command = onCommand
+      stoppedBoot = onStoppedBoot ?? null
     },
+    resizeTerminal: (rows, cols) => void calls.sizes.push([rows, cols]),
     input: (text) => void calls.input.push(text),
     async writeFiles(files) {
       calls.files.push(files)
@@ -79,6 +84,7 @@ function fakeVm() {
     print: (text: string) => console?.(new TextEncoder().encode(text)),
     status: (s: VmStatus) => status?.(s),
     command: (c: TracedCommand) => command?.(c),
+    stoppedBoot: (facts: VmFacts) => stoppedBoot?.(facts),
   }
 }
 
@@ -179,6 +185,47 @@ describe('the VM connection', () => {
     expect(booted).toEqual([{ boot: facts[0]?.boot?.summary }])
     expect(booted[0]?.boot.rootDevice).toBe('host9p')
     subscription.unsubscribe()
+  })
+
+  it('publishes a boot that stopped in the initramfs, which never reaches a prompt to be asked at', async () => {
+    const vm = fakeVm()
+    configureMachine({ createVmEndpoint: () => vm.endpoint })
+    const facts: VmFacts[] = []
+    const booted: BootedPayload[] = []
+    const subscription = eventBus.on<BootedPayload>(LAB_EVENTS.BOOTED, (event) => {
+      booted.push(event.payload)
+    })
+    connectVm(
+      () => {},
+      (f) => facts.push(f)
+    )
+    await settle()
+    const stopped = parseBootReport(
+      `@kf:stopped\n/dev/sda2\next4\nmount: mounting /dev/sda2 on /newroot failed: No such device\n${BOOT_REPORT.replace('host9p / 9p', 'rootfs / rootfs')}`
+    )
+    vm.status({ phase: 'booting', detail: null })
+    vm.stoppedBoot(stopped)
+    await settle()
+    expect(vm.calls.facts).toBe(0)
+    expect(facts).toEqual([stopped])
+    expect(booted[0]?.boot).toMatchObject({ outcome: 'initramfs', failedRoot: { device: '/dev/sda2' } })
+    subscription.unsubscribe()
+  })
+
+  it("passes the terminal's size to the VM, and to one started later", async () => {
+    const first = fakeVm()
+    configureMachine({ createVmEndpoint: () => first.endpoint })
+    connectVm(() => {})
+    await settle()
+    resizeVmTerminal(37, 80)
+    await settle()
+    expect(first.calls.sizes).toEqual([[37, 80]])
+    disconnectVm()
+    const second = fakeVm()
+    configureMachine({ createVmEndpoint: () => second.endpoint })
+    connectVm(() => {})
+    await settle()
+    expect(second.calls.sizes).toEqual([[37, 80]])
   })
 
   it('sets a level up once per VM, so coming back to its screen keeps what the player made', async () => {

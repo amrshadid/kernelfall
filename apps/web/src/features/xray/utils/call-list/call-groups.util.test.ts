@@ -9,7 +9,9 @@ import { callFocusOf } from './call-focus.util'
 import { callGroupsOf, leadCallId, lessonCalls } from './call-groups.util'
 import { MACHINE_PATH } from './call-list.constants'
 
+const P1 = 'prologue-boot-path-01-power-on'
 const P3 = 'prologue-boot-path-03-speak-to-shell'
+const S1 = 'prologue-surface-survey-01-streets'
 const P7 = 'prologue-machine-in-section-07-who-runs'
 const S4 = 'prologue-surface-survey-04-finding-things'
 const S5 = 'prologue-surface-survey-05-text-tools'
@@ -39,7 +41,9 @@ const outline = (group: CallGroup | undefined) =>
 const flat = (group: CallGroup): readonly XrayCall[] =>
   group.rows.flatMap((row) => (row.kind === 'call' ? [row.call] : row.calls))
 
-const titles = (groups: readonly CallGroup[]) => groups.map((g) => `${g.open ? '▾' : '▸'} ${g.title}`)
+// PIDs change with every recording, so titles show them as n; the facts tests tie them together.
+const titles = (groups: readonly CallGroup[]) =>
+  groups.map((g) => `${g.open ? '▾' : '▸'} ${g.title.replace(/PID \d+/, 'PID n')}`)
 
 describe('callGroupsOf on runs recorded on the Machine', () => {
   it("knows the Machine's PATH, the folders a PATH search looks in", async () => {
@@ -53,10 +57,10 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
       '/bin/echo one two three four',
       levelFocus('prologue-boot-path-02-first-words')
     )
-    expect(titles(groups)).toEqual(['▸ the shell (bash, PID 480)', '▾ the program (echo, PID 491)'])
+    expect(titles(groups)).toEqual(['▸ the shell (bash, PID n)', '▾ the program (echo, PID n)'])
     const [shell, echo] = groups
-    expect(shell?.facts).toEqual(['fork → PID 491'])
-    expect(echo?.facts).toEqual(['forked by PID 480', 'execve /bin/echo', 'exit 0'])
+    expect(shell?.facts).toEqual([`fork → PID ${echo?.pid}`])
+    expect(echo?.facts).toEqual([`forked by PID ${shell?.pid}`, 'execve /bin/echo', 'exit 0'])
     expect(outline(echo)).toEqual(["▸ bash's bookkeeping · 36", '*execve', '▸ start-up · 17', '*write', '*exit_group'])
     const startUp = echo?.rows[2]
     expect(startUp?.kind === 'fold' && [...new Set(startUp.calls.map((c) => c.name))]).toEqual([
@@ -86,7 +90,7 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
 
   it('P.3 hello not found: the PATH search is one row, the copy of the shell writes the error', async () => {
     const { groups } = await groupsOf(P3, 'hello')
-    expect(titles(groups)).toEqual(['▸ the shell (bash, PID 480)', '▾ a copy of the shell (bash, PID 503)'])
+    expect(titles(groups)).toEqual(['▸ the shell (bash, PID n)', '▾ a copy of the shell (bash, PID n)'])
     expect(outline(groups[0])[0]).toBe('▸ looks up hello in PATH · 7')
     const search = groups[0]?.rows[0]
     expect(search?.kind === 'fold' && search.calls.map((c) => c.path)).toEqual([
@@ -98,30 +102,32 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
       '/sbin/hello',
       '/bin/hello',
     ])
-    expect(groups[1]?.facts).toEqual(['forked by PID 480', 'exit 127'])
+    expect(groups[1]?.facts).toEqual([`forked by PID ${groups[0]?.pid}`, 'exit 127'])
     expect(outline(groups[1])).toEqual(["▸ bash's bookkeeping · 36", 'writev', 'writev', 'writev', 'exit_group'])
   })
 
-  it('S.4 find /: the redirect stays in sight and 46,720 calls of the walk are one row', async () => {
+  it('S.4 find /: the redirect stays in sight and the whole walk is one row', async () => {
     const { groups, calls } = await groupsOf(S4, 'find / -name passwd 2>/dev/null')
     expect(calls.length).toBeGreaterThan(40_000)
     const find = groups[1]
-    expect(find?.title).toBe('the program (find, PID 622)')
-    expect(outline(find)).toEqual([
+    expect(find?.title).toBe(`the program (find, PID ${find?.pid})`)
+    const rows = outline(find)
+    expect(rows.slice(0, -1)).toEqual([
       "▸ bash's bookkeeping · 36",
       'open',
       'dup2',
       'close',
       'execve',
       '▸ start-up · 17',
-      '▸ statx, getdents64, open and 8 more · 46720',
     ])
+    // The count follows the image's file count, so it changes with every image.
+    expect(rows.at(-1)).toMatch(/^▸ statx, getdents64, open and 8 more · \d{5,}$/)
   })
 
   it("S.4 a fresh shell: readline's terminfo lookup is its own row, not a PATH search", async () => {
     const { groups } = await groupsOf(S4, 'find attic -name lantern-plan.txt')
     const shell = groups[0]
-    expect(shell?.title).toBe('the shell (bash, PID 613)')
+    expect(shell?.title).toBe(`the shell (bash, PID ${shell?.pid})`)
     expect(outline(shell).slice(0, 5)).toEqual([
       "▸ reads the terminal's description (terminfo) · 18",
       'open',
@@ -146,11 +152,11 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
   it('S.5 sort | uniq -c: the pipeline pipe and each dup2 are rows, the sync pipe is bookkeeping', async () => {
     const { groups } = await groupsOf(S5, 'sort census.txt | uniq -c')
     expect(titles(groups)).toEqual([
-      '▸ the shell (bash, PID 489)',
-      '▾ the program (sort, PID 508)',
-      '▾ the program (uniq, PID 509)',
+      '▸ the shell (bash, PID n)',
+      '▾ the program (sort, PID n)',
+      '▾ the program (uniq, PID n)',
     ])
-    expect(groups[0]?.facts).toEqual(['fork → PIDs 508, 509'])
+    expect(groups[0]?.facts).toEqual([`fork → PIDs ${groups[1]?.pid}, ${groups[2]?.pid}`])
     expect(outline(groups[0]).slice(0, 3)).toEqual(['pipe', "▸ bash's bookkeeping · 6", 'fork'])
     expect(outline(groups[1])).toContain('dup2')
     expect(outline(groups[2])).toContain('dup2')
@@ -195,6 +201,40 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
     expect(outline(groups[0]).filter((row) => row === '*pipe')).toHaveLength(2)
     expect(outline(groups[0])).toContain('*setpgid')
     expect(groups[1]?.open).toBe(true)
+  })
+
+  it("after gcc … && ./hello, starts on the program's write, not the compiler's", async () => {
+    const P2 = 'prologue-boot-path-02-first-words'
+    const run = 'gcc -Wall -Wextra hello.c -o hello && ./hello'
+    const { groups, calls } = await groupsOf(P2, run, levelFocus(P2))
+    const lead = calls.find((c) => c.id === leadCallId(groups))
+    expect(lead).toMatchObject({ program: 'hello', name: 'write' })
+    // A build that fails prints only the compiler's error, so that is where it starts.
+    const broken = await groupsOf(P2, run, levelFocus(P2), 'broken')
+    const error = broken.calls.find((c) => c.id === leadCallId(broken.groups))
+    expect(error?.program).not.toBe('hello')
+    expect(error?.console).not.toBeNull()
+  })
+
+  it("with no lesson, starts on the output that reached the terminal: cat's sendfile64", async () => {
+    for (const [level, run, commandLine] of [
+      [S1, 'no-dots', 'cat /etc/motd'],
+      [P1, 'other-paths', 'cat /etc/hostname'],
+    ] as const) {
+      const { groups, calls } = await groupsOf(level, commandLine, [], run)
+      const lead = calls.find((c) => c.id === leadCallId(groups))
+      expect(lead, commandLine).toMatchObject({ program: 'cat', name: 'sendfile64' })
+      expect(lead?.console).not.toBeNull()
+    }
+  })
+
+  it('with no lesson and no output, starts on the program after execve, else the shell, never in a fold', async () => {
+    const mkdir = await groupsOf(S1, 'mkdir /tmp/survey')
+    const made = mkdir.calls.find((c) => c.id === leadCallId(mkdir.groups))
+    expect(made).toMatchObject({ program: 'mkdir', name: 'mkdir', path: '/tmp/survey' })
+    const cd = await groupsOf(S1, 'cd /etc')
+    const lead = cd.calls.find((c) => c.id === leadCallId(cd.groups))
+    expect(lead).toMatchObject({ program: 'cd', name: 'chdir', path: '/etc' })
   })
 
   it('keeps a taught PATH search one row, and opens the shell for it', async () => {

@@ -4,6 +4,8 @@ const SECTION_HEADING = /^##\s+(.+?)\s*$/
 const SPOKEN_LINE = /^\*\*(.+?):\*\*\s*(.*)$/
 const CODE_FENCE = /^```/
 const QUOTE_PREFIX = /^>\s?/
+const PAUSE = /^-{3,}$/
+const OPTION = /^-\s+(\[x\]\s+)?(.+)$/i
 
 /** `Real world` → `real-world`, the slug that `story.md#real-world` points at. */
 export function slugify(heading: string): string {
@@ -15,8 +17,9 @@ export function slugify(heading: string): string {
 
 /**
  * Parses a level's `story.md`. Sections start at `## Heading`. Inside one,
- * `> **Name:** text` is a spoken line, a paragraph is narration and a fenced
- * block is code.
+ * `> **Name:** text` is a spoken line, a paragraph is narration, a fenced
+ * block is code and `---` is a pause. A `- ` list right after a line makes that
+ * line a question with those answers; `- [x]` is the one that really happens.
  */
 export function parseStory(markdown: string): Story {
   const sections = new Map<string, StoryBlock[]>()
@@ -61,6 +64,25 @@ export function parseStory(markdown: string): Story {
       flushParagraph()
       continue
     }
+    if (PAUSE.test(line)) {
+      flushParagraph()
+      blocks.push({ kind: 'pause' })
+      continue
+    }
+    const option = OPTION.exec(line)
+    if (option?.[2] !== undefined) {
+      flushParagraph()
+      const asked = blocks.at(-1)
+      const answer = { text: option[2], right: option[1] !== undefined }
+      if (asked?.kind === 'predict') {
+        blocks[blocks.length - 1] = { ...asked, options: [...asked.options, answer] }
+        continue
+      }
+      if (asked?.kind === 'line') {
+        blocks[blocks.length - 1] = { kind: 'predict', speaker: asked.speaker, text: asked.text, options: [answer] }
+        continue
+      }
+    }
     const spoken = SPOKEN_LINE.exec(line)
     if (spoken?.[1] !== undefined && spoken[2] !== undefined) {
       flushParagraph()
@@ -70,7 +92,21 @@ export function parseStory(markdown: string): Story {
     paragraph.push(line)
   }
   flushParagraph()
+  for (const [section, parsed] of sections) {
+    sections.set(section, parsed.flatMap(plainList))
+  }
   return sections
+}
+
+/** A list with no `[x]` is an ordinary list, not a question: its line and its items read as before. */
+function plainList(block: StoryBlock): StoryBlock[] {
+  if (block.kind !== 'predict' || block.options.some((option) => option.right)) {
+    return [block]
+  }
+  return [
+    { kind: 'line', speaker: block.speaker, text: block.text },
+    { kind: 'line', speaker: null, text: block.options.map((option) => `- ${option.text}`).join(' ') },
+  ]
 }
 
 /** The section a story ref like `story.md#scene` points at. */

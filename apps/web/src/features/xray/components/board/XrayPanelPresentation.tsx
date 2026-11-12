@@ -22,7 +22,11 @@ export function XrayPanelPresentation(props: XrayPanelPresentationProps) {
   }, [expanded])
 
   return (
-    <section aria-label="X-ray" className="flex flex-col">
+    // A crossing sizes itself to the dock; the other figures grow and the dock scrolls.
+    <section
+      aria-label="X-ray"
+      className={props.figure?.kind === 'crossing' ? 'flex min-h-0 flex-col' : 'flex flex-col'}
+    >
       <XrayBoard layout="dock" {...props} />
       <dialog
         ref={sheet}

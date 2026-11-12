@@ -51,6 +51,8 @@ export const TRACE_PROBES = {
   splice: 'splice',
   execve: 'execve',
   path: 'path',
+  /** `route_<hook>`: the file a VFS hook works on, its filesystem and the handlers it can call. */
+  route: 'route',
 } as const
 
 /**

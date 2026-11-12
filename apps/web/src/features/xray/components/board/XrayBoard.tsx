@@ -1,6 +1,7 @@
 import {
   BootDrawing,
   CpuLanesDrawing,
+  CrossingDrawing,
   ProcessDrawing,
   RouteDrawing,
   SectionDrawing,
@@ -8,6 +9,7 @@ import {
 } from '@features/xray/components/drawing'
 import { StraceLog } from '@features/xray/components/log'
 import type {
+  CrossingScene,
   ProcessScene,
   SyscallScene,
   XrayBoardActions,
@@ -19,7 +21,8 @@ import type {
 import { STAGE_MS, transcriptOf } from '@features/xray/utils/storyboard'
 import { InlineText, Segmented } from '@shared/components/ui'
 import type { CSSProperties, KeyboardEvent } from 'react'
-import { CallList } from './CallList'
+import { BeatLine } from './BeatLine'
+import { CallList, CallListShell } from './CallList'
 import { Narration } from './Narration'
 import { Predict } from './Predict'
 import { Transcript } from './Transcript'
@@ -77,20 +80,27 @@ export function XrayBoard({
   const stage = playback.stages[playback.index]
   const pendingStage = playback.pending !== null ? playback.stages[playback.pending] : undefined
   const label = stage ? `${caption} Stage ${playback.index + 1}: ${stage.title}` : caption
-  const classes = ['xr', animate && 'xr--animate', playback.playing && 'xr--playing'].filter(Boolean).join(' ')
+  const crossing = figure?.kind === 'crossing'
+  // A crossing fits the dock without scrolling: one call listed, the sentence under the drawing.
+  const fit = crossing && layout === 'dock'
+  // P.1 has only init's drawing: no call list, depth or predict to control yet.
+  const plate = controls.lenses.length === 1 && controls.lens === 'section'
+  const classes = ['xr', animate && 'xr--animate', playback.playing && 'xr--playing', fit && 'xr--fit']
+    .filter(Boolean)
+    .join(' ')
   const style = { '--xr-stage': `${STAGE_MS / playback.speed}ms` } as CSSProperties
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: playback keys work from anywhere inside the board
     <div
       className={classes}
-      data-depth={controls.depth}
+      data-depth={plate ? 'simple' : controls.depth}
       data-speed={playback.speed}
       style={style}
       onKeyDown={(event) => onBoardKey(event, playbackActions, animate)}
     >
       <div className="xr__bar">
-        <h2 className="xr__title">X-ray</h2>
+        <h2 className="xr__title">{plate ? 'The Machine' : 'X-ray'}</h2>
         {controls.lenses.length > 1 && (
           <Segmented
             legend="View"
@@ -100,16 +110,18 @@ export function XrayBoard({
           />
         )}
         <div className="xr__bar-end">
-          <Segmented
-            legend="Depth"
-            showLegend={false}
-            options={[
-              { value: 'simple', label: 'Simple' },
-              { value: 'deep', label: 'Deep' },
-            ]}
-            value={controls.depth}
-            onChange={controlActions.setDepth}
-          />
+          {!plate && (
+            <Segmented
+              legend="Depth"
+              showLegend={false}
+              options={[
+                { value: 'simple', label: 'Simple' },
+                { value: 'deep', label: 'Deep' },
+              ]}
+              value={controls.depth}
+              onChange={controlActions.setDepth}
+            />
+          )}
           <button
             type="button"
             className="xr__icon-btn"
@@ -123,7 +135,7 @@ export function XrayBoard({
         </div>
       </div>
 
-      {controls.runs.length > 0 && (
+      {controls.runs.length > 0 && !plate && (
         <div className="xr__run">
           <label>
             Run
@@ -164,18 +176,29 @@ export function XrayBoard({
         </div>
       )}
 
-      {controls.callList !== null && controls.callList.groups.length > 0 && (
-        <CallList
-          view={controls.callList}
-          selectedId={controls.pickId !== null ? Number(controls.pickId) : null}
-          onSelect={(id) => controlActions.select(String(id))}
-          onToggle={controlActions.toggleRow}
-        />
-      )}
+      {controls.callList !== null &&
+        controls.callList.groups.length > 0 &&
+        (fit ? (
+          <CallListShell
+            view={controls.callList}
+            selectedId={controls.pickId !== null ? Number(controls.pickId) : null}
+            onSelect={(id) => controlActions.select(String(id))}
+            onToggle={controlActions.toggleRow}
+            all={controls.allCalls}
+            onToggleAll={controlActions.toggleAllCalls}
+          />
+        ) : (
+          <CallList
+            view={controls.callList}
+            selectedId={controls.pickId !== null ? Number(controls.pickId) : null}
+            onSelect={(id) => controlActions.select(String(id))}
+            onToggle={controlActions.toggleRow}
+          />
+        ))}
 
-      {figure !== null && figure.kind !== 'syscalls' && figure.kind !== 'processes' ? (
+      {figure !== null && figure.kind !== 'syscalls' && figure.kind !== 'crossing' && figure.kind !== 'processes' ? (
         <figure className="xr__drawing">
-          {figure.kind === 'section' && <SectionDrawing view={figure.view} />}
+          {figure.kind === 'section' && <SectionDrawing view={figure.view} commandLine={figure.commandLine} />}
           {figure.kind === 'route' && <RouteDrawing view={figure.view} />}
           {figure.kind === 'cpus' && <CpuLanesDrawing view={figure.view} />}
           {figure.kind === 'boot' && <BootDrawing view={figure.view} />}
@@ -194,26 +217,40 @@ export function XrayBoard({
       ) : (
         <>
           <figure className="xr__drawing">
-            {figure.kind === 'syscalls' ? (
-              <SyscallDrawing
-                storyboard={figure.storyboard}
-                scene={stage.scene as SyscallScene}
-                depth={controls.depth}
-                label={label}
-              />
-            ) : (
-              figure.kind === 'processes' && (
-                <ProcessDrawing storyboard={figure.storyboard} scene={stage.scene as ProcessScene} label={label} />
-              )
+            {figure.kind === 'syscalls' && (
+              <SyscallDrawing storyboard={figure.storyboard} scene={stage.scene as SyscallScene} label={label} />
+            )}
+            {figure.kind === 'crossing' && (
+              <CrossingDrawing storyboard={figure.storyboard} scene={stage.scene as CrossingScene} label={label} />
+            )}
+            {figure.kind === 'processes' && (
+              <ProcessDrawing storyboard={figure.storyboard} scene={stage.scene as ProcessScene} label={label} />
             )}
             <figcaption className="xr__caption">
               <span>{caption}</span>
               <span>{animate ? 'Space plays · ← → step' : '← → step'}</span>
             </figcaption>
           </figure>
+          {fit &&
+            (pendingStage?.predict ? (
+              <Predict
+                predict={pendingStage.predict}
+                picked={playback.pendingGuess}
+                onPick={playbackActions.guess}
+                onWatch={playbackActions.reveal}
+              />
+            ) : (
+              <BeatLine
+                stage={stage}
+                index={playback.index}
+                count={playback.stages.length}
+                guessNext={playback.pending !== null}
+                guess={playback.shownGuess}
+              />
+            ))}
           <Transport playback={playback} actions={playbackActions} animate={animate} />
           <div className="xr__side">
-            {pendingStage?.predict && (
+            {!fit && pendingStage?.predict && (
               <Predict
                 predict={pendingStage.predict}
                 picked={playback.pendingGuess}
@@ -221,14 +258,16 @@ export function XrayBoard({
                 onWatch={playbackActions.reveal}
               />
             )}
-            <Narration
-              stage={stage}
-              index={playback.index}
-              count={playback.stages.length}
-              guessNext={playback.pending !== null}
-              guess={playback.shownGuess}
-              depth={controls.depth}
-            />
+            {!fit && (
+              <Narration
+                stage={stage}
+                index={playback.index}
+                count={playback.stages.length}
+                guessNext={playback.pending !== null}
+                guess={playback.shownGuess}
+                depth={controls.depth}
+              />
+            )}
             <div className="xr__more">
               {controls.log && (
                 <details>

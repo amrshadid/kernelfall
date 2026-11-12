@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createVmSession } from '#services/vm/vm-session.service'
-import type { VmPhase, VmSession } from '#types/definitions/vm'
+import { BOOT_REPORT } from '#test/boot-report'
+import type { VmFacts, VmPhase, VmSession } from '#types/definitions/vm'
 import { setupScript } from '#utils/vm-setup/setup-script.util'
 
 const fake = vi.hoisted(() => {
@@ -110,19 +111,25 @@ const run = (ms = 3_000) => vi.advanceTimersByTimeAsync(ms)
 
 let session: VmSession
 let phases: VmPhase[]
+let stoppedBoots: VmFacts[]
 
 async function start(saved: boolean, settleMs = 3_000) {
   fake.loadVmState.mockResolvedValue(saved ? new ArrayBuffer(8) : null)
   session = createVmSession('v86.wasm')
   phases = []
+  stoppedBoots = []
   void session.start(
     { baseUrl: '/vm/' },
     () => {},
     (status) => phases.push(status.phase),
-    () => {}
+    () => {},
+    (facts) => stoppedBoots.push(facts)
   )
   await run(settleMs)
 }
+
+const STTY = 'root:stty -F /dev/ttyS0 rows 37 cols 80'
+const sizes = () => vm().log.filter((entry) => entry.startsWith('root:stty'))
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -253,5 +260,73 @@ describe('a boot level', () => {
     void session.setupLevel(DEFAULT)
     await run()
     expect(restores()).toBe(1)
+  })
+})
+
+describe("the terminal's size", () => {
+  it('reaches the console tty as root once the terminal settles on it, without counting as use', async () => {
+    await start(true)
+    session.resizeTerminal(30, 80)
+    session.resizeTerminal(37, 80)
+    session.resizeTerminal(0, 80)
+    await run()
+    expect(sizes()).toEqual([STTY])
+    void session.setupLevel(DEFAULT)
+    await run()
+    expect(restores()).toBe(0)
+  })
+
+  it("is set again after a restore, before the level's new shell starts", async () => {
+    await start(true)
+    session.resizeTerminal(37, 80)
+    session.input('ls\n')
+    await run()
+    void session.setupLevel(LAB)
+    await run()
+    const restore = vm().log.indexOf('restore')
+    const kill = vm().log.findIndex((entry) => entry.startsWith('root:kill -9'))
+    expect(
+      vm()
+        .log.slice(restore, kill)
+        .filter((entry) => entry === STTY)
+    ).toHaveLength(1)
+  })
+
+  it('waits for a reboot to reach its prompt, then is set on the new boot', async () => {
+    await start(true)
+    session.resizeTerminal(37, 80)
+    await run()
+    void session.reboot()
+    await run()
+    const reset = vm().log.indexOf('reset')
+    expect(vm().log.slice(reset)).toContain(STTY)
+  })
+
+  it('is never part of the clean boot a first visit saves', async () => {
+    await start(false, 0)
+    session.resizeTerminal(37, 80)
+    await run()
+    expect(vm().log.indexOf(STTY)).toBeGreaterThan(vm().log.indexOf('save'))
+  })
+})
+
+describe('a boot that stops in the initramfs', () => {
+  it('reports itself on the control port, unasked, with the root it failed to mount', async () => {
+    await start(true)
+    vm().out(2, 'Mounting root failed.\r\n')
+    vm().out(
+      2,
+      `@kf:stopped\r\n/dev/sda2\r\next4\r\nmount: mounting /dev/sda2 on /newroot failed: No such device\r\n${BOOT_REPORT.replace('host9p / 9p', 'rootfs / rootfs')}@kf:end\r\n`
+    )
+    expect(stoppedBoots).toHaveLength(1)
+    expect(stoppedBoots[0]?.boot?.summary).toMatchObject({
+      outcome: 'initramfs',
+      failedStage: 'root',
+      failedRoot: {
+        device: '/dev/sda2',
+        fstype: 'ext4',
+        error: 'mount: mounting /dev/sda2 on /newroot failed: No such device',
+      },
+    })
   })
 })

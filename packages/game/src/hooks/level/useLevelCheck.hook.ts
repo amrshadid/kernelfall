@@ -5,9 +5,10 @@ import type { BootedPayload, CommandFinishedPayload } from '@kernelfall/machine/
 import { LAB_EVENTS } from '@kernelfall/machine/events'
 import { useCallback, useMemo, useRef } from 'react'
 import { getContent } from '#config'
+import { GAME_EVENTS, type LevelStartedPayload } from '#events/types'
 import { useRunDispatch } from '#hooks/level/useRunDispatch.hook'
 import { useProgressStore } from '#store/progress.store'
-import type { CheckInput, CheckVerdict } from '#types/definitions/checker'
+import type { CheckInput, CheckVerdict, FinishedCommand } from '#types/definitions/checker'
 import type { LevelId, Objective } from '#types/definitions/level'
 import type { TaintEvent } from '#types/definitions/taint'
 import { evaluateCheck, mergeVerdicts } from '#utils/checker/index'
@@ -33,9 +34,10 @@ export function useLevelCheck(): UseLevelCheckResult {
   const { dispatchRun } = useRunDispatch()
   // A failed build runs no program, so its command isn't judged; it is remembered here instead,
   // with the latest compile's errors for the commands that compile nothing.
-  // SIMPLIFIED: kept in memory only, so a reload forgets it.
+  // SIMPLIFIED: kept in memory only, so a reload forgets it, and the command history too.
   const failedBuildIn = useRef<LevelId | null>(null)
   const latestBuild = useRef<{ readonly levelId: LevelId; readonly errors: number } | null>(null)
+  const played = useRef<{ readonly levelId: LevelId; readonly commands: readonly FinishedCommand[] } | null>(null)
 
   const judge = useCallback(
     async (inputFor: (levelId: LevelId) => CheckInput): Promise<ServiceResponse<CheckVerdict | null>> => {
@@ -65,8 +67,15 @@ export function useLevelCheck(): UseLevelCheckResult {
   )
 
   const check = useCallback(
-    (payload: CommandFinishedPayload) =>
-      judge((levelId) => {
+    (payload: CommandFinishedPayload) => {
+      const activeId = useProgressStore.getState().active?.level.id
+      const history = played.current?.levelId === activeId ? (played.current?.commands ?? []) : []
+      const { commandLine, status } = payload.command
+      // Every finished command changed the Machine, judged or not, so each one joins the history.
+      if (activeId !== undefined) {
+        played.current = { levelId: activeId, commands: [...history, { commandLine, status }] }
+      }
+      return judge((levelId) => {
         // gcc runs inside the Machine, so its diagnostics are in the command's own events.
         const compiled = compileReport(payload.events)
         if (compiled) {
@@ -77,13 +86,19 @@ export function useLevelCheck(): UseLevelCheckResult {
         if (compiled && compiled.errors > 0) {
           failedBuildIn.current = levelId
         }
-        return { events: payload.events, warnings: compiled?.warnings ?? [], builds }
-      }),
+        return { events: payload.events, commandLine, history, warnings: compiled?.warnings ?? [], builds }
+      })
+    },
     [judge]
   )
 
   useEventListener<CommandFinishedPayload>(LAB_EVENTS.COMMAND_FINISHED, (event) => {
     void check(event.payload)
+  })
+
+  // A start or a replay sets the Machine up again: what ran before no longer shaped it.
+  useEventListener<LevelStartedPayload>(GAME_EVENTS.LEVEL_STARTED, () => {
+    played.current = null
   })
 
   useEventListener<BootedPayload>(LAB_EVENTS.BOOTED, (event) => {

@@ -1,3 +1,4 @@
+export { callRoute, routeHookOf, symbolName } from '#utils/vm-trace/call-route.util'
 export { syscallName, syscallNumber } from '#utils/vm-trace/syscall-name.util'
 export {
   argvOf,

@@ -81,7 +81,7 @@
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
-  flex: 1 1 12rem;
+  flex: 1 1 8rem;
   font-weight: 700;
 }
 
@@ -98,7 +98,9 @@
   font-size: 0.8125rem;
 }
 
-.xr__predict-toggle {
+/* More specific than `.xr__run label`: it sits beside the run picker instead of taking its own row. */
+.xr__run .xr__predict-toggle {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -246,15 +248,55 @@
   }
 }
 
-.xr[data-depth="simple"] .xr-deep,
-.xr[data-depth="deep"] .xr-simple {
-  display: none;
-}
-
 .xr__side {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* A crossing in the dock fills it exactly: the drawing takes the height the controls leave
+   and scales down to it, so each beat's red mark and sentence show without scrolling. */
+.xr--fit {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.xr--fit .xr__drawing {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  /* Below this the drawing's text gets hard to read: the dock scrolls to the details instead. */
+  min-height: 16rem;
+  padding-top: 0.375rem;
+}
+
+.xr--fit .xr__drawing svg {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* The call above names the figure, and the svg carries the caption as its accessible name. */
+.xr--fit .xr__caption {
+  display: none;
+}
+
+.xr--fit .xr-calls {
+  max-height: 9rem;
+}
+
+.xr--fit .xr__side {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.xr--fit .xr__predict {
+  margin: 0 0.875rem 0.5rem;
+}
+
+.xr[data-depth="simple"] .xr-deep,
+.xr[data-depth="deep"] .xr-simple {
+  display: none;
 }
 
 .xr details {

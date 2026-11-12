@@ -22,6 +22,8 @@ Where the picture stops being true: nobody looks the translation up by hand. The
 
 > **init:** Now the whole Machine. Run `cat /proc/meminfo`, then `free`, which reads the same file and does the sums for you.
 
+---
+
 ```
 $ cat /proc/meminfo
 MemTotal:         223588 kB
@@ -49,6 +51,8 @@ Where the cache picture stops being true on the Machine: its files come over the
 > **kswapd:** (from the drawing) When memory runs short, I wake up and clear room.
 
 **One process's map.** `cat /proc/self/maps`. `self` means whichever process is reading: here, `cat`.
+
+---
 
 ```
 004ac000-004b0000 r--p 00000000 00:14 10         /bin/busybox
@@ -86,6 +90,11 @@ Each line is one region of memory: its first address and the first one past it, 
 ## Watch it
 
 > **init:** Before you run it: the global and the local. Which one lives on the stack?
+>
+> - The global
+> - [x] The local
+
+---
 
 ```
 $ ./where

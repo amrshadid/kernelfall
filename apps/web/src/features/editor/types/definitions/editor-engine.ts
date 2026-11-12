@@ -1,4 +1,4 @@
-import type { EditorFile } from './editor'
+import type { DiagnosticSet, EditorFile } from './editor'
 
 /** Read at call time, so the component can swap callbacks without rebuilding the editor. */
 export interface EditorHandlers {
@@ -16,5 +16,7 @@ export interface EditorHandle {
   format(): void
   /** 1-based. */
   reveal(line: number, column: number): void
+  /** Marks the last build's errors and warnings; each file takes a set once, so its marks then move with edits. */
+  setDiagnostics(set: DiagnosticSet): void
   destroy(): void
 }

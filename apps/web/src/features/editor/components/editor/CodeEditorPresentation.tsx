@@ -1,5 +1,5 @@
 import { useCodeEditor } from '@features/editor/hooks/codemirror'
-import type { EditorFile, RevealRequest, RunState } from '@features/editor/types'
+import type { DiagnosticSet, EditorFile, RevealRequest, RunState } from '@features/editor/types'
 import { ariaKeyShortcut, FORMAT_BINDING, RUN_BINDING, shortcutLabel } from '@shared/utils/keyboard'
 import { useId, useRef, useState } from 'react'
 import { FileTabs } from './FileTabs'
@@ -12,6 +12,8 @@ export interface CodeEditorPresentationProps {
   modified: ReadonlySet<string>
   /** Open a file at a line (a clicked `file:line` in the terminal). */
   reveal: RevealRequest | null
+  /** The last build's errors and warnings, marked on their lines. */
+  diagnostics: DiagnosticSet
   run: RunState
   /** A short line: a Format problem, or where Linux is while it starts; null when there is nothing to say. */
   status: string | null
@@ -52,6 +54,7 @@ export function CodeEditorPresentation(props: CodeEditorPresentationProps) {
   const { loaded, failed, format } = useCodeEditor(surface, {
     file,
     reveal: props.reveal,
+    diagnostics: props.diagnostics,
     handlers: {
       onChange: props.onChange,
       onRun: props.onRun,

@@ -1,5 +1,6 @@
 import type { CodeEditorPresentationProps } from '@features/editor/components/editor'
-import type { EditorFile, FileContents, RunState } from '@features/editor/types'
+import type { DiagnosticSet, EditorFile, FileContents, RunState } from '@features/editor/types'
+import { consoleTextOf, diagnosticsSummary, gccDiagnosticsOf } from '@features/editor/utils/diagnostics'
 import { isSourceFile, runStageOf } from '@features/editor/utils/workspace'
 import {
   useCommandResults,
@@ -16,6 +17,7 @@ import { useDraftAutosave } from './useDraftAutosave.hook'
 import { useEditorReveal } from './useEditorReveal.hook'
 import { useVmFileSync } from './useVmFileSync.hook'
 
+const NO_DIAGNOSTICS: DiagnosticSet = { id: 0, items: [] }
 const IDLE: RunState = { kind: 'idle' }
 const BUILDING: RunState = { kind: 'busy', label: 'Building…', reason: 'gcc is building your code.', working: true }
 const RUNNING: RunState = {
@@ -60,9 +62,14 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
   const live = pending !== null && latest?.running && latest.commandLine.trim() === pending.trim() ? latest : undefined
   const liveEvents = useRunEvents(live?.id ?? null)
 
+  const [diagnostics, setDiagnostics] = useState<DiagnosticSet>(NO_DIAGNOSTICS)
+
   useCommandResults((result) => {
     if (pending !== null && result.commandLine.trim() === pending.trim()) {
       setPending(null)
+      // Only what gcc said about the player's own files: a system header has no tab to mark.
+      const items = gccDiagnosticsOf(consoleTextOf(result.events)).filter((item) => item.path in contents)
+      setDiagnostics((last) => ({ id: last.id + 1, items }))
     }
   })
 
@@ -114,6 +121,8 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
       return
     }
     setNotice(null)
+    // The last build's marks no longer describe what is being built.
+    setDiagnostics((last) => (last.items.length === 0 ? last : { id: last.id + 1, items: [] }))
     const line = runCommand ?? defaultRunCommand(Object.keys(contents), activePath)
     setPending(line)
     // The files reach the guest before the command does, so gcc builds what is on screen.
@@ -135,6 +144,7 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
     activePath,
     modified,
     reveal,
+    diagnostics,
     run: lock
       ? { kind: 'busy', label: lock.failed ? 'Run' : 'Starting Linux…', reason: lock.runReason }
       : pending === null
@@ -142,7 +152,7 @@ export function useEditorWorkspace(options: EditorWorkspaceOptions): CodeEditorP
         : runStageOf(pending, liveEvents) === 'running'
           ? RUNNING
           : BUILDING,
-    status: notice ?? machine.detail,
+    status: notice ?? diagnosticsSummary(diagnostics.items) ?? machine.detail,
     onSelectFile: setActivePath,
     onChange,
     onRun,

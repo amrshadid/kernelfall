@@ -16,6 +16,23 @@ export interface RevealRequest {
   readonly column: number
 }
 
+/** One of the compiler's errors or warnings, at the place it names. */
+export interface EditorDiagnostic {
+  readonly path: string
+  /** 1-based. */
+  readonly line: number
+  /** 1-based, in screen columns as gcc counts them: a tab reaches the next multiple of 8. */
+  readonly column: number
+  readonly severity: 'error' | 'warning'
+  readonly message: string
+}
+
+/** What the last build said. A new `id` replaces the marks in every file. */
+export interface DiagnosticSet {
+  readonly id: number
+  readonly items: readonly EditorDiagnostic[]
+}
+
 export type RunState =
   | { readonly kind: 'idle' }
   /** `reason` says why Run is off, for its title and screen readers. */

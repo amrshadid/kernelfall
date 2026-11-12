@@ -281,8 +281,8 @@ boot text scrolls past; one burnt line flashes `Kernel panic - not syncing`.
 **Predict:** "When `cat` showed my note, who read the file: `cat` itself, or the
 kernel?" On the drawing, two lines run from `cat` down through the Gate into the
 kernel. The answer: the kernel. BusyBox `cat` asks it to open the file, then to copy
-it to the terminal (`open`, `sendfile64` in the recorded run); its other requests
-wait for First Words. Only the kernel reaches the hardware.
+it to the terminal (`open`, `sendfile64` in the recorded run); First Words shows a
+program's requests one by one. Only the kernel reaches the hardware.
 
 ### Debrief
 
@@ -387,7 +387,7 @@ for the drawing's labels, which the story names but does not teach.
 | `/proc` in general: files written when read                          | `proc` Simple; taught in P.7                             |
 | the Machine's files come over a virtio share, not a disk             | `fidelity`                                               |
 | terminal, shell, `bash`, command                                     | `terminal` Simple and Deep; P.3 is the shell's level     |
-| `echo` and `pwd` are builtins                                        | `terminal` Deep; taught in P.2                           |
+| `echo` and `pwd` are builtins                                        | `terminal` Deep; taught in P.3                           |
 | `/dev`: `ttyS0`, `null`, `zero`, `random`; `sda`, `nvme0n1`          | `files` Deep, `terminal` Deep, the real-world card; P.9  |
 | most of `/bin` is links to BusyBox                                   | `program-process` Deep                                   |
 | `/etc/hostname`, the Machine's name                                  | the real-world card                                      |
@@ -429,92 +429,62 @@ view with its four labels; the real VM's bash and `/etc/motd` with init's messag
 
 - **Id:** `prologue-boot-path-02-first-words` · **Region / NPC:** init's house in Userland / init, the Watchdog · **Tracks:** `userland`, `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-computer-basics` · **Skills unlocked:** `sys-user-kernel-mode`
 
-This is the built level (`packages/levels/content/0-prologue/1-boot-path/02-first-words`).
+**Question:** How does a program ask the kernel for something? `/bin/echo hello`
+answers in X-ray, and then the player's own `hello.c` does.
+
+**Teaches:** `syscall`, `fd`, `user-kernel-mode`. **Names** (met here, taught
+later): `exec`, `compiler` and `c-basics` (Act I). **Tools:** `/bin/echo`,
+`write`, `execve`, `exit_group`, gcc. The story text is the level's `story.md`; this
+section lists its beats.
 
 ### Scene
 
-> **init:** You walked the Machine from `/` down to `/proc`, and every program you ran needed the kernel: to show text, to read a folder, to open a file. Tonight you watch one of them ask.
+> **init:** In Power On, `cat` could not read my note on its own. It asked the kernel, and the request crossed the Gate. Tonight you watch a program ask, one request at a time.
 >
-> **The Watchdog:** Make it quick. I'm counting. (I'm always counting. That's my whole job.)
+> **The Watchdog:** Make it quick. I'm counting.
 >
-> **init:** Then we'll say the same thing ourselves, in C: your very own first request to the kernel.
+> **init:** Then you ask the kernel yourself, with your first program: a few lines of C, the language Linux itself is written in.
 
 ### See it (X-ray)
 
-**Part 1: the syscalls view (about 1:30 into the level).** A chip offers
-`/bin/echo hello` (the program file, not bash's builtin `echo`, so there is a
-program to watch). `hello` prints, init asks "Want to see what really happened?",
-and **X-ray** (a view that shows what happens inside the Machine; its syscalls view
-unlocks now) replays the command. As traced on the Machine, with the program's
-start-up calls folded:
+1. **Do** (the first line): `/bin/echo hello`. **See:** X-ray's syscalls view, as
+   traced on the Machine, with the program's start-up calls folded:
 
-```
-execve("/bin/echo", ["/bin/echo", "hello"], ...) = 0
-  … 17 more requests: the program getting ready
-write(1, "hello\n", 6)                           = 6
-exit_group(0)                                    = ?
-```
+   ```
+   execve("/bin/echo", ["/bin/echo", "hello"], ...) = 0
+     … 17 more requests: the program getting ready
+   write(1, "hello\n", 6)                           = 6
+   exit_group(0)                                    = ?
+   ```
 
-init reads it line by line. Each line is one **syscall** (system call): a request
-from a program to the kernel. The name, then what was asked in brackets, then after
-the `=` the kernel's answer.
-
-- `execve(...)`: the kernel was asked to start the program `/bin/echo` (one of
-  BusyBox's names) with the words `/bin/echo` and `hello`. Answer `0`: done.
-- The 17 folded calls (X-ray shows them): musl and BusyBox getting ready, `brk`
-  and `mprotect` for memory, `getuid` and `getgid` asking who is running it, then
-  `setgid(1000)` and `setuid(1000)`: BusyBox making sure it runs with the player's
-  rights and no more.
-- `write(1, "hello\n", 6)`: `echo` asked the kernel to show six bytes, `hello` and
-  a newline (`\n`, the invisible "end of line" character). Answer `6`: all six
-  taken.
-- `exit_group(0)`: `echo` said "I'm finished, all went well" (`0` means success).
-  There's no answer: the process is gone.
-
-The `1` in `write` is a **file descriptor**: a small number a process uses for
-something it has open. Every program starts with three: **0** for what you type,
-**1** for its normal output (**standard output**), **2** for error messages.
-Standard output is your terminal here, but it doesn't have to be: 1.6 sends it to a
-file.
-
-init: "Start a program, write, leave. Every program talks to the kernel this way.
-There is no other door. Try any command; X-ray watches them all." The player runs
-`ls /bin` and `cat /etc/motd` again with X-ray on and sees their syscalls (a few
-new names, `open`, `getdents64`, `writev`, `sendfile64`; the Survey explains them).
-
-**Part 2: one request, slowly.** init zooms into the `write` (the Gate view; the
-full, step-by-step version is the Syscall Gate boss, 1.B):
-
-1. The CPU has two levels of permission. Programs run in **user mode**: the CPU
-   won't let them touch devices, other programs' memory or the kernel's memory.
-2. To ask for something, a program runs one special CPU instruction. The CPU
-   switches to **kernel mode**, full permission, and jumps to one of two fixed
-   places in the kernel: the **Syscall Gate**. On this 32-bit Machine the gate has two doors:
-   `sysenter`, which musl reaches through the vDSO's `__kernel_vsyscall` (a few
-   bytes the kernel maps into every process), and the older `int $0x80`; both land
-   in `arch/x86/entry/entry_32.S`. A 64-bit PC uses `syscall` instead.
-3. The kernel does the work (here, hands the bytes to the terminal's device) and
-   the CPU returns to user mode with the kernel's answer.
-
-> **init:** You ask. The kernel does. That's the whole arrangement.
-
-Where "asking" stops being a good picture: the program doesn't wait in line or talk
-to anyone. Its own CPU switches mode and runs kernel code right away, on its behalf.
+   **Name:** _syscall_: a request from a program to the kernel; its name, what was
+   asked, then the kernel's answer after the `=`.
+2. init reads three lines: `execve` started the program; `write(1, "hello\n", 6)`
+   asked for six bytes to be shown, one for each character, and the kernel took all
+   six; `exit_group(0)` said the program was finished, its `0` meaning all went
+   well, and gets no answer, because the process is gone.
+3. **Name:** _file descriptor_: a small number for something a process has open; 0
+   is what you type, 1 its output, 2 its error messages. Here 1 leads to the
+   terminal.
+4. **Why ask at all:** the CPU runs programs in _user mode_, where it won't let them
+   touch a device or the kernel's memory; a syscall switches it to _kernel mode_ at
+   the Gate, and back with the answer.
 
 ### Build it
 
-The player writes `hello.c`, their first program, in the editor. C is a programming
-language; its text is the **source code**, and a **compiler** (here, gcc 15)
-turns it into a program file the CPU can run.
+The player writes `hello.c`, their first program, in the editor. init gives C in one
+sentence: `main` is where a program begins, each step in it ends with `;`, and
+text goes between double quotes. The compiler, gcc 15, turns the file into one the
+CPU can run.
 
 - **Starter provides:** an empty `main()` (the function a C program starts in) that
   returns 0, `#include <unistd.h>` (which brings in `write()`), and a comment block
   (in init's voice) explaining `write(fd, buf, count)` and that fd 1 is standard
   output (here, the terminal). Run types `gcc -Wall -Wextra hello.c -o hello &&
-  ./hello` into bash (`./` means "in this folder"; P.3 explains why it's needed).
+  ./hello` into bash.
 - **First, a broken build, on purpose (guided).** init: "Before you write anything,
-  let's break it. Delete the `;` after `return 0` and press Run." gcc answers, on
-  the Machine:
+  break it. Delete the `;` after `return 0` and press Run." gcc answers, on the
+  Machine:
 
   ```
   hello.c: In function 'main':
@@ -526,22 +496,15 @@ turns it into a program file the CPU can run.
         | ~
   ```
 
-  init reads it part by part, and each part lights up as she names it:
-  - `hello.c:19:17` is where: the file, the line (19) and the column (17; gcc
-    counts the leading tab as eight columns, so 17 is just after the `0`).
-  - `error:` is how bad: an error stops the build, so there is no `./hello` to
-    run. (A `warning:` lets the build finish; more on those in 1.3.)
-  - The message says what the compiler expected: a `;` before the `}`. It noticed
-    only when it reached the `}` on line 20 (marked `~`), but the `^` points where
-    the `;` belongs.
-  - Under the `^`, the fix the compiler suggests: a `;`.
-  - "Fix the first error first. Later ones are often caused by it."
+  init reads three parts, and the editor marks the line gcc named:
+  - `hello.c:19:17` is where: the file, the line, the column.
+  - `error:` means the build stopped, so there is no program to run.
+  - The `^` points at the place, and under it is the fix gcc suggests.
 
   The player puts the `;` back and presses Run: a clean build, and nothing printed,
   because `main` says nothing yet.
-- **Player writes:** a call to `write()` that prints one line to standard output
-  (any text, ending in a newline) and returns 0 from `main`. Stretch (not
-  required): check the return value and return 1 if `write()` failed.
+- **Player writes:** above `return 0`, one line: a `write()` that sends a line of
+  text, ending in `\n`, to file descriptor 1.
 - **Checker verifies (behavior):**
   - A build failed with an error, and a later build of `hello.c` succeeded (the
     guided break counts; so does any error the player fixes on their own).
@@ -551,25 +514,24 @@ turns it into a program file the CPU can run.
     return value equals the count.
   - The bytes that reached the terminal end in `\n`.
 
-`printf` also passes. If the player uses it, X-ray shows the `writev` that musl's
-stdio made for them, and the story explains that `printf` is a library function
-(ready-made code that comes with C) that collects text and hands it to the kernel,
-here with `writev`, write's sibling that takes the text in pieces.
+`printf` also passes: X-ray then shows the `writev` that musl's stdio made. The story
+no longer explains it; the `write-syscall` card does.
 
 **Golden runs:** `solution`, `solution-printf`; rejected: `broken` (the starter
 with the `;` deleted), `silent` (the starter: builds, exits 0, writes nothing),
 `no-newline`.
 
-If a build prints a warning (for example `unused variable 'n'`), init adds a
-note, and nothing more: "That's a warning, not an error: your program still built.
-Warnings often point at real bugs. The Smith will teach you to clear them." No
-Taint.
+A warning (for example `unused variable 'n'`) is marked in the editor in ink and
+adds no Taint; warnings are taught in 1.3.
 
 ### Watch it
 
-**Predict** (before running): init asks which X-ray lane `./hello` will light up:
-user mode only, kernel mode only, or both. The run shows the answer: the program
-runs in user mode, and each syscall dips into kernel mode and back.
+**Predict** (before running): "Where does the work for `./hello` get done?" In
+Userland only, in the kernel only, or on both sides of the Gate. The run shows the
+answer: the player's code runs in Userland, in user mode, and its `write` crosses the
+Gate, runs in the kernel and comes back with the bytes taken, `15` for init's line. The player never wrote `exit_group`:
+returning from `main` made that request. Seven requests got the program ready, where
+`/bin/echo` needed seventeen.
 
 ```
 $ ./hello
@@ -583,28 +545,24 @@ write(1, "hello, Machine\n", 15)    = 15
 exit_group(0)                       = ?
 ```
 
-In the world: the first lamp in Userland flickers on above init's house. The Kernel
-Map shows a single lit dot labeled "console". The Watchdog grunts: "A process
-that talks. Fine. I'll stop counting. For now."
+> **The Watchdog:** A process that talks. Fine. I'll stop counting. For now.
 
 ### Debrief
 
-> **init:** The first lamp in Userland is lit above my house. Your line went the only way anything goes: through the Gate.
->
-> **init:** One day you'll build a shell of your own. You can't build what you've never used, so put my chips away. Next, in Speak to the Shell, you talk to bash yourself, every word.
+> **init:** That is how a program asks: a syscall, through the Gate, and the kernel's answer back. So far I chose every command. In Speak to the Shell you choose the words yourself, and see how the shell finds the program you name.
 
 P.3 begins.
 
 ### Hints
 
 1. Nudge: "You want your line to reach the terminal. Every program starts with
-   three file descriptors already open. Which one is standard output?"
+   three file descriptors already open. Which one is the program's output?"
 2. Concept: "`write(fd, buf, count)` hands `count` bytes from `buf` to the kernel.
-   File descriptor 1 is standard output; here, it leads to your terminal. The
+   File descriptor 1 is the program's output; here, it leads to your terminal. The
    kernel answers with how many bytes it took."
-3. Point at the spot: "Inside `main`, call `write` with fd 1, your string, and the
-   string's length in bytes. Count the `\n` too. `sizeof` on a string literal
-   counts the hidden `\0` at the end, so subtract one."
+3. Point at the spot: "Inside `main`, above `return 0`, add `write` with file
+   descriptor 1, your text in double quotes, and the number of bytes in it. `\n` is
+   one byte: count it too."
 
 ### Codex (chapter: First Boot)
 
@@ -612,18 +570,15 @@ The built level's card list must match this one.
 
 - **Syscall** (`syscall`)
   - **Simple:** A request from a program to the kernel: show text, open a file,
-    start a program. The only way a program gets the kernel to do anything.
-  - **Deep:** Each syscall has a name, a number and up to six arguments; the
-    kernel answers with a value, or a negative error code that the C library turns
-    into `-1` plus `errno`. On this 32-bit Machine a program enters with
-    `sysenter` (through `__kernel_vsyscall` in the vDSO) or the older `int $0x80`.
-    They land at two entry points, `entry_SYSENTER_32` and `entry_INT80_32`: the
-    Syscall Gate. Each saves the registers and calls `do_fast_syscall_32()` or
-    `do_int80_syscall_32()`. There `ia32_sys_call()` runs the handler numbered in
-    `eax`: a `switch` generated at build time from `syscall_32.tbl` (since 6.9 the
-    old `sys_call_table[]` is kept only for tracing). On a 64-bit PC, `syscall` enters at
-    `entry_SYSCALL_64`. — `arch/x86/entry/entry_32.S`,
-    `arch/x86/entry/syscall_32.c`, `arch/x86/entry/syscalls/syscall_32.tbl`.
+    start a program. Programs have no other way to reach it.
+  - **Deep:** Each syscall has a number and up to six arguments. The kernel answers
+    with a value, or a negative error code that the C library turns into `-1` and
+    `errno`. On this 32-bit Machine a program enters with `sysenter` or the older
+    `int $0x80`, at `entry_SYSENTER_32` and `entry_INT80_32` in `entry_32.S`: the
+    Gate. From there `ia32_sys_call()` in `syscall_32.c` runs the handler numbered
+    in `eax`, a `switch` statement generated from `syscall_32.tbl`. —
+    `arch/x86/entry/entry_32.S`, `arch/x86/entry/syscall_32.c`,
+    `arch/x86/entry/syscalls/syscall_32.tbl`.
   - **Read:** man 2 `syscalls`, man 2 `intro`. Deepened by 1.B (the syscall
     path, step by step).
 - **User mode and kernel mode** (`user-kernel-mode`)
@@ -633,7 +588,8 @@ The built level's card list must match this one.
     and the kernel in ring 0; kernel memory is mapped supervisor-only, so a program
     that touches it faults. A syscall instruction is the sanctioned way up: on this
     32-bit Machine `sysenter` or `int $0x80`, with `sysexit` or `iret` the way
-    back; on a 64-bit PC, `syscall` and `sysret`. — `arch/x86/entry/entry_32.S`,
+    back; on a 64-bit PC, `syscall` and `sysret`. man 2 `syscall` lists the
+    instruction for each architecture. — `arch/x86/entry/entry_32.S`,
     `arch/x86/entry/entry_64.S`, https://man7.org/linux/man-pages/man2/syscall.2.html.
   - **Read:** man 2 `intro`, man 2 `syscall`. Deepened by P.5 (kernel space and
     user space).
@@ -652,8 +608,8 @@ The built level's card list must match this one.
     took. It can take fewer than asked (a "short write"), so careful code checks
     the return value. The path: `ksys_write()` → `vfs_write()` → the file's own
     write function; for a terminal, the tty layer's `tty_write()`. Its sibling
-    `writev()` takes several buffers in one call; musl prints `printf()`'s text that
-    way. — `fs/read_write.c` (`ksys_write()`, `vfs_write()`), `drivers/tty/tty_io.c`.
+    `writev()` takes several buffers in one call; the Machine's C library, musl,
+    prints `printf()`'s text that way. — `fs/read_write.c` (`ksys_write()`, `vfs_write()`), `drivers/tty/tty_io.c`.
   - **Read:** man 2 `write`. Deepened by P.9 (one interface for every file), 1.6
     (the read/write contract) and 2.5 (the driver's side).
 - **Compiler diagnostics** (`compiler-diagnostics`)
@@ -664,22 +620,28 @@ The built level's card list must match this one.
     under it, and `~` under the code it was reading when it noticed. clang uses the
     same `file:line:column: error:` shape with its own wording. Fix the first error
     first: later ones are often caused by it. The kernel is built by the same
-    compilers (gcc, or clang with `LLVM=1`) and its build can treat warnings as
-    errors (`CONFIG_WERROR`). — `Documentation/kbuild/llvm.rst`, `init/Kconfig`
-    (`WERROR`).
+    compilers, and `CONFIG_WERROR` makes its build treat warnings as errors. —
+    `Documentation/kbuild/llvm.rst`, `init/Kconfig` (`WERROR`).
   - **Read:** https://gcc.gnu.org/onlinedocs/gcc/Diagnostic-Message-Formatting-Options.html.
     Deepened by 1.3 (warnings and a clean build).
-- **Taint (the game's meter)** (`taint-meter`)
-  - **Simple:** The Machine's stain meter: hacks add Taint, clean code adds none.
-    It is a game score, not a Linux feature.
-  - **Deep:** Linux has its own, different "taint": flags the kernel sets when
-    something makes it less trustworthy (a proprietary or out-of-tree module, a
-    previous oops). They are bits set by `add_taint()`, readable in
-    `/proc/sys/kernel/tainted`, and shown as letters on an oops's `Tainted:` line.
-    The game's meter borrows the word, not the mechanism. — `kernel/panic.c`
-    (`add_taint()`), `Documentation/admin-guide/tainted-kernels.rst`.
-  - **Read:** https://docs.kernel.org/admin-guide/tainted-kernels.html. Deepened
-    by 2.2 (Game Taint vs kernel taint flags).
+
+### Moved out of the story
+
+| Fact (old story)                                                      | Now                                                  |
+| --------------------------------------------------------------------- | ---------------------------------------------------- |
+| `/bin/echo` is the program file, `echo` the shell's builtin           | P.3, where builtins are taught                       |
+| the 17 start-up calls by name: `brk`, `mprotect`, `getuid`, `setuid`… | X-ray shows them; the story only counts them         |
+| `ls /bin` and `cat /etc/motd` under X-ray: `open`, `getdents64`…      | the chips stay; the calls are P.9's and the Survey's |
+| standard output "doesn't have to" lead to the terminal                | S.4 (redirection) and 1.6                            |
+| the Gate's two doors, `sysenter` and `int $0x80`; `syscall` on 64-bit | `syscall` Deep and `user-kernel-mode` Deep           |
+| "the program doesn't wait in line": the CPU runs kernel code at once  | `user-kernel-mode` Deep; 1.B walks the path          |
+| source code; `./` means "in this folder"                              | P.3 (`./` and `PATH`)                                |
+| gcc counts the leading tab as eight columns                           | gone; the editor marks the place                     |
+| a `warning:` lets the build finish; "the Smith will teach you those"  | `compiler-diagnostics` Deep; 1.3                     |
+| the `~` under the `}` where gcc noticed; "fix the first error first"  | `compiler-diagnostics` Deep                          |
+| `printf` is a library function; `writev`                              | `write-syscall` Deep; library functions are Act I's  |
+| the Userland lamp, the "console" dot on the Kernel Map                | gone: the Section drawing shows the crossing         |
+| the Taint meter's card (`taint-meter`)                                | 1.3, where Taint first counts                        |
 
 ### Real-world card
 
@@ -706,20 +668,12 @@ Build and trace it: `gcc -Wall -Wextra -o hello hello.c && strace ./hello`. On a
 glibc system you'll see more syscalls before your `write` than on the Machine: its
 separate loader opens and maps `libc.so.6` (`openat`, `mmap`, `mprotect` and
 friends), while the Machine's musl is its own loader and opens nothing. Build with
-`-static` and trace again to see a shorter list. Delete a `;` and build with clang:
-it words the error differently ("expected ';' after return statement") but uses
-the same `file:line:column: error:` shape.
+`-static` and trace again to see a shorter list.
 
 ### Taint
 
-The Taint meter is introduced here and shown at zero. init: "Hacks leave a stain on
-the Machine. We call it Taint. Keep it low." No Taint rule is live anywhere in the
-Prologue:
-
-- **Compiler warnings** get init's note (Build it), not Taint. They count from
-  1.3, where warnings are taught.
-- Ignoring `write()`'s return value gets a gentle checker note. Return-value Taint
-  starts in Act I.
+No Taint rule is live in the Prologue. Compiler warnings and an ignored `write()`
+return value count from Act I, where they are taught.
 
 ### Fidelity
 
@@ -735,7 +689,7 @@ Prologue:
 ### Lab needs
 
 Done: X-ray's syscalls view; gcc's real output in the terminal; the Run button's
-build command. Later (0.2.0): gcc's diagnostics as marks in the editor.
+build command; gcc's diagnostics as marks in the editor.
 
 ---
 

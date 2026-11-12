@@ -51,6 +51,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - **X-ray fits a small laptop screen.** On a 1280×720 screen its drawing is larger and the
   sentence under it is no longer hidden: the controls keep to one row, and on a short
   screen the title block gives its height to the drawing.
+- **First Words (P.2) is rewritten to the content standard:** one question ("How does
+  a program ask the kernel for something?"), three ideas instead of seven, and about
+  60% of the words. What left the story is in its Codex cards or in the level that
+  teaches it.
 - The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p

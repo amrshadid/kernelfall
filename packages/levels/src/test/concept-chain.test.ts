@@ -8,8 +8,9 @@ import { labelOf } from '#utils/label/level-label.util'
 const KNOWN_CONCEPT_GAPS: Readonly<Record<ConceptViolationKind, Readonly<Record<ConceptId, string>>>> = {
   'used-before-taught': {
     'device-file': 'P.1 no longer shows /dev; P.7 uses /dev/null and P.9 explains device files without declaring it',
-    hex: "P.2's `int $0x80` and P.4's e820 addresses come before P.5 explains hex",
-    'c-basics': 'P.2, P.5, P.7, P.8, P.9 and 1.4 have the player write C; no level introduces C itself',
+    hex: "P.4's e820 addresses come before P.5 explains hex",
+    'library-function':
+      "1.4 calls execvp() and strerror(); library functions are taught in Act I's 1.0, which isn't built",
     pipe: "P.4's `dmesg | grep`, P.7's `top | head` and S.4's aside come before S.5 teaches `|`",
     interrupt: "P.4 and P.7 name interrupts; P.6 leaves them to a Codex card, and Act II's 2.10b teaches them",
     scheduler: 'P.4 names the scheduler; P.7 explains it',
@@ -20,7 +21,7 @@ const KNOWN_CONCEPT_GAPS: Readonly<Record<ConceptViolationKind, Readonly<Record<
     'background-job': "P.7's `&` and `%1`, and 1.4's real-world card, are never explained in the game",
   },
   'taught-twice': {
-    builtin: 'P.3 and S.1 explain the builtin again after P.2',
+    builtin: 'S.1 explains the builtin again after P.3',
     'user-space': 'P.4 means the programs outside the kernel; P.5 means the low 3 GiB of addresses',
     'proc-fs': 'P.9 and S.1 explain /proc again after P.7',
     mount: 'P.9 defines mounts again after P.4',

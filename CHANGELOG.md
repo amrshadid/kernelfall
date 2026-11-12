@@ -73,6 +73,12 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   in about half the words. Bring the Machine Up (P.10) is now a recall level: each of
   the three wrong words on the boot line points back to a level you have done. Who
   Runs quotes one recorded session, so its PIDs agree from `ps` to `mypid`.
+- **The Surface Survey and Run Anything are rewritten to the content standard,** so
+  every built level now is. S.1 to S.5 and 1.4 each answer one question, in a half to
+  two thirds of the words. Processes from Outside (S.3) teaches process states and
+  builds on the signals of The Kernel, Up Close instead of defining them again; Run
+  Anything teaches `fork`, `execve` and `wait`, and no longer says a part of the game
+  comes "in the next release". No hint gives the command to type.
 - The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p

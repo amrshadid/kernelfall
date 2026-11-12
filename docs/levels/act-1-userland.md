@@ -909,85 +909,63 @@ Warning Taint starts here, for this level and every level after it.
 
 ## 1.4 — Run Anything
 
-- **Region / NPC:** Process District / init, the Watchdog · **Tracks:** `userland` · **Time:** ~18 min · **Prerequisites:** `c-build-warnings`, `sys-shell-basics` · **Skills unlocked:** `proc-lifecycle`, `sys-errno`
+- **Region / NPC:** Process District / init, the Watchdog · **Tracks:** `userland` · **Time:** ~30 min · **Prerequisites:** `c-build-warnings`, `sys-shell-basics` · **Skills unlocked:** `proc-lifecycle`, `sys-errno`
 
 ### Scene
 
-> **init:** Welcome to the Process District. My home. Look at it. Empty doorways. Nobody running.
->
-> **init:** On the Surface you watched bash start programs all day. Here you build a shell of your own, `ksh-lite`. It already reads a line, cuts it into words and knows one builtin, `exit`. It can't run a program yet. A real shell can run _anything_. Here's how every process in this city was born.
->
-> **init:** First, a process copies itself. That's `fork`. Two of you, each with a copy of the same memory, same code. Only the return value differs: the child gets 0.
->
-> **init:** Then the copy becomes something else. That's `exec`. Same process ID, brand-new program.
->
-> **init:** And the parent waits for the child to finish. That's `wait`. A finished child who isn't waited for becomes a _zombie_. It's dead, but it still holds its place in the process table.
->
-> **The Watchdog:** Zombies. Ugh. I've seen whole districts full of them. Wait for your children, kid.
->
-> **init:** When nobody waits, I end up adopting them. I'm old. Please don't make me.
+**Question:** How does a shell start a program, and how does it learn how the
+program ended? With `fork` and `execve`, and with `wait`.
+
+**Teaches:** `fork`, `exec`, `wait`. **Uses** (among others): `zombie` (S.3),
+`exit-status` and `errno` (named in P.3, explained here in a line each),
+`virtual-memory` and `page` (P.8), `stderr` (S.4), `builtin` and
+`working-directory` (S.1). The story text is the level's `story.md`; this section
+lists its beats.
+
+Opens from S.5 ("you stop using a shell and start building one"): `ksh-lite` reads a
+line, cuts it into words and knows one builtin, `exit`; it can't start a program
+yet. The player types `ls` in bash and looks at X-ray's processes view.
 
 ### See it (X-ray)
 
-The **processes view** unlocks. init runs `ls` from the rescue shell, as the player
-did all through the Survey, and asks: "You ran `ls` a dozen times. Who started
-it?" The view shows the process tree: `init(1)` → `rescue(300)`. Then:
-
-1. `fork` returns twice: a second box appears with a new PID, labeled `rescue`,
-   and the syscalls view shows `clone(...) = 412` in the parent and `= 0` in the
-   child.
-2. `execve("/bin/ls", ...)` in the child: the box keeps its PID but its label
-   changes to `ls`.
-3. `ls` writes its output and calls `exit_group(0)`. The box turns grey with a
-   `Z` badge: a zombie.
-4. The parent's `wait4` returns 412 and the box disappears: reaped.
-
-A slow-motion replay button lets the player watch each step again with the
-`task_struct` fields that changed (`pid`, `comm`, `state`, `exit_code`).
-
-Three more short beats in the replay:
-
-- **The exit status travels back.** `ls` called `exit_group(0)`; the parent's
-  `wait4` fills an `int status`, and `WIFEXITED(status)` / `WEXITSTATUS(status)`
-  read the 0 back out. A shell keeps it as `$?`, and has two numbers of its own:
-  127 for "command not found", 128 + n for "killed by signal n" (1.8).
-- **Errors come back as numbers.** init runs `nosuch`. The syscalls view shows the
-  kernel's answer to `execve` as `-ENOENT`; the C library turns it into `-1` and
-  sets `errno` to `ENOENT` (2). `strerror()` turns that into "No such file or
-  directory".
-- **Each process has its own memory** (about a minute). Right after `fork`, the
-  memory panel shows the same variable at the same address in parent and child.
-  The child changes it; the parent's copy doesn't move. Same address, different
-  memory: each process has its own **virtual address space**, and `fork` gives the
-  child a copy (Linux shares the pages until one side writes: _copy-on-write_).
-  This beat backs the `address-space` card; the skill (`mem-address-spaces`) is
-  earned in 2.5, where the driver must cross from the kernel into a process's
-  memory.
-
-The syscalls view is the X-ray name for these calls. In 1.5 the player gets the
-same view as text, from a real tool: `strace`.
+1. **Name:** `fork`. bash copied itself; two processes run the same code, and the
+   return value tells them apart (the child's PID in the parent, 0 in the child).
+   The child's memory is a copy at the same addresses, each process having its own
+   virtual memory (Pages and Maps); a page is copied only when one side writes.
+2. **Name:** `execve`. The child swapped its program for `ls`: same PID, new
+   program; it comes back only if it failed.
+3. **Name:** `wait` (`wait4`). bash sleeps until the child ends and gets its _exit
+   status_, 0 for success. Until then the ended child is a zombie, like `yes` in
+   S.3.
+4. **Do:** `nosuch`. bash searched `PATH` itself (as in P.3) and found nothing; it
+   forked anyway, and the child printed the complaint and ended with 127, the shells'
+   "command not found". No `execve`.
 
 ### Build it
 
-- **Starter provides (partial):** the player's `ksh-lite` so far (or the reference)
-  with a new `run_external(char **argv)` stub that `dispatch()` already calls when
-  no builtin matches.
+- **Starter provides (partial):** `ksh-lite`, which reads a line, cuts it into
+  words, knows `exit` (with no argument, the last command's status), and has a
+  `run_external(char **argv)` stub that `dispatch()` already calls when no builtin
+  matches.
 - **Player writes:** `run_external()`: `fork()`; in the child, `execvp(argv[0],
   argv)`, and if it returns, print `ksh-lite: <name>: command not found` (for
-  `ENOENT`) or `ksh-lite: <name>: <strerror(errno)>` and `_exit(127)`; in the
-  parent, `waitpid(pid, &status, 0)` and remember the exit status. Handle `fork()`
-  failing. `exit` with no argument now exits with the last command's status.
+  `ENOENT`) or `ksh-lite: <name>: <strerror(errno)>` on standard error and
+  `_exit(127)`; in the parent, `waitpid(pid, &status, 0)` and return
+  `WEXITSTATUS(status)`. When `fork()` fails, say so on standard error and keep
+  reading. The story names each of these: `errno` (a failed system call returns -1
+  and leaves the reason there), `_exit` (ends the child at once), `waitpid` (the C
+  library's `wait4`) and `WEXITSTATUS`.
 - **Checker verifies (behavior):**
   - `ls /` prints the root directory listing, and the next prompt appears only
     after all of `ls`'s output.
   - `/bin/echo a b` prints `a b` (a path with a slash runs directly).
   - `nosuch` prints the not-found message on stderr; afterwards exactly one
     `ksh-lite` process exists (no second shell).
-  - `false` followed by `exit` ends the shell with status 1; `true` then `exit`
-    with 0; `nosuch` then `exit` with 127.
+  - `false` followed by `exit` ends the shell with status 1; `nosuch` then `exit`
+    with 127.
   - After 10 commands, `ksh-lite` has no zombie children in the process table.
-  - When the lab makes `fork()` fail with `EAGAIN`, the shell prints an error and
-    keeps running.
+  - Under `(ulimit -u 1; exec ./ksh-lite)`, `fork()` fails with `EAGAIN`; the shell
+    writes to fd 2 and reads its next line.
 
 ### Watch it
 
@@ -1003,20 +981,26 @@ ksh$ nosuch
 ksh-lite: nosuch: command not found
 ```
 
-Each command the player runs appears as a small figure walking out of the shell's
-house, doing its job, and walking back to be counted. The Process District's
-streets fill with people. In the processes view, the tree under `ksh-lite` grows and
-shrinks with each command. init, quietly: "No zombies. Good."
+The child printed on standard error. Had it not ended there, it would have gone on
+as a second shell reading the terminal. In the processes view every command walks
+out as a new process, does its job and is collected: no zombies.
 
 ### Debrief
 
-> **init:** The streets have people again. Let's send one somewhere. Type `cd /tmp`.
->
-> **init:** `ksh-lite: cd: command not found`. Of course: there's no `cd` program to run. And there can't be.
->
-> **The Watchdog:** People walking around with no address. Lost, the lot of them.
->
-> **init:** Every process carries a few things of its own: where it stands, what it's called. Tomorrow I'll show you where the Kernel keeps them, and how to read them.
+A shell starts a program with `fork` and `execve`, and learns how it ended with
+`wait`. The player types `cd /tmp` and gets "command not found": there is no `cd`
+program, and (from S.1) there can't be. That comes next, in 1.5. The Watchdog:
+"People walking about with no address. Lost, the lot of them."
+
+### Moved out of the story
+
+| What                                                | Where it is now                  |
+| --------------------------------------------------- | -------------------------------- |
+| `WIFEXITED` / `WEXITSTATUS`, `$?`, 128 + n          | Codex `exit-status`; hint 2      |
+| `strerror()` and the number 2 for `ENOENT`          | Codex `errno`                    |
+| The memory panel beat (one variable, two processes) | Codex `fork` and `address-space` |
+| init adopting orphans                               | Codex `wait`                     |
+| The slow-motion replay with `task_struct` fields    | not built; dropped               |
 
 ### Hints
 
@@ -1038,8 +1022,8 @@ shrinks with each command. init, quietly: "No zombies. Good."
   - **Deep:** the child gets a copy of the caller's memory, open files and signal
     handlers. Linux shares the memory pages copy-on-write: both point at the same
     pages until one side writes. `fork()` returns the child's PID in the parent and
-    0 in the child, or -1 with `errno` (`EAGAIN`, `ENOMEM`). glibc's `fork()` uses
-    the `clone` syscall, which is why traces show `clone`. — man 2 `fork`, man 2
+    0 in the child, or -1 with `errno` set. musl on i386 calls the `fork` syscall,
+    which is what the Machine's traces show; glibc calls `clone`. — man 2 `fork`, man 2
     `clone` — `kernel/fork.c` (`kernel_clone()`, `copy_process()`).
 - **execve** (`execve`, deepens: `arguments`)
   - **Simple:** a process swaps its program for another one; same PID, new
@@ -1047,7 +1031,7 @@ shrinks with each command. init, quietly: "No zombies. Good."
   - **Deep:** `execve(path, argv, envp)` copies `argv` and `envp` onto the new
     program's stack; memory, code and stack are replaced; open file descriptors stay
     open (unless marked close-on-exec). It only returns on error. `execvp` is a
-    library wrapper that searches `PATH`. Real Linux loads ELF files with
+    library wrapper that searches `PATH`. The kernel loads ELF files with
     `load_elf_binary()`. — man 2 `execve`, man 3 `exec` — `fs/exec.c`
     (`do_execveat_common()`, `bprm_execve()`), `fs/binfmt_elf.c`.
 - **wait / zombies** (`wait`)
@@ -1063,12 +1047,11 @@ shrinks with each command. init, quietly: "No zombies. Good."
   - **Deep:** `exit(n)`, `_exit(n)` or returning `n` from `main` ends the process
     with `n & 0xff`. The parent's `waitpid` gets a packed `int status`:
     `WIFEXITED(status)` is true for a normal exit and `WEXITSTATUS(status)` gives
-    `n`; `WIFSIGNALED`/`WTERMSIG` say a signal killed it (1.8). Shells store it in
-    `$?` and add conventions of their own: 127 "command not found", 126 "found
-    but not executable", 128 + n "killed by signal n". `_exit` ends the process
-    at once; `exit` first runs `atexit` handlers and flushes stdio buffers, which
-    a forked child must not do twice. — man 2 `waitpid`, man 2 `_exit`, man 3
-    `exit` — `kernel/exit.c` (`do_group_exit()`, `wait_task_zombie()`).
+    `n`. Shells store it in `$?` and add numbers of their own: 127 "command not
+    found", 126 "found but not executable", 128 + n "killed by signal n". `_exit`
+    ends the process at once; `exit` first flushes stdio buffers, which a forked
+    child must not do twice. — man 2 `waitpid`, man 2 `_exit`, man 3 `exit` —
+    `kernel/exit.c`.
 - **errno** (`errno`)
   - **Simple:** when a syscall fails, `errno` says why.
   - **Deep:** inside the kernel a failing syscall returns a negative error number
@@ -1119,8 +1102,8 @@ int main(void)
 Run `nosuch; echo $?` in bash (127). To see a zombie:
 `bash -c 'sleep 1 & exec sleep 30' &` makes a parent that never waits; after a
 second, `ps -e -o pid,ppid,stat,comm | grep sleep` shows the child with state `Z`.
-After 1.5, come back and run the program under `strace -f ./a.out` to find the
-`clone`, `execve` and `wait4` lines.
+Run the program under `strace -f ./a.out` to find the `fork`, `execve` and `wait4`
+lines; with glibc the `fork` shows as `clone`.
 
 ### Taint
 
@@ -1128,14 +1111,10 @@ After 1.5, come back and run the program under `strace -f ./a.out` to find the
   objective; any zombie that survives to the end of the level also adds +2.
 - **Calling `exit()` instead of `_exit()` in the child after `execvp` fails:** +1.
   `exit()` flushes stdio buffers copied from the parent, so buffered text prints
-  twice. How it's observed: the checker runs one scripted pass with the shell's
-  stdout on a pipe, so the lab's C library fully buffers it, as glibc does when
-  stdout isn't a terminal; the prompts sit in the buffer at `fork`. A child that
-  calls `exit()` after a failed `execvp` then makes a `write(1, …)` of the
-  parent's buffered bytes before `exit_group`: the event stream shows a `write` on
-  fd 1 from the child's PID, and the pipe receives the prompts twice. This needs
-  stdio buffering in the lab's C library; until it has it, the rule is off and the
-  debrief only plays a recording of the effect.
+  twice. Judged in `checker.ts`: the child writes the shell's buffered prompt a
+  second time on fd 1 before `exit_group` (golden runs `exit-in-child` and
+  `exit-in-child-flushed`). With an empty buffer, `exit()`'s events are the same as
+  `_exit()`'s, so it is caught only when it prints.
 - **Ignoring `fork()`'s return value:** +2. A failed `fork` returns -1; treating it
   as a PID and calling `waitpid(-1, ...)` waits for any child, which is a different
   thing entirely.
@@ -1147,14 +1126,9 @@ After 1.5, come back and run the program under `strace -f ./a.out` to find the
 - **Faithful:** `fork`/`execve`/`wait4` semantics and return values; errno values
   (`ENOENT` 2, `EACCES` 13, `EAGAIN` 11); zombie and reparenting behavior; exit
   status encoding (`WIFEXITED`, `WEXITSTATUS`); shell conventions 127 and 128 + n;
-  `clone` appearing in traces instead of `fork`; glibc's buffering rule (line
-  buffered on a terminal, fully buffered otherwise), once the lab's C library has
-  it.
-- **Simplified:** the lab copies process memory on `fork` instead of using
-  copy-on-write pages (X-ray still explains copy-on-write). The lab's `clone`
-  supports only the flags glibc's `fork()` uses. `execve` loads the lab's own
-  program format, not real ELF; X-ray names `load_elf_binary` as what real Linux
-  does.
+  copy-on-write `fork`, ELF loading and musl's buffered stdio, on the real kernel.
+- **Simplified:** `exit()` in the child is caught only when it prints buffered text
+  a second time.
 
 ---
 

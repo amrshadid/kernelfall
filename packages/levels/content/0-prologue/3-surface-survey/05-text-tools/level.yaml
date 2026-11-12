@@ -8,7 +8,7 @@ tracks: [userland]
 skills: [sys-text-tools]
 prerequisites: [sys-shell-basics]
 teaches: [text-line, pipe]
-uses: [redirection, fd, fork, exec, syscall, uid]
+uses: [redirection, fd, shell, syscall, uid]
 objectives:
   - id: counted-lines
     text: "`wc -l census.txt` counts the census: 40 lines."
@@ -26,7 +26,7 @@ objectives:
 hints:
   - "`uniq` only squashes repeats that sit next to each other. How do you put all the same lines next to each other?"
   - "`>` sends a command's output into a file, as in Finding Things. `|` sends it straight into the next command instead."
-  - "`sort census.txt > sorted.txt`, then `uniq -c sorted.txt`; then `sort census.txt | uniq -c`."
+  - "Two steps with a file: sort into `sorted.txt`, then `uniq -c` on that file. Then one step without it: the same two commands, with `|` where the file was."
 xray: [syscalls, files]
 # A pipeline is a pipe, a fork per side and each side's dup2.
 xrayFocus: [pipe, fork, dup2]
@@ -48,17 +48,15 @@ codex:
   - id: shell-pipeline
     term: a pipeline (|)
     simple: >-
-      `a | b` runs both programs at once and hands everything a writes on standard
-      output to b's standard input, through the kernel, with no file in between.
+      `a | b` runs both programs at once and hands what a writes on standard output
+      to b's standard input, through the kernel, with no file.
     deep: >-
-      bash calls pipe(), which gives two fds: a read end and a write end of a buffer
-      in the kernel. It forks a child per command; the left one dup2()s the write end
-      onto fd 1, the right one the read end onto fd 0, each closes the rest and calls
-      execve(). bash closes its copies and waits for both with wait4(). A read of an
-      empty pipe sleeps until data comes, and answers 0 once no writer is left. Right
-      after the data pipe, bash makes a second pipe of its own, as it does before
-      starting any command: it holds the first child back until the whole pipeline
-      exists, and carries no data.
+      bash calls pipe(), which gives two fds: the read end and the write end of a
+      buffer in the kernel, 64 KiB by default. It forks a child per command; the left
+      one dup2()s the write end onto fd 1, the right one the read end onto fd 0. A
+      read of an empty pipe sleeps until data comes, and answers 0 once no writer is
+      left. bash's second pipe() carries no data: it only holds the first child
+      back.
     sources: [fs/pipe.c, fs/file.c]
     docs: https://man7.org/linux/man-pages/man7/pipe.7.html
     tryIt: "strace -f -e trace=pipe,pipe2,dup2,execve bash -c 'ls / | wc -l'"

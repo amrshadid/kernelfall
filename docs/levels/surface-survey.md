@@ -166,59 +166,38 @@ that first uses a row above names the command in a line of its scene or See it.
 
 - **Id:** `prologue-surface-survey-01-streets` · **Region / NPC:** Userland's streets / init, the Watchdog · **Tracks:** `userland` · **Time:** ~25 min · **Prerequisites:** `sys-shell-basics`, `sys-command-lifecycle` · **Skills unlocked:** `io-fs-hierarchy`
 
+**Question:** What is a folder, and what really moves when you move a file? A folder
+is a list of names, each pointing at an inode; a move changes a name, not the bytes.
+
+**Teaches:** `working-directory`, `inode`, `builtin`. **Uses:** `file-tree`, `shell`,
+`process`, `syscall`, `proc-fs`, `distribution`. The story text is the level's
+`story.md`; this section lists its beats.
+
 ### Scene
 
-Opens from P.10's debrief ("Time you walked the streets you're rebuilding"). init
-names _Userland_ (where programs live, outside the kernel) and its streets, the
-folders; every step asks the kernel; today the player builds a little.
+Opens from P.10 ("You brought the Machine up and saw it from my doorstep. Now walk
+it"). Userland is one tree of folders, the file tree from Power On, and every program
+stands somewhere in it; every step asks the kernel; today the player builds a little.
 
 ### See it (X-ray)
 
-1. **Where you stand.** Every process has a **working directory**. `pwd` prints the
-   shell's, `/home/you`. `pwd` is a bash builtin (`type pwd` → `pwd is a shell
-   builtin`): bash prints the path it keeps, and X-ray shows a single `writev`.
-2. **Absolute and relative paths.** `cat /etc/motd`, `cat ../../etc/motd`,
-   `cd /etc` then `cat motd`. `cd /etc` is bash's own `chdir("/etc") = 0`; `cd ..`
-   shows `chdir("/")`: bash works the path out and hands the kernel the result.
-   A program hands the kernel a relative path as it is:
-   `open("../../etc/motd", O_RDONLY|O_LARGEFILE) = 3`.
-3. **Reading a folder.** `ls /`:
-
-   ```
-   open("/", O_RDONLY|O_LARGEFILE|O_CLOEXEC|O_DIRECTORY) = 3
-   getdents64(3, /* 20 entries */, 2048)  = 488
-   statx(AT_FDCWD, "/bin", ...)           = 0
-   ...                                      one statx per name
-   getdents64(3, /* 0 entries */, 2048)   = 0
-   close(3)                               = 0
-   writev(1, "\e[1;34mbin\e[m    ...", ...) = 150    one per line on the screen
-   ```
-
-   ```
-   bin    dev    home   media  opt    root   sbin   sys    usr
-   boot   etc    lib    mnt    proc   run    srv    tmp    var
-   ```
-
-   Twenty entries, eighteen names: `.` and `..` are hidden without `-a`. 150 bytes a
-   line: BusyBox's `ls` colours each folder name (`\e[1;34m` … `\e[m`).
-   `O_LARGEFILE` is added by musl to every `open` of a 32-bit program.
-4. **Reading a file.** `cat motd` from `/etc`:
-
-   ```
-   open("motd", O_RDONLY|O_LARGEFILE)     = 3
-   sendfile64(1, 3, NULL, 16777216)       = 124
-   sendfile64(1, 3, NULL, 16777216)       = 0
-   close(3)                               = 0
-   ```
-
-   BusyBox's `cat` has the kernel copy from the file to the terminal; 0 is the end.
+1. **Name:** _working directory_, the folder a process's paths start from. **Do:**
+   `pwd` prints `/home/you`.
+2. **Name:** _absolute_ (starts with `/`, walked from the root) and _relative_ (walked
+   from the working directory; `..` is one folder up). **Do:** `cd /etc`, `pwd`,
+   `cd ..`, `pwd` (`/etc`, then `/`).
+3. **Name:** _builtin_, a command the shell does itself. X-ray on `cd /etc` shows no
+   program started, only bash's own `chdir("/etc")`. It has to be a builtin: a working
+   directory belongs to one process, so a program started for the job would move
+   itself and exit.
+4. **Do:** `cd home/you`, then `cat ../../etc/motd`. X-ray: bash worked the path out
+   and handed the kernel `chdir("/home/you")`; `cat` handed over `../../etc/motd` as
+   typed (`open("../../etc/motd", O_RDONLY|O_LARGEFILE) = 3`), and the kernel walked
+   it from `cat`'s working directory.
 
 ### Build it
 
-- **Worked examples:** `cd /etc`, `pwd`, `cd ..`, `pwd`, `cd home/you`, `pwd`,
-  `cat ../../etc/motd` (`cd home/you` reaches the kernel as `chdir("/home/you")`,
-  `cat`'s path as `open("../../etc/motd", …)`);
-  `mkdir /tmp/survey`, `mkdir /tmp/survey/maps`, `mkdir -p /tmp/survey/notes/old`;
+- **Worked examples:** `mkdir /tmp/survey`, `mkdir /tmp/survey/maps`, `mkdir -p /tmp/survey/notes/old`;
   `cp /etc/motd /tmp/survey/maps/motd`, `cp /etc/os-release /tmp/survey/maps/`,
   `ls -i /etc/motd /tmp/survey/maps/motd` (two numbers, e.g. `142` and `6`: inode
   numbers on `/tmp` vary by run); `mv motd motd.old` keeps the number; `rm`;
@@ -253,49 +232,77 @@ folders; every step asks the kernel; today the player builds a little.
   relative `cd` can't be told from an absolute one); a `mkdir` run with
   two successful calls; an `ls -i` with two names of one file and different inodes;
   an `mv` with a `rename` and no data call (`read`, `write`, `readv`, `writev`,
-  `pread64`, `pwrite64`, `sendfile64`, `copy_file_range`, `splice`) after its
+  `pread64`, `pwrite64`, `sendfile`, `sendfile64`, `copy_file_range`, `splice`) after its
   `execve`; `rmdir` failing with `ENOTEMPTY` and one succeeding; an `ls -R` showing
   the exact tree; the shell printing `/tmp/survey`.
 
 ### Watch it
 
-**Predict:** "How big is `/proc/uptime` on the disk?"
+**Predict:** "`ls -l` prints a file's size. What size will it print for
+`/proc/uptime`?" 0 bytes. Real output (the date is the boot's, the numbers the
+moment's):
 
 ```
 $ ls -l /proc/uptime
--r--r--r--    1 root     root             0 Oct 31 16:31 /proc/uptime
+-r--r--r--    1 root     root             0 Nov 12 18:43 /proc/uptime
 $ cat /proc/uptime
-28.17 3.34
+36.24 3.18
 ```
 
-Seconds since start, and seconds the one CPU sat idle (summed over CPUs on bigger
-machines). The Kernel Map gets its first Userland outline.
+Size 0, and `cat` prints text anyway: as with `/proc/version` in Power On, nobody
+stored it. The name is in a folder like any other, but behind it is kernel code
+that writes the text at read time, not stored bytes. Then the `mv`: each made one `rename` and no `read`
+or `write`; `rm` was one `unlink`, which removed a name.
 
 ### Debrief
 
-The lock the player has already seen, `-r--r--r--` in `ls -l /proc/uptime`; S.2, Who
-May Enter, begins.
+A folder is a list of names, and moving a file changes a name, not its bytes. The
+lock the player has already seen, `-r--r--r--` in `ls -l /proc/uptime`; S.2, Who May
+Enter, begins.
+
+### Hints
+
+1. Nudge: "Where are you standing right now? There's a command that just tells you."
+2. Concept: absolute and relative paths, `..`, and `mkdir -p`.
+3. Point at the spot: `ls -R /tmp/survey` shows what's left; `rm` for files, `rmdir`
+   for empty folders, then `pwd`.
 
 ### Codex (chapter: Surface Survey)
 
 `filesystem-hierarchy` (deepens `files`), `reading-a-directory`,
-`directory-entries` (BusyBox's `mkdir`, `rename`, `unlink`, `rmdir` vs GNU's
-`renameat2`, `unlinkat` on 64-bit; all end in `do_renameat2()`, `do_unlinkat()`,
-`do_rmdir()`, `do_mkdirat()`), `procfs` (deepens `filesystems`).
+`directory-entries` (inodes; `rename`, `unlink`, `ENOTEMPTY`), `procfs` (deepens
+`filesystems`).
 
 ### Real-world card and fidelity
 
 The same walk with `strace` on any Linux; the card notes GNU's `openat`,
-`renameat2`, `unlinkat`, and coreutils 9 `cp`'s `ioctl(FICLONE)` (a reflink) before
-`copy_file_range`. Fidelity: everything shown is the
+`renameat2` and `unlinkat` on a 64-bit PC. Fidelity: everything shown is the
 Machine's; the street signs and the Map are drawings; `pwd`'s output is judged as
 text, which an `echo` of the same text would match.
+
+### Moved out of the story
+
+| What                                                                     | Where it is now                       |
+| ------------------------------------------------------------------------ | ------------------------------------- |
+| `ls /` and its `getdents64` calls, the hidden `.` and `..`               | Codex `reading-a-directory`           |
+| `cat motd`'s `sendfile64` calls                                          | X-ray, on the player's own `cat`      |
+| `pwd` as a builtin with a single `writev`                                | fidelity note                         |
+| `mkdir -p`'s `EEXIST` tries                                              | this spec (X-ray on the new commands) |
+| What `/proc/uptime`'s two numbers mean                                   | Codex `procfs`'s "try it"             |
+| GNU `cp`'s `ioctl(FICLONE)`, and which kernel function each call ends in | dropped                               |
 
 ---
 
 ## S.2 — Who May Enter
 
 - **Id:** `prologue-surface-survey-02-who-may-enter` · **Region / NPC:** Userland's locked doors / init, the neighbour (user `guest`, uid 1001) · **Tracks:** `userland` · **Time:** ~20 min · **Prerequisites:** `io-fs-hierarchy` · **Skills unlocked:** `io-permissions`
+
+**Question:** Who decides whether you may open a file, and by what rule? The kernel,
+on every open: it picks owner, group or everyone else, then checks that one's three
+letters.
+
+**Teaches:** `uid`, `permissions`, `capability`. **Uses:** `inode`, `file-tree`,
+`process`. The story text is the level's `story.md`; this section lists its beats.
 
 ### Lab
 
@@ -312,38 +319,31 @@ cat: can't open '/etc/shadow': Permission denied
 $ id
 uid=1000(you) gid=1000(you) groups=1000(you)
 $ ls -l /etc/shadow
--rw-r-----    1 root     shadow         285 Oct 31 16:31 /etc/shadow
+-rw-r-----    1 root     shadow         274 Jan  1  1970 /etc/shadow
 ```
 
 ```
 open("/etc/shadow", O_RDONLY|O_LARGEFILE) = -1 EACCES (Permission denied)
 ```
 
-`may_open()` → `inode_permission()` → `generic_permission()`: not the owner, not in
-the file's group, so the "other" bits. Then `/dev`:
-
-```
-crw-rw-rw-    1 root     root        1,   3 Oct 31 16:30 /dev/null
-brw-------    1 root     root        8,   0 Oct 31 16:30 /dev/sda
-```
-
-The disk opens only for root (no udev here, so no `disk` group on the node).
+The Scene opens from S.1's `-r--r--r--` and has the player try the locked door.
+See it names the _user ID_ (`id`), the _group_, and the _permissions_: the first
+character is the kind, then three letters each for owner, group and everyone else,
+kept in the file's inode. The kernel uses one of the three: not the owner, not in
+the file's group, so the last three, `---`, and `EACCES`.
 
 ### Build it
 
-- **Reading modes:** `ls -l notes.txt /etc/passwd /etc/shadow` (`/etc/passwd` 735
-  bytes, root:root `-rw-r--r--`).
 - **The execute bit:** `cp /usr/local/bin/say hi`, `chmod -x hi`, `./hi hello,
-  Machine` → `-bash: ./hi: Permission denied` (status 126): bash's child calls
-  `execve`, the kernel answers `EACCES`, the child explains and exits. `chmod u+x hi`
-  and it prints `hello, Machine`; `ls -l hi` shows `-rwxr--r--`.
-- **A folder's `x`:** `mkdir box`, `cp notes.txt box/`, `chmod 644 box`,
+  Machine` → `-bash: ./hi: Permission denied`: the kernel refuses the `execve` with
+  `EACCES`. `chmod u+x hi` and it prints `hello, Machine` (`u`, `g`, `o` named).
+- **A folder's `x`:** "may pass through". `chmod`'s numbers (r 4, w 2, x 1) are
+  introduced here: `mkdir box`, `cp notes.txt box/`, `chmod 644 box`,
   `cat box/notes.txt` → `cat: can't open 'box/notes.txt': Permission denied`;
   `chmod 755 box` and it reads.
-- **Errand:** make the note private. init knocks as root with
-  `runuser -u guest -- cat /home/you/notes.txt`: before, it prints the note; after
-  `chmod 600`, `cat: can't open '/home/you/notes.txt': Permission denied`. Then
-  `chmod 666 /etc/motd` → `chmod: /etc/motd: Operation not permitted`.
+- **Errand:** `notes.txt` is `-rw-r--r--`; make it the player's alone and check with
+  `ls -l notes.txt`. Then `chmod 666 /etc/motd` →
+  `chmod: /etc/motd: Operation not permitted`. A lockout is undone by the owner.
 - **Checker:** a failed `execve` with `EACCES`, and an exec of `hi` after an earlier
   `chmod` took its owner's `x` away; a player `cat` through `box` refused while an
   earlier `chmod` (or none since `mkdir box`) left `box` without its owner's `x`, and
@@ -356,13 +356,35 @@ The disk opens only for root (no udev here, so no `disk` group on the node).
 ### Watch it
 
 **Predict:** at `-rw-------`, who can read it: you, the neighbour, init? You by the
-owner bits; the neighbour not; init by `CAP_DAC_READ_SEARCH`. `EPERM` from `chmod` is
-"not yours to change", a different "no" from `EACCES`. A `chmod 000` lockout is undone
-by the owner with `chmod 600`.
+owner bits; the neighbour not (init's knock: `cat: can't open '/home/you/notes.txt':
+Permission denied`); init, user 0, _root_, by a _capability_, a named privilege the
+kernel checks when the letters say no. `EPERM` from `chmod` is a different error
+from `EACCES`: only a file's owner, or root, may change its permissions.
 
 ### Debrief
 
-S.3, Processes from Outside, begins.
+The kernel decides on every open; locks say who may touch a file, and S.3, Processes
+from Outside, meets the ones doing the touching.
+
+### Hints
+
+1. Nudge: read the `ls -l` line left to right: who owns the note, which letters are
+   on for everyone else?
+2. Concept: three groups of `rwx`, one of them used; `chmod`'s numbers.
+3. Point at the spot: `rw-` for the owner, `---` for group and others; work out each
+   number (the digits themselves aren't given).
+
+### Moved out of the story
+
+| What                                                           | Where it is now          |
+| -------------------------------------------------------------- | ------------------------ |
+| The `may_open()` → `generic_permission()` chain                | Codex `permission-check` |
+| `CAP_DAC_READ_SEARCH` and `CAP_DAC_OVERRIDE` by name           | Codex `permission-check` |
+| The other kind letters (`l`, `c`, `b`) and the rest of `ls -l` | Codex `permission-bits`  |
+| `/dev/null` and `/dev/sda`'s locks                             | dropped (P.9 lists them) |
+| bash's child, `execve` and exit status 126                     | Act I (1.4)              |
+| `runuser`, `su`, and the knock before the note is private      | fidelity note; dropped   |
+| Reading three `ls -l` lines as a drill                         | dropped                  |
 
 ### Codex
 
@@ -383,11 +405,25 @@ had before are read from the earlier command lines (a plain `chmod` that exited 
 
 - **Id:** `prologue-surface-survey-03-processes` · **Region / NPC:** the edge of the Process District / init, the Watchdog · **Tracks:** `userland` · **Time:** ~20 min · **Prerequisites:** `io-permissions`, `proc-process-basics` · **Skills unlocked:** `proc-observe`
 
+**Question:** How do you pause or end a running process from outside, and when does
+it obey? With signals; it acts on one the next time it runs, and a stopped process
+doesn't run.
+
+**Teaches:** `process-state`, `pending-signal`, `zombie`. **Uses:** `signal` (from
+P.5), `process`, `pid`, `parent`, `kernel-thread`, `proc-fs`, `uid`, `capability`,
+`hex`, `builtin`. The story text is the level's `story.md`; this section lists its
+beats.
+
 ### Lab
 
 Setup starts `sleep 86400` and `yes > /dev/null` as `you`, in a subshell that exits,
-so init adopts them (PPID 1). No fixed PIDs: the player reads them from `ps`, and the
-story says "your PIDs will differ".
+so init adopts them (PPID 1). No fixed PIDs: the player reads them from `ps`.
+
+### Scene
+
+Opens from S.2 ("the ones doing the touching"): init started a `sleep` and a `yes`
+as the player. Signals are called back from The Kernel, Up Close (`poke`'s
+`SIGSEGV`); today the player sends them.
 
 ### See it
 
@@ -397,26 +433,25 @@ PID   PPID  USER     STAT TIME  COMMAND
     1     0 root     S     0:00 init
     2     0 root     SW    0:00 kthreadd
 ...
-  476     1 you      S     0:00 sleep
-  478     1 you      R     0:01 yes
-  480     1 you      S     0:00 bash
-  483   480 you      R     0:00 ps
+  483     1 you      S     0:00 sleep
+  485     1 you      R     0:01 yes
+  487     1 you      S     0:00 bash
+  490   487 you      R     0:00 ps
 ```
 
-BusyBox's `ps` lists every process without `-e`. The first `STAT` letter is the state
-(`R`, `S`, `T`, `Z`, and `I` for an idle kernel thread); BusyBox adds `W` for no user
-memory at all (VSZ 0), `<` and `N` for a raised or lowered priority (nice). The
-kernel's threads have parent 2. `kill -l` lists the
-signals; on x86 (32- and 64-bit alike) `SIGKILL` 9, `SIGTERM` 15, `SIGCONT` 18,
-`SIGSTOP` 19. init pauses `sleep`: `kill(476, SIGSTOP) = 0` (bash's builtin makes the
-call), and `/proc/476/status` says `State:	T (stopped)`.
+**Name:** the _state_, the first `STAT` letter: `R` running or ready, `S` sleeping;
+`TIME` is CPU time used. The `PPID` 2 lines are the kernel's threads from Who Runs.
+`kill` sends a signal and is a builtin (`kill(483, SIGSTOP) = 0` is bash's own call).
+**Do:** `kill -STOP` and `kill -CONT` on `sleep`, then `cat /proc/PID/status`:
+`State:	S (sleeping)`, `PPid:	1`.
 
 ### Build it
 
-- Resume `sleep` (`kill -CONT`), read `PPid` in `/proc/$$/status` and in `yes`'s
-  status (both 1), watch `yes`'s `TIME` grow (`0:03`, then `0:06`).
-- **Errand:** pause `yes`, check `T`; send `SIGTERM` while paused and `cat` its
-  status; `SIGCONT`; end `sleep`; try `kill 1`.
+- Run `ps -o pid,stat,time,comm` twice and watch `yes`'s `TIME` grow.
+- **Errand:** pause `yes`, check `T` and a `TIME` that stops; send `SIGTERM` (plain
+  `kill`) while paused and `cat` its status; `kill -CONT`; `ps` again; end `sleep`;
+  check with `ps` that it is gone; try `kill 1`. The zombie line is shown as what a
+  quick `ps` catches: init collects `yes` within about a second.
 - **Checker:** a `ps` listing with `sleep` and `yes`; a read of `sleep`'s or `yes`'s
   `/proc/<pid>/status` (its `Name:` line); `yes` shown in `T` by `ps` or its status;
   its status with `State:	T (stopped)` and `ShdPnd:	0000000000004000`; a full `ps`
@@ -427,17 +462,38 @@ call), and `/proc/476/status` says `State:	T (stopped)`.
 ### Watch it
 
 **Predict:** does a paused `yes` end on `SIGTERM`? No: the signal waits in `ShdPnd`
-(bit 15), `State` stays `T`; after `SIGCONT` it ends, and `ps` shows `478 Z    yes`
-until init collects it. `kill 1` → `-bash: kill: (1) - Operation not permitted`
-(`CAP_KILL` is root's).
+(`4000` hexadecimal, the fifteenth bit), `State` stays `T`; after `SIGCONT` it ends,
+and `ps` shows `485 Z    yes`, a _zombie_, until init collects it. `kill 1` →
+`-bash: kill: (1) - Operation not permitted`: `EPERM`; root may signal anyone, by
+another capability.
 
 ### Debrief
 
-S.4, Finding Things, begins.
+A process is found with `ps` and spoken to with signals; it obeys the next time it
+runs. S.4, Finding Things, begins.
+
+### Hints
+
+1. Nudge: which `ps` column says a process is paused, and which gives `kill` its
+   number?
+2. Concept: `kill -STOP`, `kill -CONT`, `kill`; a paused process acts on signals once
+   resumed.
+3. Point at the spot: the order (pause, end, read the status, wake); no command line
+   is given.
 
 ### Codex
 
 `process-states` (deepens `process`), `sending-signals` (deepens `signals`).
+
+### Moved out of the story
+
+| What                                                         | Where it is now         |
+| ------------------------------------------------------------ | ----------------------- |
+| The signal table (`SIGKILL` 9, `SIGTERM` 15, `SIGCONT` 18…)  | Codex `sending-signals` |
+| `SIGKILL` and `SIGSTOP` can't be refused; `CAP_KILL` by name | Codex `sending-signals` |
+| States `I`, `D`, and BusyBox's `W`, `<`, `N`                 | Codex `process-states`  |
+| How a signal is marked and delivered                         | Act I                   |
+| `$$` and reading the shell's own status                      | dropped                 |
 
 ---
 
@@ -450,11 +506,29 @@ S.4, Finding Things, begins.
 `/home/you/attic` (four folders, about 30 files, one `lantern-plan.txt` in
 `boxes/old`), two `guest` files and one of yours in `/tmp`.
 
+**Question:** A command prints answers and complaints on one screen. How are they
+kept apart, and how do you send each one somewhere else? Two file descriptors, 1 and
+2, and the shell decides where each leads before the program starts.
+
+**Teaches:** `stderr`, `redirection`. **Uses:** `fd`, `terminal`, `shell`,
+`file-tree`, `permissions`, `device-file`. The story text is the level's `story.md`;
+this section lists its beats.
+
+### Scene
+
+Opens from S.3's debrief (the papers hidden in the attic): init's plan,
+`lantern-plan.txt`, is somewhere under `attic`. `find` walks a whole tree; the player
+runs `find attic -name lantern-plan.txt` (`attic/boxes/old/lantern-plan.txt`).
+
 ### See it
 
+The beats: how `find` walks (`open`, `getdents64`, `statx`, into every folder; the
+kernel only answers); its tests `-name`, `-type d`, `-user`; `find / -name passwd`
+with two results among nearly four hundred complaints; _standard output_ (fd 1) and
+_standard error_ (fd 2), both leading to the terminal; _redirection_ with `>` and
+`2>`. The outputs the story quotes or the errand produces:
+
 ```
-$ find /etc -name motd
-/etc/motd
 $ find attic -type d
 attic
 attic/boxes
@@ -467,7 +541,7 @@ $ find / -name passwd
 /etc/passwd
 find: /proc/tty/driver: Permission denied
 find: /proc/1/task/1/fd: Permission denied
-...                                             about 380 lines
+...                                             395 complaints in all
 find: /root: Permission denied
 find: /sys/kernel/tracing: Permission denied
 /usr/bin/passwd
@@ -494,12 +568,18 @@ close(3)                                                         = 0
 execve("/usr/bin/find", ["find", "attic", "-type", "d"], ...)    = 0
 ```
 
-For `2>/dev/null` it opens `/dev/null` and calls `dup2(3, 2)`.
+For `2>/dev/null` it opens `/dev/null` and calls `dup2(3, 2)`. The story shows only
+the `open` and the `dup2`.
 
 ### Build it
 
-- **Errand:** find and `cat` the plan; list the attic's folders and save them with
-  `>`; find `guest`'s files; run `find / -name passwd`, then with `2>/dev/null`.
+- **Worked example:** `find attic -type d > folders.txt` and `cat folders.txt`, then
+  the `open` (made if missing, emptied if not, lowest free fd 3) and `dup2(3, 1)`.
+  `>` empties the file first.
+- **Errand:** `cat` the plan; find `guest`'s files in `/tmp`; run
+  `find / -name passwd` again with the complaints thrown away (`/dev/null` is named
+  as a device file that swallows what is written to it; the player puts `2>` and it
+  together).
 - **Checker:** one `find` path ending `/lantern-plan.txt`; `cat` opened it and printed
   `Someday.` (read from the terminal's bytes, or from `sendfile64`'s data once the
   trace has it); the attic's four folders, on the screen and redirected into a file
@@ -511,11 +591,30 @@ For `2>/dev/null` it opens `/dev/null` and calls `dup2(3, 2)`.
 ### Watch it
 
 **Predict:** with `> found.txt`, which lines still show? The complaints: only fd 1
-went into the file.
+went into the file; `2>/dev/null` did the opposite with `dup2(3, 2)`. The program
+doesn't choose: the shell does, before the program starts. init then owns up to the
+plan: "The Lantern: a driver of our own."
 
 ### Debrief
 
-S.5, Counting and Sorting, begins.
+Two file descriptors keep answers and complaints apart, and the shell decides where
+each leads. S.5, Counting and Sorting, sends one program's output into another.
+
+### Hints
+
+1. Nudge: which command walks a whole tree?
+2. Concept: `find`'s tests, `> file` and `2> file`.
+3. Point at the spot: the complaints leave on fd 2; which of `>` and `2>` moves it,
+   and which file swallows what is written to it (the command isn't given).
+
+### Moved out of the story
+
+| What                                                       | Where it is now        |
+| ---------------------------------------------------------- | ---------------------- |
+| bash's child, its `close(3)` and `execve` after the `dup2` | Codex `redirection`    |
+| Which `/proc` folders are closed to the player, and why    | dropped                |
+| `find /etc -name motd`, and the order `find` prints in     | dropped                |
+| Unbuffered `stderr`                                        | Codex `standard-error` |
 
 ### Codex
 
@@ -532,16 +631,25 @@ S.5, Counting and Sorting, begins.
 
 `/home/you/census.txt`: 40 lines, 80 words, 742 bytes; 31 `dark`, 9 `lit`.
 
-### See it and Build it
+**Question:** How does one program's output become another program's input, with no
+file in between? Through a pipe, a buffer in the kernel: one program writes into it
+and the next reads from it.
 
-`head -n 5`, `wc -l` (`40 census.txt`), `tail -n 2`, `grep harbor` (7 lines),
-`grep -c dark` (`31`), `sort`; `wc -w` (`80`), `wc -c` (`742`), `grep -n lit` (lines
-1, 4, 11, 16, 23, 28, 33, 38, 40), `grep -v dark`, `grep -i HARBOR`,
-`grep you /etc/passwd` (`you:x:1000:1000:you:/home/you:/bin/bash`), `sort -r`.
-Each tool: `open`, `read` in pieces of up to 1,024 bytes, `writev`.
+**Teaches:** `text-line`, `pipe` (named in P.4's `dmesg | grep`). **Uses:**
+`redirection`, `fd`, `shell`, `syscall`, `uid`. The story text is the level's
+`story.md`; this section lists its beats.
 
-- **Errand:** `sort census.txt > sorted.txt`, `uniq sorted.txt` (six kinds),
-  `uniq -c sorted.txt`:
+### Scene, See it and Build it
+
+Opens from S.4 (the plan found, a list sent into a file). **Name:** a _line_, text up
+to a newline. **Do:** `wc -l census.txt` (`40 census.txt`; `wc -w` 80 and `wc -c` 742
+are told), `grep -c dark census.txt` (`31`; `grep -v dark` is told), and
+`grep you /etc/passwd` (`you:x:1000:1000:you:/home/you:/bin/bash`; the `x` points at
+`/etc/shadow` from S.2). Each tool: `open`, `read` in pieces, write; the idea of a
+line lives in the tools.
+
+- **Errand:** `uniq` only sees a line repeating the one above it (`uniq census.txt`
+  gives 37 of 40), so `sort census.txt > sorted.txt`, then `uniq -c sorted.txt`:
 
   ```
         8 compilers-quarter dark
@@ -562,25 +670,29 @@ Each tool: `open`, `read` in pieces of up to 1,024 bytes, `writev`.
 
 ### Watch it
 
-**Predict:** `uniq census.txt` unsorted: `uniq census.txt | wc -l` → 37. Then
-`sort census.txt | uniq -c`, with bash's real trace:
+The _pipe_ is named at the end of Build it, with the callback to The Boot Path's
+`dmesg | grep`; the player runs `sort census.txt | uniq -c`. **Predict:** "`sort`
+wrote its lines to file descriptor 1. Where did they go?" Into a buffer inside the
+kernel. The story shows five lines of bash's real trace (the `pipe`, the two `dup2`s,
+the 719-byte `writev` and `read`) and names _standard input_, fd 0. The whole trace
+(PIDs are the recording's):
 
 ```
 pipe([3, 4])                                            = 0
 pipe([5, 6])                                            = 0
-fork()                                                  = 488
-fork()                                                  = 489
-[pid 488] dup2(4, 1)                                    = 1
-[pid 488] execve("/usr/bin/sort", ...)                  = 0
-[pid 489] dup2(3, 0)                                    = 0
-[pid 489] execve("/usr/bin/uniq", ...)                  = 0
-[pid 488] writev(1, "compilers-quarter dark\n", ...)       = 23
-[pid 489] read(0, "compilers-quarter dark\n", 1024)      = 23
-[pid 488] writev(1, "compilers-quarter dark\ncomp"..., ...) = 719
-[pid 489] read(0, "compilers-quarter dark\ncomp"..., 1024) = 719
+fork()                                                  = 511
+fork()                                                  = 512
+[pid 511] dup2(4, 1)                                    = 1
+[pid 511] execve("/usr/bin/sort", ...)                  = 0
+[pid 512] dup2(3, 0)                                    = 0
+[pid 512] execve("/usr/bin/uniq", ...)                  = 0
+[pid 511] writev(1, "compilers-quarter dark\n", ...)       = 23
+[pid 512] read(0, "compilers-quarter dark\n", 1024)      = 23
+[pid 511] writev(1, "compilers-quarter dark\ncomp"..., ...) = 719
+[pid 512] read(0, "compilers-quarter dark\ncomp"..., 1024) = 719
 ...
-wait4(-1, ...)                                          = 488
-wait4(-1, ...)                                          = 489
+wait4(-1, ...)                                          = 511
+wait4(-1, ...)                                          = 512
 ```
 
 The data pipe comes first (3, 4); the second (5, 6) is bash's own, made before every
@@ -589,8 +701,25 @@ command it starts, and holds `sort` until `uniq` exists too. A pipe holds
 
 ### Debrief
 
-Ends The Surface: Act I opens next; the Compiler's Quarter (1.0, Letters in a Row)
-comes in the next release, and 1.4, Run Anything, is open now as a preview.
+A pipe is a buffer in the kernel. Ends the Surface and hands on to 1.4, Run
+Anything, where the player stops using a shell and starts building one.
+
+### Hints
+
+1. Nudge: `uniq` only squashes neighbours; how do equal lines get next to each other?
+2. Concept: `>` into a file, as in Finding Things; `|` straight into the next command.
+3. Point at the spot: two steps with a file, then the same two commands with `|`
+   where the file was (the command lines aren't given).
+
+### Moved out of the story
+
+| What                                                    | Where it is now          |
+| ------------------------------------------------------- | ------------------------ |
+| `head`, `tail`, `grep -n`, `grep -i`, `sort -r`         | real-world card; dropped |
+| bash's `fork`s, `execve`s, `wait4`s and its second pipe | Codex `shell-pipeline`   |
+| The pipe's 64 KiB and a reader's end of file            | Codex `shell-pipeline`   |
+| The carriage return that Enter sends                    | dropped                  |
+| The Compiler's Quarter and 1.0 as coming later          | dropped                  |
 
 ### Codex
 

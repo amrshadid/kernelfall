@@ -8,7 +8,7 @@ tracks: [userland]
 skills: [io-permissions]
 prerequisites: [io-fs-hierarchy]
 teaches: [uid, permissions, capability]
-uses: [inode, file-tree, device-file, process, fork, exec, errno, exit-status]
+uses: [inode, file-tree, process, syscall]
 objectives:
   - id: exec-denied
     text: "`./hi` without its `x` bit: the kernel refuses to run it, and `execve` returns `EACCES`."
@@ -28,7 +28,7 @@ objectives:
 hints:
   - Read the `ls -l` line from left to right. Who owns the note, and which letters are on for everyone else?
   - "The nine letters after the first are three groups of `rwx`: owner, group, other. The kernel uses only one of the three: the owner bits if you own the file, else the group bits if you're in its group, else the other bits. `chmod` with numbers adds r=4, w=2, x=1 for each group."
-  - "You want owner `rw-`, group `---`, other `---`: that's 6, 0, 0."
+  - "You want `rw-` for the owner and `---` for the group and the others. Work out each one's number, and give `chmod` the three digits."
 xray: [syscalls, files]
 codex:
   - id: users-and-ids

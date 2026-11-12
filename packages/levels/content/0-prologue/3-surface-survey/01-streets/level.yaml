@@ -7,8 +7,8 @@ minutes: 25
 tracks: [userland]
 skills: [io-fs-hierarchy]
 prerequisites: [sys-shell-basics, sys-command-lifecycle]
-teaches: [working-directory, inode, builtin, proc-fs]
-uses: [file-tree, shell, terminal, syscall, fd, errno, distribution]
+teaches: [working-directory, inode, builtin]
+uses: [file-tree, shell, process, syscall, proc-fs, distribution]
 objectives:
   - id: cd-absolute
     text: '`cd /etc`: bash''s own `chdir("/etc")`, no program started.'
@@ -69,18 +69,14 @@ codex:
     term: names and files (inodes)
     simple: >-
       A folder maps names to files. mv changes a name, rm removes one, cp makes a new
-      file; ls -i shows which file a name points to.
+      file; ls -i shows a name's file.
     deep: >-
-      The kernel's record of a file is its inode: its size, owner and mode, and where
-      its data lies on the disk (the data itself is kept apart). A folder entry only
-      points a name at an inode, so one inode can have several names
-      (i_nlink counts them). rename moves a name within one filesystem without touching
-      the data; across filesystems mv has to copy and delete. unlink removes a name;
-      the kernel frees the file only when no names and no open file descriptors are
-      left. rmdir refuses a folder that isn't empty (ENOTEMPTY). On the Machine,
-      BusyBox calls mkdir, rename, unlink and rmdir; GNU tools on a 64-bit PC call
-      mkdir, renameat2 and unlinkat. All of them end in do_mkdirat(), do_renameat2(),
-      do_unlinkat() and do_rmdir().
+      The kernel's record of a file is its inode: size, owner, mode, and where its
+      data lies. A folder entry points a name at an inode, so one inode can have
+      several names. rename moves a name within one filesystem without touching the
+      data; across filesystems mv must copy and delete. unlink removes a name, and
+      the kernel frees the file when no names and no open file descriptors are left.
+      An inode number is unique only within one filesystem.
     sources: [fs/namei.c, include/linux/fs.h]
     docs: https://man7.org/linux/man-pages/man2/rename.2.html
     tryIt: "cp /etc/os-release /tmp/x && ls -i /etc/os-release /tmp/x && mv /tmp/x /tmp/y && ls -i /tmp/y"
@@ -90,9 +86,9 @@ codex:
     simple: /proc holds no stored files. Each read runs kernel code that prints the current state.
     deep: >-
       procfs is the filesystem mounted at /proc, with one numbered folder per process.
-      Its files show size 0 in ls -l because their text is made at read time, by
-      kernel functions like proc_pid_status(). Nothing of it is on a disk.
-    sources: [fs/proc/root.c, fs/proc/base.c, fs/proc/array.c]
+      Almost all its files show size 0 in ls -l because their text is made at read
+      time, by kernel functions like proc_pid_status(). Nothing of it is stored.
+    sources: [fs/proc/root.c, fs/proc/base.c, fs/proc/array.c, fs/proc/uptime.c]
     docs: https://man7.org/linux/man-pages/man5/proc.5.html
     tryIt: ls -l /proc/uptime && cat /proc/uptime
 taint: []
@@ -107,8 +103,8 @@ fidelity:
     - /proc contents made on read, with size 0 in ls -l
   simplified:
     - "the street signs and the Kernel Map are drawings"
-    - "bash's pwd prints the path it keeps, without a syscall, so the checker reads what the shell wrote, which an echo of the same text would match"
-    - "bash hands the kernel an absolute path for every cd, so `cd /etc` and `cd etc` from `/` look the same: the checker judges where a cd lands, and a `..` by the folder bash checks on the way"
+    - "bash's pwd prints the path it keeps with one writev, never asking the kernel where it is, so the checker reads what the shell wrote, which an echo of the same text would match"
+    - "bash hands the kernel an absolute path for every plain cd, so `cd /etc` and `cd etc` from `/` look the same: the checker judges where a cd lands, and a `..` by the folder bash checks on the way"
 story:
   scene: story.md#scene
   debrief: story.md#debrief

@@ -7,8 +7,8 @@ minutes: 20
 tracks: [userland]
 skills: [proc-observe]
 prerequisites: [io-permissions, proc-process-basics]
-teaches: [signal, zombie, pending-signal]
-uses: [process, pid, parent, scheduler, kernel-thread, proc-fs, capability, uid, hex, exit-status]
+teaches: [process-state, pending-signal, zombie]
+uses: [signal, process, pid, parent, kernel-thread, proc-fs, uid, capability, hex, builtin]
 objectives:
   - id: listed-both
     text: "`ps` lists init's two processes, `sleep` and `yes`, each with its PID."
@@ -26,8 +26,8 @@ objectives:
     text: "`kill 1` fails with `Operation not permitted`: you may signal only your own processes."
 hints:
   - Which column of `ps` says whether a process is paused? And which one gives the number `kill` needs?
-  - "`kill -STOP PID` pauses, `kill -CONT PID` resumes, `kill PID` asks it to end. A paused process acts on signals only once it's resumed, except `SIGKILL`."
-  - "Find `yes`'s PID in `ps -o pid,stat,comm`. `kill -STOP` it, `kill` it, `cat` its `/proc/<pid>/status`, then `kill -CONT` it."
+  - "`kill -STOP PID` pauses, `kill -CONT PID` resumes, `kill PID` asks it to end. A paused process acts on a signal only once it's resumed."
+  - "The order matters: `yes` must be paused before the signal that ends it arrives, and you read its status file before you wake it. Its PID is in `ps -o pid,stat,comm`."
 xray: [processes, syscalls]
 codex:
   - id: process-states
@@ -38,13 +38,11 @@ codex:
       ps and /proc/<pid>/status show it.
     deep: >-
       The state lives in task_struct->__state; /proc prints it from a fixed table of
-      letters, task_state_array. D is an uninterruptible sleep (waiting on I/O),
-      which even SIGKILL can't end until it wakes. A zombie has exited and waits for
-      its parent to collect its exit status. I is an idle kernel thread, waiting for
-      work (TASK_IDLE), which isn't counted in the load average. ps may add detail
-      letters after the state: BusyBox's W marks a task with no user address space at
-      all (its VSZ is 0), like the kernel's threads; < a raised priority (a negative
-      nice value), N a lowered one.
+      letters, task_state_array. D is an uninterruptible sleep, waiting on I/O. I is
+      an idle kernel thread. A zombie has exited and waits for its parent to collect
+      its exit status. BusyBox's ps adds detail letters: W for a task with no user
+      memory, like the kernel's threads; < for a raised priority, N for a lowered
+      one.
     sources: [fs/proc/array.c, include/linux/sched.h]
     docs: https://man7.org/linux/man-pages/man5/proc_pid_status.5.html
     tryIt: ps -o pid,ppid,user,stat,time,comm

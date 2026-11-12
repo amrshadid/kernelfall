@@ -483,6 +483,7 @@ open in the editor, and the Lantern's module tree from Act II.
    reports it ready.
 
 Checker verifies (behavior):
+
 - After two reboots, `/proc/cmdline` contains `crashkernel=128M` and
   `lantern.brightness=200`; `grub.cfg` was regenerated, not edited by hand.
 - `/proc/iomem` shows a `Crash kernel` region of 128 MiB, and
@@ -706,6 +707,7 @@ They pack it (`find . | cpio -o -H newc | gzip`) and point a boot entry's `initr
 line at it.
 
 Checker verifies (behavior):
+
 - With `initcall_debug`, the log has `calling  lantern_init+0x0/...` and `initcall
   lantern_init+0x0/... returned 0`, before `Run /init as init process`;
   `/sys/module/lantern/parameters/brightness` is 200 and `lsmod` doesn't list
@@ -913,6 +915,7 @@ and a `walk` subcommand stub; a `Makefile`. The player writes `lens walk <pid>
   `CAP_SYS_ADMIN`).
 
 Checker verifies (behavior):
+
 - For a stack, heap, code and an untouched `malloc` address in a test process,
   `lens walk` prints the same indices, flags and physical address as the lab's own
   page tables.
@@ -1080,6 +1083,7 @@ experiments from command chips, using `lens walk` from 3.3 on `cowdemo`'s parent
 child.
 
 Checker verifies (behavior):
+
 - `lens faults -- touch64` prints the lab's counts exactly; `touch64 --populate`
   (which maps with `MAP_POPULATE`) shows almost none; `touch64 --huge` (which asks
   for transparent huge pages with `madvise`) shows about 32 (verify alignment
@@ -1260,6 +1264,7 @@ subcommand stub. The player adds:
 exists; `.mmap` remains supported (verify the 6.18 guidance for new drivers).)
 
 Checker verifies (behavior):
+
 - `lanternctl watch` reports every change made by `lanternctl set` (2.6's `ioctl`)
   and by writes from `ksh-lite`, and `strace` shows no `read()` in its loop.
 - `lens faults` (3.4) on a watcher that reads the map 1000 times shows one fault
@@ -1424,6 +1429,7 @@ a `harbor.log` path option. The player adds an **archiver thread**:
   queue.
 
 Checker verifies (behavior):
+
 - 3 `nc` clients and 200 messages: every message reaches every client and appears
   in `harbor.log` exactly once, in order.
 - With the lab's slow disk, chat replies still arrive within the lab's latency bound
@@ -1597,6 +1603,7 @@ loop) in `/usr/local/bin`. The player writes `lens sched -n <nice> [-n <nice>]â€
 - print each child's weight, CPU time, wait time and share; then kill and reap them.
 
 Checker verifies (behavior):
+
 - For nice 0/5, 0/0/10 and -5/0 (as root), `lens sched` prints shares that match the
   lab's accounting to 0.1% and the weight ratios to 1%.
 - Children are pinned (without affinity, two hogs on two CPUs each get a whole CPU
@@ -1783,6 +1790,7 @@ Call Trace:
 The kernel is now tainted `L` (soft lockup). The snapshot restores.
 
 Checker verifies (behavior):
+
 - The brightness breathes: it changes every `pulse_ms` in the light map (3.5) and
   sysfs (2.7).
 - `ps -o pid,ppid,ni,comm` shows `lantern-pulse` with parent 2 and nice 10.
@@ -1945,6 +1953,7 @@ Starter (partial): `lantern_trace.h` with the multi-read header's boilerplate
 - uses the function_graph tracer on `lantern_write` with `set_graph_function`.
 
 Checker verifies (behavior):
+
 - `/sys/kernel/tracing/events/lantern/` has the three events, each with a `format`
   file listing the fields.
 - With the events on, each `echo`, `cat`, `lanternctl set` and pulse step from
@@ -2113,6 +2122,7 @@ header. The player writes `lens stat -- <command>`:
 Then, from command chips, `perf record -g` and `perf report` on `lantern-stress`.
 
 Checker verifies (behavior):
+
 - For three commands, `lens stat`'s counts equal the lab's exactly (counters opened
   after `exec`, or without `inherit`, miss events and fail the check).
 - As uid 1000 with `perf_event_paranoid` at 2, opening a kernel-inclusive counter
@@ -2278,6 +2288,7 @@ empty; init's rejected sketch in a comment-free scratch file. The player writes:
   `bpf_map_lookup_elem()` that prints TGID, `/proc/<tgid>/comm` and bytes.
 
 Checker verifies (behavior):
+
 - The program loads and attaches; init's sketch is still rejected (the scratch file
   is part of the level).
 - Writers with known sizes (`echo` from `ksh-lite`, `lanternctl`, `lantern-stress`)
@@ -2470,6 +2481,7 @@ They rebuild their kernel as `-lantern-kcsan` (2.1's fragment, with `CONFIG_KCSA
 instead of KASAN: the two can't be on together) and run the ring under it.
 
 Checker verifies (behavior):
+
 - In the lab's weak-ordering mode (arm64 rules) over 10,000 forced interleavings of
   IRQ and readers, every reading returned is one the IRQ produced, in order, none
   duplicated, and none lost except counted overruns.
@@ -2676,6 +2688,7 @@ lock-free:
   drops the reference.
 
 Checker verifies (behavior):
+
 - Under `lantern-stress -r 8 -w 1`, the read path takes no `msg_lock` (the lab's lock
   tracer). (A player who took the optional 3.10 also sees `perf report` no longer
   show readers in `mutex_spin_on_owner`; the checker doesn't need it.)
@@ -2881,6 +2894,7 @@ Starter (partial): `lighthouse.dts` from P.6 with the GIC node added and
   `.dtb` with `dtc` (P.6) and boots the board.
 
 Checker verifies (behavior):
+
 - On boot the beacon probes (`beacon 7e300000.beacon: â€¦` in the board's log) and
   `/sys/class/leds/beacon:white:lamp/` exists; writing its `brightness` changes the
   `BRIGHTNESS` register.
@@ -3080,6 +3094,7 @@ liveness (reads back the bitwise NOT of what was written), `0x24` interrupt stat
 - writes `remove()`: stop the card's interrupts, unhook the Lantern from it.
 
 Checker verifies (behavior):
+
 - `lspci -k` shows `Kernel driver in use: lantern` for `00:03.0`.
 - The liveness test runs at probe; changing brightness from `ksh-lite`, `lanternctl`
   and the pulse reaches the card's register (the lab watches MMIO writes).
@@ -3280,6 +3295,7 @@ player writes:
   `release` drops the reference.
 
 Checker verifies (behavior):
+
 - `mount -t lanternfs none /mnt/lantern`; `ls` lists exactly the history's ids;
   `cat` each prints its text; `stat` shows the size, mode and inode number.
 - A message written from `ksh-lite` appears at once; an evicted one disappears from
@@ -3464,6 +3480,7 @@ Then `mkfs.ext2 /dev/lanternblk0`, `mount /dev/lanternblk0 /archive`, and `harbo
 log (3.6) moves there.
 
 Checker verifies (behavior):
+
 - `lsblk` shows a 16 MiB `lanternblk0`; `mkfs.ext2`, `mount`, writing a 1 MiB file,
   `sync`, `drop_caches` and reading it back gives identical bytes; `fsck.ext2 -n`
   is clean after `umount`.
@@ -3659,6 +3676,7 @@ player writes:
 Then `ip link set lantern0 up`, `ip addr add 10.77.0.1/24 dev lantern0`.
 
 Checker verifies (behavior):
+
 - `ping` to the lighthouse (`10.77.0.2`) works; `harbor` serves clients on the
   lighthouse over `lantern0` (re-tests 1.9, 1.10), and 2.11's netfilter counter
   counts them.
@@ -3836,6 +3854,7 @@ XDP support for the player's `lantern0` (an `ndo_bpf` that installs the program,
   reads the count with `lens bpf` (3.11), summing the per-CPU values.
 
 Checker verifies (behavior):
+
 - During the Storm, `harbor` chat over `lantern0` stays within its latency bound;
   the lab allocates no skb for any Storm frame; the drop count equals the number of
   Storm frames.
@@ -4046,6 +4065,7 @@ and `napi_complete_done()` agrees; return the work done. Then rebuild the everyd
 kernel's module and replay the evening.
 
 Checker verifies (behavior):
+
 - The evening replay runs with the Storm at full strength: no soft lockup, no RCU
   stall, no "exceeding its budget" warning.
 - `harbor` answers on both CPUs within a degraded but bounded latency; CPU 1's
@@ -4279,6 +4299,7 @@ handler. (Or the canonical hand-written form: set the state, _then_ check, then
 the waker, 3.12.)
 
 Checker verifies (behavior):
+
 - The forced interleaving (the interrupt between check and sleep) and 100 others:
   calibration always finishes; no hung task.
 - Fault injection: the card never answers; calibration returns `-ETIMEDOUT` within
@@ -4473,6 +4494,7 @@ Starter (blank): the old driver's tree with the player's two fixes. The player:
    `--reuse-cmdline`, then `kexec -e`.
 
 Checker verifies (behavior):
+
 - The tests pass on the fixed tree, and each fails on the tree with its fix reverted.
 - The series applies in order with `git am` on the pre-fix tree, and the kernel
   builds after every patch (bisectable).

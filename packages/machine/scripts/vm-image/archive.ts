@@ -126,5 +126,11 @@ export function writeCpioGz(entries: readonly CpioEntry[]): Uint8Array {
     const header = encoder.encode(`070701${fields.map((value) => value.toString(16).padStart(8, '0')).join('')}`)
     chunks.push(header, name, pad(header.length + name.length), entry.data, pad(entry.data.length))
   })
-  return gzipSync(Buffer.concat(chunks), { level: 9 })
+  const archive = gzipSync(Buffer.concat(chunks), { level: 9 })
+  // zlib writes the building OS here (3 on Linux, 19 on macOS), which would change the image's id.
+  archive[GZIP_OS_BYTE] = GZIP_OS_UNIX
+  return archive
 }
+
+const GZIP_OS_BYTE = 9
+const GZIP_OS_UNIX = 3

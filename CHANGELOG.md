@@ -55,6 +55,14 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p
   root, the IDE disk, virtio-net, and bash as init's shell.
 
+### Fixed
+
+- **The game starts offline.** On the public site the service worker threw as it loaded, so it never
+  registered and nothing was kept for offline play. The build now runs the worker and
+  fails if it throws.
+- The Machine's image has the same version on every build machine: an image built on
+  macOS and one built on Linux differed in one byte of the initramfs's gzip header.
+
 ## [0.1.0-alpha.1] - 2026-10-31
 
 The first public pre-release: the engine, and the levels built so far, playable at

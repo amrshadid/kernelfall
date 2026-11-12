@@ -9,6 +9,12 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Added
 
+- **Settings → About shows the real version, the source and how to join in.** The
+  version is the release's own (`0.1.0-alpha.1 · alpha 1 of The Surface`), with a link
+  to what changed in each version, and on the public site the commit it was built
+  from. Below it: the source on GitHub, and an invitation to contribute, with links to
+  the contributor's guide, the roadmap and the issue form. The version in the footer of
+  the map and Settings is the real one too.
 - **The Guide shows a step one beat at a time.** It stops at the next thing you do and
   shows the rest once you've run it (or pressed Continue), so a result is on your
   terminal before it is explained, and a Predict's answer waits for your run. Level

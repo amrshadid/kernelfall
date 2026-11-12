@@ -67,6 +67,12 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   stories is in their Codex cards or in the level that teaches it. P.3 has one manual
   objective instead of two, and P.4's commands need no options:
   `dmesg | grep "command line"` and `dmesg | grep serial8250_init`.
+- **The Machine in Section is rewritten to the content standard,** so the whole
+  Prologue now is. The Kernel Up Close (P.5), Who Runs (P.7), Pages and Maps (P.8) and
+  Files, Doors and Wires (P.9) each answer one question and teach at most three ideas,
+  in about half the words. Bring the Machine Up (P.10) is now a recall level: each of
+  the three wrong words on the boot line points back to a level you have done. Who
+  Runs quotes one recorded session, so its PIDs agree from `ps` to `mypid`.
 - The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p

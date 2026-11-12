@@ -7,23 +7,10 @@ minutes: 20
 tracks: [userland, kernel]
 skills: [proc-process-basics]
 prerequisites: [sys-kernel-role]
-teaches: [scheduler, parent, proc-fs]
-uses:
-  [
-    process,
-    pid,
-    cpu,
-    kernel-thread,
-    signal,
-    interrupt,
-    device-file,
-    syscall,
-    pipe,
-    redirection,
-    background-job,
-    c-basics,
-    compiler,
-  ]
+teaches: [scheduler, parent, kernel-thread]
+# Met here in one clause each: S.4 teaches `>`; `&` and /dev/null are taught by no built level yet.
+names: [redirection, background-job, device-file]
+uses: [process, pid, cpu, proc-fs, signal, syscall, pipe, c-basics, compiler]
 objectives:
   - id: reads-proc-status
     text: "Read what the kernel keeps about a process, in `/proc/<pid>/status`."
@@ -39,13 +26,13 @@ objectives:
 hints:
   - "`getpid()` gives your own number. Is there a function for your parent's?"
   - "`getppid()` returns the parent's PID. `printf` with `%d` prints a whole number."
-  - "After the first `printf`, add `printf(\"My parent is %d\\n\", (int)getppid());`."
+  - "After the first `printf`, add a second one like it, with `My parent is %d` as its text and `(int)getppid()` as its number."
 chips:
   - { command: ps, explain: "list every process: PID, user, CPU time and command" }
   - { command: cat, explain: "cat /proc/$$/status shows what the kernel keeps about your shell" }
   - { command: nproc, explain: "how many CPUs the kernel can use" }
   - { command: top, explain: "top -b -n 1 takes one look at who is using the CPU" }
-  - { command: kill, explain: "send a signal: kill %1 stops the shell's first background job" }
+  - { command: kill, explain: "send a signal: kill %1 ends the shell's first background job" }
 xray: [processes, syscalls]
 codex:
   - id: process

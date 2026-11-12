@@ -35,5 +35,10 @@ export const ENFORCED_LEVELS: readonly LevelId[] = [
   'prologue-boot-path-02-first-words',
   'prologue-boot-path-03-speak-to-shell',
   'prologue-boot-path-04-the-boot-path',
+  'prologue-machine-in-section-05-kernel-up-close',
   'prologue-machine-in-section-06-finding-the-hardware',
+  'prologue-machine-in-section-07-who-runs',
+  'prologue-machine-in-section-08-pages-and-maps',
+  'prologue-machine-in-section-09-files-doors-wires',
+  'prologue-machine-in-section-10-bring-it-up',
 ]

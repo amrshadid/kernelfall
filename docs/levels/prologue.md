@@ -1274,109 +1274,54 @@ UI (`useMachineReboot()`), so the Predict can show the plain entry come back.
 
 ## P.5 — The Kernel Up Close
 
-- **Id:** `prologue-machine-in-section-05-kernel-up-close` · **Region / NPC:** The Machine in Section / init, the Watchdog; on the drawing: the Gatekeeper, the Dockmaster, the Maintainer · **Tracks:** `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-user-kernel-mode` · **Skills unlocked:** `sys-kernel-role`
+- **Id:** `prologue-machine-in-section-05-kernel-up-close` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-user-kernel-mode` · **Skills unlocked:** `sys-kernel-role`
+
+**Question:** Why must a program ask the kernel, instead of taking what it needs?
+`poke` takes, and is ended; `myuname` asks, and is answered.
+
+**Teaches:** `kernel-space`, `user-space`, `signal`. **Names** (one sentence each;
+the Codex has the detail): `memory-address`, `hex`, `module`, `distribution`.
+**Tools:** `poke`, `echo $?`, the `uname` syscall and command. The story text is the
+level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** I keep an old drawing. The Machine, cut open, like a page from a service manual. "Section of the Machine, before the Kernelfall."
+> **init:** In The Boot Path, the kernel was the biggest of the four hands. Tonight we open it. You know the rule from First Words: a program asks the kernel with a syscall. So what happens to a program that doesn't ask?
 >
-> **init:** Bottom floor: the hardware. Top floor: us, the programs. Between them, filling most of the page: the Kernel.
+> **The Watchdog:** I've seen it. It is quick.
 >
-> **The Watchdog:** The Kernel isn't a process like you, child. It's the thing that runs processes. (It keeps a few helpers of its own. They work for it.)
->
-> **init:** Every one of us goes through it. None of us goes around it. Let me show you why we can't.
+> **init:** `poke.c` is in the editor. It tries to read the kernel's own memory, directly.
 
 ### See it (X-ray)
 
-The Section drawing opens inside (a new X-ray view): hardware at the bottom, the
-kernel's parts in the middle, Userland on top. Each command lights the parts it
-touches.
+1. **Name:** _address_, the number of a byte of memory, written in hexadecimal
+   (`0x`, digits `0` to `9` then `a` to `f`). **Do:** Run builds `poke` (a starter
+   the setup doesn't build) and runs it; it reads the byte at `0xc0000000`. Then
+   `echo $?`. **See** (real output):
 
-**Part 1: what the kernel owns.** Five things, and a program reaches none of them
-directly: **CPU time** (who runs, and when), **memory**, **devices**, **files** and
-the **network**. The kernel shares them out, keeps programs apart, and checks every
-request.
+   ```
+   $ ./poke
+   Segmentation fault         ./poke
+   $ echo $?
+   139
+   ```
 
-**Part 2: kernel space and user space.** Every byte of memory has a number, its
-**memory address**; `0x` means hexadecimal, and a **bit** (0 or 1, eight to a byte)
-is what each hex digit packs four of. The Machine is a 32-bit PC: 4 GiB of
-addresses per process. The lower 3 GiB (`0x00000000`–`0xbfffffff`) are **user
-space**; the top 1 GiB, from `0xc0000000`, is **kernel space**, present in every
-process but locked (`CONFIG_VMSPLIT_3G`, `PAGE_OFFSET`).
-
-The player opens `poke.c` (a starter the setup doesn't build) and presses Run, which
-builds `poke` and runs it: it reads the first byte of kernel space, `0xc0000000`.
-Then `echo $?` (real output):
-
-```
-$ ./poke
-Segmentation fault         ./poke
-$ echo $?
-139
-```
-
-```
---- SIGSEGV {si_signo=SIGSEGV, si_code=SEGV_MAPERR, si_addr=0xc0000000} ---
-+++ killed by SIGSEGV +++
-```
-
-The CPU refused the read, because `poke` runs in user mode. The kernel was called in
-to deal with it, and ended `poke` with a **signal**: a short notice the kernel
-delivers to a process. This one, `SIGSEGV` ("segmentation violation", a bad memory
-access, number 11), ends the process unless it was prepared for it; the shell
-reports 128 + 11 = 139. Other signals: `SIGINT` when you press Ctrl-C, `SIGTERM` for
-"please stop". "Not its memory, not the hardware. It has to ask."
-
-Page-table isolation (PTI, against Meltdown) would hide most of the kernel while
-user code runs; the Machine boots with `mitigations=off`, and its `dmesg` says
-`Kernel/User page tables isolation: disabled on command line.`
-
-**Part 3: one big program, with add-ons.** Linux is a **monolithic** kernel: the
-scheduler, memory, filesystems, drivers and networking all run in kernel mode, in
-one program. (A **microkernel**, like seL4 or QNX's, keeps only the basics in the
-kernel and runs drivers and filesystems as separate processes that pass messages;
-safer when a driver fails, slower to talk.) Linux can still grow while it runs:
-**modules**, pieces of the kernel kept in files and added when needed.
-
-```
-$ ls /lib/modules/$(uname -r)/kernel
-arch      drivers   kernel    net       sound
-crypto    fs        lib       security  virt
-$ cat /proc/modules
-virtio_net 81920 0 - Live 0x00000000
-net_failover 16384 1 virtio_net, Live 0x00000000
-failover 12288 1 net_failover, Live 0x00000000
-ext4 749568 0 - Live 0x00000000
-...
-```
-
-The Dockmaster speaks from the drawing: "Modules wait on disk until they're needed.
-I load them. When the Deep wakes up, you'll write one." 868 modules ship as
-`.ko.gz` files; twelve are loaded. Each line gives the size, then the **reference
-count** (how many things use the module now: often the modules named after it, like
-`ext4` using `jbd2`; `9p`'s `1 -` is the mounted root filesystem), then the address,
-shown as zeros for anyone but root.
-
-**Part 4: Linux and the distribution.** `uname -sr` prints `Linux 6.18.63-0-virt`:
-that's the kernel. `cat /etc/os-release` prints `PRETTY_NAME="Alpine Linux v3.24"`:
-that's the **distribution**, Linux plus everything around it. init: "Linux is only
-the kernel. I, the shell, the C library, `ls` and `cat`: we're the rest." Alpine
-uses musl and BusyBox, not the GNU tools and C library, so it's "Alpine Linux",
-not "GNU/Linux".
-
-**Part 5: which Linux.** The Maintainer, from the drawing's last panel: "New kernels
-come out of **mainline** about every nine or ten weeks. **Stable** releases add
-fixes to them. Once a year, one becomes **LTS**, long-term support, and gets fixes
-for years. This Machine runs 6.18 LTS, so everything you learn here stays true while
-you learn it." The release reads like a label: `6.18`, its 59th stable update,
-Alpine's build `0` of the `virt` flavour. And one line about the license: Linux is
-free software under the **GPL, version 2**: anyone may use, study, change and share
-it, and whoever shares the kernel as a program must share its source too.
+2. **Name:** _user space_ and _kernel space_. Every process has 4 GiB of addresses to
+   itself: the lower 3 GiB are user space, where its own program and data live; the
+   top 1 GiB, from `0xc0000000`, is kernel space, the kernel's memory, there in every
+   process and locked while the CPU is in user mode.
+3. **Name:** _signal_, a short notice the kernel delivers to a process. The CPU
+   refused the read and called the kernel, which ended `poke` with `SIGSEGV`, number
+   11, a bad memory access. `echo $?` prints the last command's exit status, and the
+   shell reports "ended by signal 11" as 128 + 11.
 
 ### Build it
 
-The player writes their own `uname`: the `uname` command is a thin wrapper around a
-syscall of the same name.
+The player finishes their own `uname`. init first says what the lock protects: the
+kernel owns the CPU's time, the memory, the devices, the files and the network,
+shares them out and checks every request; it is one big program that can add pieces
+to itself while it runs, _modules_. So a program that wants any of it has to ask, and
+`uname` is the syscall that asks the kernel who it is.
 
 - **Starter provides:** `myuname.c`, complete except one line:
 
@@ -1419,11 +1364,10 @@ syscall of the same name.
 ### Watch it
 
 **Predict:** "Your program and the `uname` command: will they print the same
-release?" Both made the same syscall, and X-ray shows them side by side:
-
-```
-uname({sysname="Linux", nodename="kernelfall", ...}) = 0
-```
+release?" Yes: both made the same syscall and got the same answer, because the
+kernel keeps that record in its own memory, the memory `poke` could not read. X-ray
+shows both as `uname`, served by the kernel function `__ia32_sys_newuname` (the
+trace itself calls the syscall `newuname`):
 
 ```
 $ ./myuname
@@ -1432,16 +1376,14 @@ $ uname -srm
 Linux 6.18.63-0-virt i686
 ```
 
-`i686` is a 32-bit x86 CPU of the Pentium Pro family or later; the Machine's calls
-itself a Pentium III. The Section drawing gets its first label, "kernel", and a dotted line around it:
-"monolithic". The Gatekeeper's portrait appears at the line between user and kernel
-space: "Every request comes through me. One day you'll come through in person."
+`i686` is the kernel's word for this kind of 32-bit PC CPU. `Linux` is the kernel alone: with
+a shell, tools and init around it, it makes a _distribution_, and the Machine's is
+Alpine. init closes on the two programs: `poke` reached across the Gate and was
+ended; `myuname` asked at the Gate and was answered.
 
 ### Debrief
 
-> **init:** It owns the CPU, the memory, the devices, the files and the wires, and it shares them out. That's a kernel.
->
-> **init:** But how does it know what hardware it has? Nobody tells it at the factory. Let's go down to the bottom floor.
+> **init:** So the kernel's memory is locked to every program. Take, and the kernel ends you. Ask, and it answers. It owns every device too, but who tells it which devices it has? In Finding the Hardware, we go down to the bottom of the drawing.
 
 P.6 begins.
 
@@ -1478,6 +1420,15 @@ P.6 begins.
     `arch/x86/Kconfig`, `arch/x86/mm/pti.c`.
   - **Read:** https://docs.kernel.org/arch/x86/pti.html. Deepened by P.8
     (pages and maps).
+- **Addresses and hexadecimal** (`addresses-hex`)
+  - **Simple:** Every byte of memory has a number, its address. Addresses are
+    written in hexadecimal: `0x`, then the digits 0 to 9 and a to f.
+  - **Deep:** Hexadecimal counts in sixteens. A bit is one binary digit, 0 or 1,
+    and eight make a byte; each hex digit stands for exactly four bits, which is why
+    programmers write addresses this way. The Machine is a 32-bit PC, so an address
+    has 32 bits, eight hex digits, and there are 4 GiB of them. `0xc0000000` is
+    3,221,225,472: 3 GiB. — `arch/x86/include/asm/page_32_types.h`.
+  - **Read:** man 7 `units`. Try: `printf '%d\n' 0xc0000000`.
 - **Signals** (`signals`)
   - **Simple:** Short notices the kernel delivers to a process. Some end it:
     `SIGSEGV` for a bad memory access, `SIGINT` for Ctrl-C.
@@ -1516,14 +1467,35 @@ P.6 begins.
   - **Read:** https://docs.kernel.org/process/2.Process.html. Deepened by 2.13
     (how mainline works).
 - **The GPL** (`kernel-license`)
-  - **Simple:** Linux is free software under the GPL, version 2: use, study, change
-    and share it, and share its source when you share the kernel as a program.
+  - **Simple:** Linux is free software under GPL version 2: use, study, change and
+    share it. Whoever ships the kernel must share its source.
   - **Deep:** The kernel is `GPL-2.0-only`, with a "syscall note" that keeps
     ordinary programs which only use syscalls outside the GPL. Every source file
     states its license in an `SPDX-License-Identifier` line. Modules declare theirs
     with `MODULE_LICENSE()`. — `COPYING`, `LICENSES/`,
     `Documentation/process/license-rules.rst`.
   - **Read:** https://docs.kernel.org/process/license-rules.html. Deepened by 2.2.
+
+### Moved out of the story
+
+| Fact (old story)                                                        | Now                                                        |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| the old drawing; "bottom floor, top floor"                              | gone: P.1 introduced the Section drawing                   |
+| bits, eight to a byte; a hex digit is four bits; 3,221,225,472          | `addresses-hex` Deep                                       |
+| `0x00000000` to `0xbfffffff`; 32 bits make 4 GiB                        | `kernel-user-space` Deep and `addresses-hex` Deep          |
+| `strace`'s `SIGSEGV` lines, `si_addr`, `SEGV_MAPERR`                    | `kernel-resources` Deep has `SEGV_MAPERR`; rest is gone    |
+| `SIGINT` for Ctrl-C, `SIGTERM`; a process may be ready for a signal     | `signals` Simple has `SIGINT`; `SIGTERM` waits for S.3     |
+| page table isolation, Meltdown, `mitigations=off`                       | `kernel-user-space` Deep                                   |
+| monolithic against microkernel; seL4, QNX                               | `monolithic-kernel` Deep; the story says "one big program" |
+| `/lib/modules/$(uname -r)`, `/proc/modules`, 868 modules, twelve loaded | `monolithic-kernel` Deep; the counts are gone; 2.2         |
+| a module's reference count; `ext4` and `jbd2`; `9p`'s `1 -`             | gone; 2.2 (your first module)                              |
+| `/etc/os-release`; GNU/Linux; musl and BusyBox                          | `linux-distribution` Deep; the story names Alpine          |
+| mainline, stable, LTS; reading the release label                        | `kernel-versions` Simple and Deep                          |
+| the GPL                                                                 | `kernel-license`                                           |
+| `i686` is the Pentium Pro's family; the Machine's CPU is a Pentium III  | gone                                                       |
+| `newuname` dates from when the record gained a sixth field              | gone; the story keeps the name                             |
+| the Dockmaster, the Maintainer, the Gatekeeper                          | gone: they return in their own regions                     |
+| "It keeps a few helpers of its own": the kernel's threads               | gone; P.7 shows them in `ps`                               |
 
 ### Real-world card
 
@@ -1881,101 +1853,90 @@ Met with level content only: `lab.files` writes `board.c` to `/usr/local/src`,
 
 ## P.7 — Who Runs
 
-- **Id:** `prologue-machine-in-section-07-who-runs` · **Region / NPC:** The Machine in Section, the processes floor / init, the Watchdog; on the drawing: the Verger · **Tracks:** `userland`, `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-kernel-role` · **Skills unlocked:** `proc-process-basics`
+- **Id:** `prologue-machine-in-section-07-who-runs` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `userland`, `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-kernel-role` · **Skills unlocked:** `proc-process-basics`
+
+**Question:** With one CPU, how do all the Machine's processes run at once? Most are
+asleep, and the scheduler gives the ready ones turns.
+
+**Teaches:** `scheduler`, `parent`, `kernel-thread`. **Names** (one clause each):
+`redirection` (S.4 teaches it), `background-job` and `device-file` (no built level
+teaches them yet). **Tools:** `ps`, `/proc/$$/status`, `yes`, `top`, `kill`,
+`getppid`. The story text is the level's `story.md`; this section lists its beats.
+Every block is one recorded session, so its PIDs agree: the shell is 472 throughout.
 
 ### Scene
 
-> **init:** The bottom floor's done: the hardware, and a driver for each part. One floor up, someone has to decide who gets to use the CPU.
+> **init:** Finding the Hardware ended on a question: one CPU, and many programs that want it. Who decides? The Machine really has just one CPU, and `ps` is about to show you dozens of processes. How do they all run?
 >
-> **init:** Remember: a program is a file; a process is a program running, with its own memory and its own number. Every process also has a parent: the process that started it.
+> **The Watchdog:** One CPU. One. Everybody wants it.
 >
-> **The Watchdog:** And one CPU. One. Everybody wants it.
->
-> **init:** So the kernel takes turns for us, many times a second. Let's watch.
+> **init:** They take turns, many times a second, and the kernel decides whose turn it is.
 
 ### See it (X-ray)
 
-1. BusyBox `ps` lists every process (real output, cut with `...`; PIDs vary):
+1. **Do** (the first line): `ps` (real output, cut with `...`):
 
    ```
    $ ps
    PID   USER     TIME  COMMAND
-       1 root      0:00 /sbin/init
+       1 root      0:01 /sbin/init
        2 root      0:00 [kthreadd]
        3 root      0:00 [pool_workqueue_]
    ...
-      15 root      0:00 [ksoftirqd/0]
+     472 you       0:00 -bash
    ...
-      39 root      0:00 [kswapd0]
-   ...
-     471 root      0:01 cat /sys/kernel/tracing/trace_pipe
-     473 root      0:00 {kf-control} /bin/sh /usr/sbin/kf-control
-     480 you       0:00 -bash
-     491 you       0:00 ps
+     485 you       0:00 ps
    ```
 
-   PID 1 is init. PID 2, `kthreadd`, is the parent of the **kernel threads**, in
-   brackets, dozens of them: the kernel's own workers, which the scheduler runs like
-   processes but which only ever run kernel code (`ksoftirqd/0` finishes interrupt
-   work for the one CPU; `kswapd0` frees memory). At the bottom: the trace reader
-   that feeds X-ray, the game's control shell, the player's login shell `-bash`, and
-   `ps`.
-2. `cat /proc/$$/status` (`$$`: the shell's own PID) shows what the kernel keeps
-   about the player's shell; the level shows an excerpt:
+   **Name:** _kernel threads_, the names in brackets: the kernel's own workers,
+   which take turns on the CPU like processes but run only the kernel's code. PID 1
+   is init; near the bottom, the player's shell and `ps` itself.
+2. **Name:** _parent_, the process that started a process. `/proc` has a folder per
+   PID, and `$$` is the shell's word for its own. **Do:** `cat /proc/$$/status`:
 
    ```
    Name:	bash
+   ...
    State:	S (sleeping)
-   Pid:	480
+   ...
+   Pid:	472
    PPid:	1
    ...
-   VmRSS:	    2236 kB
-   ...
-   voluntary_ctxt_switches:	218
-   nonvoluntary_ctxt_switches:	294
    ```
 
-   Every count and size here changes from run to run; the story says so.
-
-   `S (sleeping)`: waiting for you to type. `PPid: 1`: its parent is init. `VmRSS`:
-   the memory it is using right now. The two counters say how often it gave up the
-   CPU because it had to wait (voluntary), or had it taken away because its turn was
-   over (nonvoluntary).
-3. **The scheduler.** `nproc` prints `1`. The player types init's line (real
-   output from a recorded run):
-
-   ```
-   $ yes > /dev/null & yes > /dev/null & yes > /dev/null & sleep 4; top -b -n 1 | head -12; kill %1 %2 %3
-   [1] 495
-   [2] 496
-   [3] 497
-   Mem: 21200K used, 202452K free, 8K shrd, 0K buff, 2852K cached
-   CPU:   5% usr  54% sys   0% nic   0% idle   0% io  39% irq   0% sirq
-   Load average: 0.90 0.21 0.07 5/62 500
-     PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND
-     471     1 root     R     1716   1%   0  25% cat /sys/kernel/tracing/trace_pipe
-     495   480 you      R     1652   1%   0  10% yes
-     497   480 you      R     1652   1%   0   9% yes
-     496   480 you      R     1652   1%   0   9% yes
-     499   480 you      R     1664   1%   0   7% top -b -n 1
-   ...
-   ```
-
-   All three `R` (running, or ready to run), all on CPU `0`: one runs at a time, the
-   others wait in the **run queue** and take turns in short slices. The trace of
-   every `write` they make costs CPU too: the trace reader's 25%, the `sys` share,
-   and the `irq` share, mostly `ttyS1`, the serial line carrying the trace out (in
-   those four seconds it interrupted about 5,000 times, as often as the timer;
-   `ttyS0` 80). Watching isn't free. X-ray shows the one CPU's lane, with the
-   three taking turns.
-4. **Many at once.** One picture: two processes add 1 to the same counter; one is
-   stopped halfway through its addition while the other does its own, and one
-   addition is lost. One CPU is enough. The Verger, on the drawing: "That's why the
-   kernel has locks, and why I write down the order every lock is taken." (Lock
-   Cathedral, 2.9.)
+   `S (sleeping)`: the shell is waiting, at that instant for `cat` to finish, so it
+   needs no CPU. `PPid: 1`: its parent is init.
+3. Almost every process on the list is asleep like the shell, waiting for something
+   to do; the kernel shares the CPU only among the few that are ready to run. That
+   is the first half of the answer.
 
 ### Build it
 
+- **The crowd.** The player types init's line as it is: three `yes`, four seconds,
+  one look with `top`, then `kill`, which sends each a signal (real output):
+
+  ```
+  $ yes > /dev/null & yes > /dev/null & yes > /dev/null & sleep 4; top -b -n 1 | head -12; kill %1 %2 %3
+  [1] 487
+  [2] 488
+  [3] 489
+  Mem: 19268K used, 204336K free, 4K shrd, 0K buff, 2848K cached
+  CPU:   4% usr  34% sys   0% nic   0% idle   0% io  61% irq   0% sirq
+  Load average: 1.26 0.30 0.10 4/59 492
+    PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND
+    471     1 root     R     1716   1%   0  39% cat /sys/kernel/tracing/trace_pipe
+    488   472 you      R     1652   1%   0  12% yes
+    487   472 you      R     1652   1%   0  12% yes
+    489   472 you      R     1652   1%   0  12% yes
+    491   472 you      R     1664   1%   0  11% top -b -n 1
+  ...
+  ```
+
+  One clause each: `> /dev/null` sends output to a device that throws it away; `&`
+  starts a program in the background, so the shell doesn't wait. All three show `R`,
+  running or ready to run; only one is on the CPU at any instant. **Name:** the
+  _scheduler_, the part of the kernel that decides who runs and for how long. The
+  `cat` above them is X-ray's own feed: watching costs CPU time too.
 - **Starter provides:** `mypid.c` (not `whoami.c`: `whoami` is a BusyBox applet),
   complete except one line:
 
@@ -2003,27 +1964,28 @@ Met with level content only: `lab.files` writes `board.c` to `/usr/local/src`,
 
 ### Watch it
 
-**Predict:** "Run `./mypid` twice. Same PID both times? Same parent?" Different
-PIDs (each run is a new process); the same parent (the shell started both).
+**Predict:** "Run `./mypid` twice. Same PID both times? Same parent?" A new PID
+each time (every run is a new process, and the kernel hands out the next free
+number); the same parent (the shell started both, and 472 is the PID `ps` showed).
 
 ```
 $ ./mypid
-I am process 502
-My parent is 480
+I am process 493
+My parent is 472
+[3]+  Terminated                 yes > /dev/null
 $ ./mypid
-I am process 503
-My parent is 480
+I am process 494
+My parent is 472
 ```
 
-The processes floor of the Section drawing fills with small figures: init at the
-root, the shell under it, the kernel threads off to one side. Labels appear: the
-Process District (1.4–1.8), the Clockwork Court (3.6–3.8), the Lock Cathedral (2.9).
+init closes on the family tree: init started the shell, the shell started `mypid`,
+and the other kernel threads all descend from `kthreadd`, PID 2. The `Terminated`
+line is the shell reporting a `yes` that `kill` ended; a live player may see one for
+each `yes`.
 
 ### Debrief
 
-> **init:** Every process has a number, a parent and a state, and the kernel takes turns giving each one the CPU.
->
-> **init:** But each of them also thinks it has the whole Machine's memory to itself. It doesn't. Let's see how the kernel pulls that off, in Pages and Maps.
+> **init:** Every process has a number, a parent and a state, and the scheduler gives each one a turn on the CPU. Each of them also believes it has the Machine's memory to itself. It doesn't. In Pages and Maps, you see how the kernel pulls that off.
 
 P.8 begins.
 
@@ -2032,8 +1994,8 @@ P.8 begins.
 1. Nudge: "`getpid()` gives your own number. Is there a function for your parent's?"
 2. Concept: "`getppid()` returns the parent's PID. `printf` with `%d` prints a whole
    number."
-3. Point at the spot: "After the first `printf`, add
-   `printf(\"My parent is %d\\n\", (int)getppid());`."
+3. Point at the spot: "After the first `printf`, add a second one like it, with
+   `My parent is %d` as its text and `(int)getppid()` as its number."
 
 ### Codex (chapter: The Machine in Section)
 
@@ -2067,6 +2029,23 @@ P.8 begins.
     `kernel/kthread.c`, `kernel/softirq.c`, `mm/vmscan.c`.
   - **Read:** man 1 `ps`. Deepened by 2.10b (workqueues).
 
+### Moved out of the story
+
+| Fact (old story)                                                          | Now                                                     |
+| ------------------------------------------------------------------------- | ------------------------------------------------------- |
+| "a program is a file; a process is a program running"                     | P.1 taught it; `process` Simple                         |
+| `kthreadd` is the parent of the kernel threads                            | the story's last line; `kernel-threads` Deep            |
+| `ksoftirqd/0`, `kswapd0`                                                  | `kernel-threads` Deep                                   |
+| the two programs of root's near the bottom of `ps`; `-bash`'s dash        | gone; the `cat` line in `top` gets one sentence         |
+| what `/proc` is                                                           | P.1 named it; P.9 teaches it                            |
+| "your PIDs will differ"; counts change from moment to moment              | gone: a banned hedge                                    |
+| `VmRSS`; voluntary and nonvoluntary context switches                      | `scheduler` card's try-it (`grep ctxt`); P.8 for memory |
+| `nproc` prints 1                                                          | gone: the story says the Machine has one CPU            |
+| the run queue; "a short slice of time"; the `CPU` column is always 0      | `scheduler` Deep has the run queue; the rest is gone    |
+| what tracing costs: the `sys` and `irq` shares, `ttyS1`, 5,000 interrupts | one sentence stays; `fidelity` says tracing costs CPU   |
+| a race on a shared counter; the Verger and locks                          | 2.9 (many users at once)                                |
+| the Section drawing filling with figures; district labels                 | gone                                                    |
+
 ### Real-world card
 
 ```sh
@@ -2091,114 +2070,80 @@ No Taint rules are live in the Prologue.
 ### Lab needs
 
 None beyond the shared Machine. Risk: three traced `yes` flood the trace with
-`write` events (about 6,000 events in the 4-second reference run); the app's X-ray
+`write` events (about 4,600 events in the reference run's crowd line); the app's X-ray
 must stay responsive.
 
 ---
 
 ## P.8 — Pages and Maps
 
-- **Id:** `prologue-machine-in-section-08-pages-and-maps` · **Region / NPC:** The Machine in Section, the memory floor / init; on the drawing: kswapd · **Tracks:** `kernel` · **Time:** ~25 min · **Prerequisites:** `proc-process-basics` · **Skills unlocked:** `mem-virtual-memory-basics`
+- **Id:** `prologue-machine-in-section-08-pages-and-maps` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `kernel` · **Time:** ~25 min · **Prerequisites:** `proc-process-basics` · **Skills unlocked:** `mem-virtual-memory-basics`
+
+**Question:** How can every process have 3 GiB of addresses on a Machine with 256
+MiB of memory? Each has its own map, and RAM is spent only on the pages in use.
+
+**Teaches:** `virtual-memory`, `page`. **Tools:** `free`, `/proc/self/maps`, `&name`.
+The story text is the level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** You saw every process get its own number. Here's the stranger part: every one of them also gets its own memory, or thinks it does.
->
-> **init:** 256 MiB. That's all the RAM the Machine has. And yet every process here believes it has 3 GiB of addresses to itself, about twelve times more.
+> **init:** In The Kernel Up Close, every process had 3 GiB of user space to itself. In Who Runs, you saw dozens of processes. The Machine has 256 MiB of RAM, its memory chips. That doesn't add up.
 >
 > **The Watchdog:** Lies. The kernel tells everyone lies.
 >
-> **init:** Useful ones. Each process gets its own map. The kernel decides which parts of each map are backed by real memory, and by which memory.
+> **init:** Useful ones. Run `free`, and see what there really is.
 
 ### See it (X-ray)
 
-1. **Physical and virtual.** **Physical memory** is the RAM chips, each byte with
-   its own real address. A process never sees those. It uses **virtual addresses**,
-   its own numbering, and a part of the CPU, the **MMU** (memory management unit),
-   translates each one into a real address on every memory access.
-
-   > **init:** Like flat numbers in a building. Two buildings both have a flat 4B; the city map tells the post which street each is on.
-
-   Where the picture stops being true: the translation isn't looked up by a person;
-   the MMU does it in hardware, for every access, and the kernel can change a
-   process's map at any time.
-2. **Pages and page tables.** Memory is handled in **pages** of 4 KiB (4096 bytes).
-   For each process the kernel keeps **page tables**: a lookup from a virtual page
-   to a physical page (a "frame"); three levels of tables on the Machine (32-bit
-   with PAE), four or five on a 64-bit PC. One picture: two processes, both using
-   the virtual address `0xbf9bb000` on their stacks, mapped to two different
-   frames; the kernel's top gigabyte mapped the same in both. An access the page
-   tables don't allow causes a **page fault**: the page has no mapping, or it has
-   one that forbids this access (a write to a read-only page, a user-mode read of a
-   kernel page). The kernel decides: fill it in, or end the process. P.5's `poke`
-   was the second kind: the page at `0xc0000000` was mapped, supervisor-only (the
-   CPU's error code 5: present, user mode).
-3. **The whole Machine.** `cat /proc/meminfo`, then `free` (real output, one run;
-   numbers move a little from moment to moment):
+1. **Do** (the Scene's last line): `free` (real output):
 
    ```
-   $ cat /proc/meminfo
-   MemTotal:         223588 kB
-   MemFree:          203128 kB
-   MemAvailable:     201096 kB
-   Buffers:               0 kB
-   Cached:             2852 kB
-   ...
    $ free
                  total        used        free      shared  buff/cache   available
-   Mem:         223588       17276      203128           8        3184      201096
+   Mem:         223636       28536      191876           8        3224      189860
    Swap:             0           0           0
    ```
 
-   `MemTotal` is about 218 of the 256 MiB: the firmware keeps part, the kernel's code
-   and data take more (`dmesg`: `Memory: 220092K/245368K available (10068K kernel
-   code, ...)`; the first number moves a little from boot to boot). `Cached` is the **page cache** (a **cache** is any copy kept close
-   by to make the next use faster). BusyBox `free` takes totals from `sysinfo()` and
-   `Cached` + `SReclaimable` from `/proc/meminfo` into `buff/cache`; `used` = total −
-   free − buff/cache (223588 − 203128 − 3184 = 17276). Where the cache picture stops
-   being true on the Machine: the 9p root (`cache=0x5`, mmap mode) hands each `read`
-   to the host without keeping a copy, so `Cached` stays at a few MiB, mostly
-   programs' mapped code. kswapd, on the drawing: "When memory runs short, I wake up
-   and clear room. Slab Mines, 2.8."
-4. **One process's map.** `cat /proc/self/maps` (`self` means whichever process is
-   reading, here `cat`, which is BusyBox; real output):
+   `free` counts in KiB: about 218 MiB, once the firmware and the kernel have taken
+   their share of the 256. **Name:** _physical memory_, the RAM itself, which a
+   process never sees, and _virtual addresses_, its own numbering, which a part of
+   the CPU, the MMU, turns into a place in RAM on every access.
+2. **Name:** _pages_ of 4096 bytes. For each process the kernel keeps a map from its
+   virtual pages to pages of RAM, and a page gets RAM only when the process first
+   touches it. That answers the question.
+3. A process uses only some regions of its 3 GiB. **Do:** `cat /proc/self/maps`
+   lists them (`self` is whoever is reading, here `cat`, which is BusyBox; real
+   output, cut with `...`):
 
    ```
-   004ac000-004b0000 r--p 00000000 00:14 10         /bin/busybox
-   004b0000-00550000 r-xp 00004000 00:14 10         /bin/busybox
-   00550000-00572000 r--p 000a4000 00:14 10         /bin/busybox
-   00572000-00574000 r--p 000c6000 00:14 10         /bin/busybox
-   00574000-00575000 rw-p 000c8000 00:14 10         /bin/busybox
-   01dd7000-01dd8000 ---p 00000000 00:00 0          [heap]
-   01dd8000-01dd9000 rw-p 00000000 00:00 0          [heap]
-   b7f07000-b7f17000 rw-p 00000000 00:00 0
-   b7f17000-b7f1b000 r--p 00000000 00:00 0          [vvar]
-   b7f1b000-b7f1d000 r--p 00000000 00:00 0          [vvar_vclock]
-   b7f1d000-b7f20000 r-xp 00000000 00:00 0          [vdso]
-   b7f20000-b7f31000 r--p 00000000 00:14 267        /lib/ld-musl-i386.so.1
-   b7f31000-b7f90000 r-xp 00011000 00:14 267        /lib/ld-musl-i386.so.1
-   b7f90000-b7fc4000 r--p 00070000 00:14 267        /lib/ld-musl-i386.so.1
-   b7fc4000-b7fc5000 r--p 000a3000 00:14 267        /lib/ld-musl-i386.so.1
-   b7fc5000-b7fc6000 rw-p 000a4000 00:14 267        /lib/ld-musl-i386.so.1
-   b7fc6000-b7fc8000 rw-p 00000000 00:00 0
-   bff47000-bff68000 rw-p 00000000 00:00 0          [stack]
+   004cb000-004cf000 r--p 00000000 00:14 10         /bin/busybox
+   004cf000-0056f000 r-xp 00004000 00:14 10         /bin/busybox
+   ...
+   0189e000-0189f000 rw-p 00000000 00:00 0          [heap]
+   ...
+   b7e7e000-b7edd000 r-xp 00011000 00:14 267        /lib/ld-musl-i386.so.1
+   ...
+   bfb3f000-bfb60000 rw-p 00000000 00:00 0          [stack]
    ```
 
-   Each line is one region: its addresses (eight hex digits: 32 bits), what may be
-   done there (`r` read, `w` write, `x` run as code, `p` private to this process),
-   and what it holds: the program's code (`r-x`), its data (`rw-`), the **heap**
-   (memory a program asks for while it runs) and the **stack** (local variables),
-   just under `0xc0000000`. Between the heap and the stack: musl, shared by every
-   program; the vdso (small kernel-provided functions, including the doorway for
-   syscalls on this Machine); and long gaps. Run it again and every address moves:
-   **ASLR**.
+   Each line is one region: where it starts and ends, what may be done there (`r`
+   read, `w` write, `x` run as code), and what it holds. The first lines are `cat`'s
+   program file, and the `r-xp` one is its code; its _stack_, where a function keeps
+   its variables, is at the bottom, just under the kernel's gigabyte.
 
 ### Build it
 
+init first names the _page fault_: when a page has no RAM yet, or the access is
+forbidden, the CPU stops and calls the kernel. Inside one of the listed regions, the
+kernel puts a page of RAM there and the program goes on; outside every region, it
+ends the program, as it ended P.5's `poke`, whose `0xc0000000` is above the last
+line of the list, in the kernel's gigabyte. `&global` gets one clause: "the address
+of `global`".
+
 - **Starter provides:** `where.c`. It prints the address of a global variable (one
   declared outside any function) and then prints its own `/proc/self/maps` (with
-  `open`, `read` and `write`, all written for you, under init's comment "you'll
-  write this kind of loop in 1.6").
+  `open`, `read` and `write`, all written for you, under init's comment "You'll
+  write this kind of loop yourself one day").
 - **Player does:** add a local variable (one declared inside `main`) and print its
   address next to the global's (`printf("local  at %p\n", (void *)&local);`), run
   `./where`, and find which region each address falls in.
@@ -2207,8 +2152,8 @@ must stay responsive.
   - One printed address falls inside the run's `[stack]` region and one inside a
     `rw-p` region of `where` itself.
   - `/proc/meminfo` was read with its text visible in the trace: `free` reads it
-    with `read()`; `cat` copies it with `sendfile64`, whose bytes the trace doesn't
-    carry yet, so the objective names `free`.
+    with `read()`, and `cat /proc/meminfo` (`sendfile64`, whose bytes the trace
+    carries) meets it too.
 - **Golden runs:** `solution` (`cat /proc/meminfo`, `free`, `./where`); `starter`
   (one address: rejected for `local-on-stack`, `prints-maps`, `reads-meminfo`).
 
@@ -2220,26 +2165,23 @@ in the program's data region, near the bottom. Real output:
 
 ```
 $ ./where
-global at 0x467004
-local  at 0xbf9bbbb8
-00463000-00464000 r--p 00000000 00:14 6402       /home/you/where
-00464000-00465000 r-xp 00001000 00:14 6402       /home/you/where
-00465000-00466000 r--p 00002000 00:14 6402       /home/you/where
-00466000-00467000 r--p 00002000 00:14 6402       /home/you/where
-00467000-00468000 rw-p 00003000 00:14 6402       /home/you/where
+global at 0x4e6004
+local  at 0xbfa5c338
+004e2000-004e3000 r--p 00000000 00:14 7030       /home/you/where
 ...
-bf99b000-bf9bc000 rw-p 00000000 00:00 0          [stack]
+004e6000-004e7000 rw-p 00003000 00:14 7030       /home/you/where
+...
+bfa3d000-bfa5e000 rw-p 00000000 00:00 0          [stack]
 ```
 
-The memory floor of the Section drawing lights: RAM frames at the bottom, two
-process maps above with arrows down to them, the page cache as a shelf of file
-pages. Labels: the Slab Mines (2.8a–b), the Page-Table Labyrinth (3.3–3.5).
+Run again, both addresses move (the kernel places each new program's pieces
+somewhere new, so an attacker can't count on where anything is), but each stays in its
+region. Another process can use the very same addresses for different pages of RAM:
+each has its own map.
 
 ### Debrief
 
-> **init:** Pages, page tables, a map for each of us, and a cache of files in whatever memory is left. The kernel keeps all of it straight.
->
-> **init:** One floor left before you've seen it all: files, devices and wires, in Files, Doors and Wires. And one rule that ties them together.
+> **init:** So the kernel gives every process its own map, and spends real memory only on the pages in use. The CPU, the memory: one part of the kernel is left. In Files, Doors and Wires, you see how files and devices all answer to the same few syscalls.
 
 P.9 begins.
 
@@ -2249,23 +2191,22 @@ P.9 begins.
    a variable inside `main`?"
 2. Concept: "`&name` is the address of any variable. `%p` prints an address; cast it
    to `(void *)` first."
-3. Point at the spot: "Inside `main`, add `int local = 0;` and
-   `printf(\"local  at %p\\n\", (void *)&local);` before the maps are printed."
+3. Point at the spot: "In `main`, declare a variable of your own, then print its
+   address the way the line beside it prints the global's, before `print_maps()` is
+   called."
 
 ### Codex (chapter: The Machine in Section)
 
 - **Virtual memory** (`virtual-memory`, deepens: `kernel-user-space`)
   - **Simple:** Each process uses its own made-up addresses; the CPU's MMU
     translates them to real RAM, page by page.
-  - **Deep:** Physical memory is managed in page frames (`struct page`, grouped as
-    folios). Each process's address space is a `struct mm_struct` with a list of
-    regions (`struct vm_area_struct`) and its page tables (three levels on 32-bit
-    x86 with PAE, the Machine's: PGD, PMD, PTE; four on most x86-64 machines; five
-    with LA57). A page fault on a user address goes through
-    `do_user_addr_fault()` to `handle_mm_fault()`; one on a kernel address from
-    user mode, like `poke`'s, is refused in `do_kern_addr_fault()`. The CPU's error
-    code says which kind: bit 0 set means the page was present and the access
-    forbidden. — `include/linux/mm_types.h`, `mm/memory.c`,
+  - **Deep:** A process's address space is a `struct mm_struct` with its regions
+    (`struct vm_area_struct`) and its page tables: three levels on 32-bit x86 with
+    PAE, the Machine's, four or five on x86-64. A page fault on a user address goes
+    through `do_user_addr_fault()` to `handle_mm_fault()`, which may fill it in; one
+    on a kernel address from user mode, like `poke`'s, is refused in
+    `do_kern_addr_fault()`. In the CPU's error code, bit 0 set means the page was
+    present and the access forbidden. — `include/linux/mm_types.h`, `mm/memory.c`,
     `arch/x86/mm/fault.c`.
   - **Read:** https://docs.kernel.org/admin-guide/mm/concepts.html. Deepened by
     1.4 (memory after `fork`), 2.5 (separate address spaces) and the Page-Table
@@ -2298,6 +2239,24 @@ P.9 begins.
   - **Read:** https://docs.kernel.org/admin-guide/mm/concepts.html. Deepened by
     P.10 (one `read`, end to end).
 
+### Moved out of the story
+
+| Fact (old story)                                                     | Now                                                                             |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| the flats-in-two-buildings picture and where it stops being true     | gone: one picture, the map                                                      |
+| page tables, frames, three levels of tables, four or five on 64-bit  | `virtual-memory` Deep has the levels; frames wait for 3.3                       |
+| two processes with the same stack address reaching different RAM     | the last line of Watch it                                                       |
+| the two kinds of page fault                                          | one sentence in Build it; `virtual-memory` Deep                                 |
+| `cat /proc/meminfo`; `MemFree`, `MemAvailable`, `Buffers`, `Cached`  | `meminfo` card has `MemTotal` and `MemAvailable`; the rest is gone              |
+| the `dmesg` memory line                                              | gone                                                                            |
+| the page cache; what a cache is; `SReclaimable`; `free`'s arithmetic | `page-cache` and `meminfo` cards                                                |
+| the 9p root keeps no copy, so `Cached` stays small                   | `page-cache` Deep; `fidelity`                                                   |
+| kswapd's line                                                        | `meminfo` Deep                                                                  |
+| every line of `cat`'s map; `p` for private; eight hex digits         | the excerpt keeps five lines; the two facts are gone                            |
+| the heap; `ld-musl` shared by every program; the vdso and vvar       | shown in the excerpt, unexplained; `proc-maps` Deep names `[heap]` and `[vdso]` |
+| "ASLR" by name                                                       | `proc-maps` Deep; the story says what it does                                   |
+| the drawing's memory floor lighting                                  | gone                                                                            |
+
 ### Real-world card
 
 ```sh
@@ -2323,29 +2282,34 @@ No Taint rules are live in the Prologue.
 
 ### Lab needs
 
-None beyond the shared Machine. Engine: `sendfile64` data in the trace would let
-`cat /proc/meminfo` meet `reads-meminfo` too.
+None beyond the shared Machine.
 
 ---
 
 ## P.9 — Files, Doors and Wires
 
-- **Id:** `prologue-machine-in-section-09-files-doors-wires` · **Region / NPC:** The Machine in Section, the files, devices and network floors / init; on the drawing: udev, the Harbormaster, the Tollkeeper · **Tracks:** `userland`, `kernel` · **Time:** ~25 min · **Prerequisites:** `drv-hardware-discovery`, `mem-virtual-memory-basics` · **Skills unlocked:** `io-everything-is-a-file`, `sys-kernel-subsystems`
+- **Id:** `prologue-machine-in-section-09-files-doors-wires` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `userland`, `kernel` · **Time:** ~25 min · **Prerequisites:** `drv-hardware-discovery`, `mem-virtual-memory-basics` · **Skills unlocked:** `io-everything-is-a-file`, `sys-kernel-subsystems`
+
+**Question:** How can one small program read a stored file, the kernel's own state
+and a device, all the same way? The same three calls, and the VFS behind them.
+
+**Teaches:** `vfs`, `mount`, `device-file`. **Names:** `network-stack`, by its card
+`eth0` and its driver `virtio_net`, which P.10 reads again. **Tools:** `/proc/mounts`,
+`ls -l /dev/…`, `look` (`open`, `read`, `write`). The story text is the level's
+`story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** The last floor, and the rule I promised. A file of settings. A number the kernel works out when you ask. A door to a driver. On Linux, you open all three the same way.
+> **init:** In Pages and Maps I promised the last part of the kernel. Here it is. A file of settings. A number the kernel works out when you ask. A setting of a device. On Linux, a program opens all three the same way.
 >
-> **init:** That's the rule people quote: "everything is a file." It isn't quite everything. But it's close, and it's why one small `cat` can read half the Machine.
+> **init:** People say "everything is a file." It isn't quite everything, but it is why one small program can read half the Machine. Start with what the file tree is made of: run `cat /proc/mounts`.
 
 ### See it (X-ray)
 
-1. **One tree, many filesystems.** A **filesystem** is the way files and folders are
-   laid out and found; several kinds are **mounted** (attached) into the one tree.
-   `cat /proc/mounts` (real output):
+1. **Do** (the Scene's last line): `cat /proc/mounts` (real output):
 
    ```
-   dev /dev devtmpfs rw,relatime,size=110896k,nr_inodes=27724,mode=755 0 0
+   dev /dev devtmpfs rw,relatime,size=110856k,nr_inodes=27714,mode=755 0 0
    host9p / 9p rw,relatime,cache=0x5,access=client,msize=512000,trans=virtio 0 0
    proc /proc proc rw,relatime 0 0
    sys /sys sysfs rw,relatime 0 0
@@ -2355,133 +2319,74 @@ None beyond the shared Machine. Engine: `sendfile64` data in the trace would let
    tracefs /sys/kernel/tracing tracefs rw,relatime 0 0
    ```
 
-   Eight mounts of seven kinds (`tmpfs` twice): **9p** at `/` (the Machine's files,
-   from the game over the virtio share met in P.6, earlier the same night). None of
-   the others is stored anywhere lasting: **procfs**, **sysfs** (P.6) and
-   **tracefs** (the trace X-ray reads) make a file's contents when it is read;
-   **devtmpfs** holds device nodes the kernel makes as drivers find devices,
-   **devpts** the terminals' nodes, and **tmpfs** ordinary files kept in RAM. The ext4 filesystem on `/dev/sda1` is not mounted, so none of its
-   files are in the tree: a filesystem joins the tree only when mounted.
-2. **The VFS.** `cat` on three filesystems (real output); `cat` itself uses `open`
-   and `sendfile64` (the kernel copies file to terminal without passing through
-   `cat`'s memory). The read code differs underneath; the player watches it with
-   `look` in Build it:
+   **Name:** _filesystem_, one way of keeping files and finding them, and _mounted_,
+   attached to the tree at a folder. Each line says what was mounted, where, and
+   which kind. Three kinds are explained: `9p` at `/` holds the Machine's own files;
+   at `/proc` and `/sys` the kernel makes up each file's contents when it is read;
+   `/dev` keeps the device files.
+2. **Name:** _device file_, a name in the tree that stands for a device. **Do:**
+   `ls -l /dev/null /dev/sda` (real output; BusyBox `ls`; the date is the boot's):
 
    ```
-   $ cat /etc/motd
-   Welcome to the Machine.
-   The kernel panicked tonight, and every process froze.
-   Find the way down, and bring the kernel back.
-   $ cat /proc/uptime
-   45.38 6.46
-   $ cat /sys/class/net/lo/mtu
-   65536
-   ```
-3. **Devices.** `ls -l /dev/null /dev/tty /dev/sda` (real output; BusyBox `ls`):
-
-   ```
-   crw-rw-rw-    1 root     root        1,   3 Oct 31 16:16 /dev/null
-   brw-------    1 root     root        8,   0 Oct 31 16:16 /dev/sda
-   crw-rw-rw-    1 root     root        5,   0 Oct 31 16:16 /dev/tty
+   crw-rw-rw-    1 root     root        1,   3 Nov 12 09:42 /dev/null
+   brw-------    1 root     root        8,   0 Nov 12 09:42 /dev/sda
    ```
 
-   `c` is a **character device** (a stream of bytes, like a terminal), `b` a
-   **block device** (storage read in fixed-size blocks, like a disk). The two
-   numbers are the **major** (which driver: 8 is the SCSI disk driver, which also
-   runs the IDE disk through libata) and **minor** (which device of that driver).
-   `cat /dev/null` returns at once: the null driver always answers "end of file".
-   The kernel made these nodes in devtmpfs; most systems run udev to set owners and
-   names, the Machine runs none, so all stay root's and the disk is root-only.
-4. **Networking, shown, not built.** `ls /sys/class/net` prints `eth0  lo` (`lo`,
-   loopback, is a pretend network inside the Machine; `eth0` is the virtio card run
-   by `virtio_net`, down, with no wire out of the browser yet).
-   `cat /proc/net/dev` counts each one's bytes and **packets** (the small pieces data
-   is sent in). The drawing shows one message's trip: a program's **socket** (a file
-   descriptor for talking over a network) → **TCP** (keeps the bytes in order, resends
-   lost ones) → **IP** (addresses each packet) → the netfilter gates → the network
-   card's driver (`virtio_net`) → the wire. The Harbormaster: "I run the stack. Socket
-   Harbor, 1.9." The Tollkeeper: "And I stand at the gates. Netfilter Wall, 2.11."
-5. **Processes talking to each other** (one line): pipes, signals, shared memory and
-   message queues. "The Aqueducts and the Alarm Bells, 1.7 and 1.8."
-6. **The kernel's own log.** `dmesg` shows the boot from P.4 again, and the lines
-   drivers wrote while taking their devices:
-
-   ```
-   [    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
-   ...
-   [    1.588336] scsi host0: ata_piix
-   ...
-   [    1.782304] ata1.00: ATA-0: v86 ATA HD, 1.00, max MWDMA2
-   ```
-
-   The kernel writes these with `printk()` into a ring buffer (a fixed-size log
-   where the newest lines push out the oldest); BusyBox `dmesg` reads it with the
-   `syslog` syscall. `kernel.dmesg_restrict` is 0 on the Machine, so uid 1000 may
-   read it (many distributions set 1).
-7. **What ties it together.** Every one of these went through the Syscall Gate:
-   `open`, `read`, `write`. The Gatekeeper: "Every floor. Through me."
-
-Then the Section drawing completes, and every part gets its label, its folder in the
-kernel's source code and its map region: the table at the top of this spec, on one
-page.
+   `c` passes bytes one after another, like a terminal; `b` is storage, read in
+   blocks, like `sda`, the Machine's disk. Behind each is a driver. The disk isn't
+   in the list of mounts, so its files aren't in the tree.
+3. **Name:** the _VFS_, the virtual file system: a path can lead to stored bytes, to
+   the kernel's own state, or to a driver, and the VFS makes them all answer to the
+   same calls by handing each request to the code behind the path.
 
 ### Build it
 
 - **Starter provides:** `look.c`: it opens one path, reads up to 256 bytes and
   writes them to standard output, with every return value checked. The path is on
-  one line: `const char *path = "/etc/motd";`.
-- **Player does:** run it as it is, then change the path and run it on a file in
-  `/proc` and on a file in `/sys` (any; init suggests `/proc/uptime` and
-  `/sys/class/net/eth0/address`). Last, on the Section drawing's table, match three
-  parts to their source folders (drag `mm/`, `fs/`, `net/`).
+  one line: `const char *path = "/etc/motd";`. init ties `open`, `read` and `write`
+  back to the `write` of P.2.
+- **Player does:** run it as it is, then change the path to `/proc/uptime` and run
+  it, and to `/sys/class/net/eth0/address` and run it again.
 - **Checker verifies (behavior):**
   - `./look` read successfully from files on the 9p root, procfs and sysfs (three
     runs; objectives `reads-9p`, `reads-procfs`, `reads-sysfs`), each read returning
     more than 0 bytes, each followed by a `write` on fd 1. The checker's mount table
     is tested against the Machine's `/proc/mounts` in `machine-facts.json`.
-  - The three folder matches (drag-to-match, unjudged).
 - **Golden runs:** `solution-9p`, `solution-procfs`, `solution-sysfs`; `dev-null`
   (the null driver answers end of file at once: rejected for all three reads).
 
 ### Watch it
 
-**Predict:** before the `/sys` run: "Which filesystem will answer?" X-ray shows
-`look`'s syscalls, the same three for each file; it does not show which
-filesystem's code answered (nothing in the trace says so). init explains that part:
-the VFS hands the `read` to `v9fs_file_read_iter()` for `/etc/motd` (9p asks the
-game over the share), `proc_reg_read_iter()` for `/proc/uptime` (procfs works the
-numbers out) and `kernfs_fop_read_iter()` for the card's address, which sysfs
-formats from `dev_addr`, the address `virtio_net` stored in the card's
-`struct net_device` at probe (`net/core/net-sysfs.c`). Real output; the emulator
-picks the last three bytes at random:
+**Predict:** before the `/sys` run: "Which filesystem will answer?" sysfs, the kind
+mounted at `/sys`. Real output (every card has its own address, so the player's ends
+differently):
 
 ```
 $ ./look
-00:22:15:76:df:a8
+00:22:15:66:d9:a5
 ```
 
 ```
-open("/sys/class/net/eth0/address", O_RDONLY|O_LARGEFILE) = 3
-read(3, "00:22:15:76:df:a8\n", 256)      = 18
-write(1, "00:22:15:76:df:a8\n", 18)       = 18
+open("/sys/class/net/eth0/address", ...) = 3
+read(3, "00:22:15:66:d9:a5\n", 256)      = 18
+write(1, "00:22:15:66:d9:a5\n", 18)       = 18
 ```
 
-musl adds `O_LARGEFILE` on 32-bit (it lets a 32-bit program use files whose size
-or offsets don't fit a 32-bit `off_t`, past 2 GiB) and uses `open`, not `openat`.
-
-The whole Section drawing lights up once, floor by floor, then dims to show what is
-still dark: everything but one lamp in Userland. init: "Every region on your map is
-one of these parts. That's what we're rebuilding."
+The three calls were the same in all three runs, and the VFS sent each `read`
+somewhere different: to 9p for `/etc/motd`, which fetched stored bytes; to procfs for
+`/proc/uptime`, which worked out its first number, how long the Machine has been up;
+to sysfs for `eth0`, the Machine's network card, which printed the address its
+driver, `virtio_net`, read from the card. X-ray names the kernel part that served
+each call (the trace's routes: `v9fs_file_read_iter`, `proc_reg_read_iter`,
+`kernfs_fop_read_iter`). init then points at `write`: every time it went to a driver,
+the terminal's (`tty_write`), so the same call had a device behind it. That is the
+level's one driver-served call; `look` never opens a device file.
 
 ### Debrief
 
-> **init:** You've seen every floor of the Machine. The kernel's parts, where they live in its source, and which street of the map will teach each one.
+> **init:** One set of calls, and the VFS behind them: that is how a stored file, the kernel's state and a device all answer alike. You have met the kernel's biggest parts.
 >
-> **The Watchdog:** Pretty drawing. Now it's going to fall down again.
->
-> **init:** What? Old dog, what did you do?
->
-> **The Watchdog:** Nothing! Something in the boot entry. I can feel it. Next restart, we're stuck. You'll have to bring it up yourself.
+> **The Watchdog:** And something is wrong with the boot entry. I can feel it. Next restart, we're stuck.
 
 P.10 begins.
 
@@ -2489,10 +2394,10 @@ P.10 begins.
 
 1. Nudge: "The program reads whatever `path` names. What should it name for the
    `/proc` run?"
-2. Concept: "`/proc` and `/sys` files are opened and read exactly like disk files.
-   Only the path changes."
-3. Point at the spot: "Change the text to `\"/proc/uptime\"`, run, then to
-   `\"/sys/class/net/eth0/address\"`, run."
+2. Concept: "`/proc` and `/sys` files are opened and read exactly like the Machine's
+   other files. Only the path changes."
+3. Point at the spot: "Only one line changes: the one that starts
+   `const char *path`. Put the new path between its quotes, then press Run."
 
 ### Codex (chapter: The Machine in Section)
 
@@ -2562,20 +2467,37 @@ P.10 begins.
   - **Read:** https://docs.kernel.org/, https://elixir.bootlin.com/linux/v6.18/source.
     Deepened by 2.1 (finding things in the source).
 
+### Moved out of the story
+
+| Fact (old story)                                                       | Now                                                    |
+| ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| eight mounts of seven kinds; tracefs, devpts, tmpfs; "none is stored"  | the story explains three; `filesystems` names tmpfs    |
+| the ext4 filesystem on `/dev/sda1`, unmounted                          | "the filesystem on that disk" stays; P.10 names `sda1` |
+| `cat` on three filesystems; `/proc/uptime`'s two numbers; `lo`'s `mtu` | gone: `look` reads the three files instead             |
+| `cat` uses `open` and `sendfile64`                                     | `vfs` Deep (`sendfile()`) and its try-it               |
+| `/dev/tty`; major and minor numbers; `cat /dev/null`; udev             | `device-files` has the numbers and udev; rest is gone  |
+| `ls /sys/class/net`, `lo`, `/proc/net/dev`, packets                    | `network-stack` Deep; `lo` and packets are gone        |
+| a message's trip: socket, TCP, IP, netfilter, driver, wire             | `network-stack` Simple and Deep; 1.9 and 2.11          |
+| pipes, signals, shared memory, message queues                          | 1.7 and 1.8                                            |
+| `dmesg` again; `printk()`, the ring buffer, `dmesg_restrict`           | `printk-dmesg` card; P.4 taught the kernel's log       |
+| the Harbormaster, the Tollkeeper, the Gatekeeper                       | gone: they return in their own regions                 |
+| the source tree; matching `mm/`, `fs/`, `net/` to parts of the drawing | `kernel-source-tree` card; the real-world card         |
+| the VFS's three read functions by name                                 | `vfs` Deep; X-ray shows them on each call              |
+| "asked for the bytes over the share"; the address's random last bytes  | `fidelity`                                             |
+| `O_LARGEFILE`                                                          | gone here; S.1 explains it                             |
+
 ### Real-world card
 
 ```sh
 cat /proc/mounts                          # every filesystem in your tree
 ls -l /dev/null /dev/tty                  # two character devices
-ls /sys/class/net; cat /proc/net/dev      # interfaces and their counters
-sudo dmesg | tail -n 20                   # the newest kernel messages (sudo where only root may read them)
+ls /sys/class/net; cat /proc/net/dev      # network interfaces and their counters
 strace cat /proc/uptime                   # every call cat makes
 ```
 
-On a 64-bit glibc system `strace` shows `openat` where the Machine's musl uses
-`open`, and GNU `cat` copies with `read` and `write` (or `copy_file_range`) where
-BusyBox's uses `sendfile64`. Browse the source tree at https://elixir.bootlin.com/linux/v6.18/source and
-open `mm/`, `fs/` and `net/`.
+On a 64-bit PC with glibc, `strace` shows `openat` where the Machine's musl uses
+`open`. Browse the kernel's source at https://elixir.bootlin.com/linux/v6.18/source
+and open `fs/`, `mm/` and `net/`.
 
 ### Taint
 
@@ -2583,17 +2505,15 @@ No Taint rules are live in the Prologue.
 
 ### Fidelity
 
-- **Faithful:** the Machine's real `/proc/mounts`; the VFS function names for 9p,
-  procfs and sysfs reads, as init names them; sysfs's `address` printing the
-  `dev_addr` `virtio_net` stored at probe; `/dev` modes and numbers as devtmpfs makes them with no
-  udev; `/sys/class/net` with `eth0` (`virtio_net`) and `lo`; `/proc/net/dev`;
-  `cat`'s `open` + `sendfile64` and `look`'s `open`/`read`/`write` with
-  `O_LARGEFILE`; `printk`'s ring buffer read by BusyBox `dmesg` with `syslog()`; the
-  source tree layout.
-- **Simplified:** X-ray shows `look`'s syscalls, not which filesystem answered them:
-  the routing under the VFS is init's explanation, not something the trace shows;
-  the network trip is a drawing (packets are built in 1.9); `eth0` has no network
-  behind it.
+- **Faithful:** the Machine's real `/proc/mounts`; which filesystem's code served
+  each read, as the trace's routes show it; sysfs's `address` printing the `dev_addr`
+  `virtio_net` stored at probe; the `/dev` modes, `c` and `b`, as devtmpfs makes them
+  with no udev; `look`'s `open`/`read`/`write`, and the terminal's driver serving its
+  `write`. In the Codex cards only: majors and minors, `/sys/class/net` and
+  `/proc/net/dev`, `cat`'s `sendfile64`, `printk`'s ring buffer, the source tree.
+- **Simplified:** the Machine's own files come over a virtio 9p share, not from a
+  disk; the card's address is given by the emulator, its last three bytes at random;
+  `eth0` has no network behind it.
 
 ### Lab needs
 
@@ -2605,20 +2525,23 @@ and bring back an ext4 objective.
 
 ## P.10 — Bring the Machine Up (capstone)
 
-- **Id:** `prologue-machine-in-section-10-bring-it-up` · **Region / NPC:** the whole Machine / the Watchdog, init, udev (on the drawing) · **Tracks:** `kernel`, `userland` · **Time:** ~30 min · **Prerequisites:** `sys-kernel-subsystems`, `sys-boot-chain` · **Skills unlocked:** `sys-command-lifecycle`
+- **Id:** `prologue-machine-in-section-10-bring-it-up` · **Region / NPC:** the whole Machine / the Watchdog, init · **Tracks:** `kernel`, `userland` · **Time:** ~30 min · **Prerequisites:** `sys-kernel-subsystems`, `sys-boot-chain` · **Skills unlocked:** `sys-command-lifecycle`
 
-The Prologue's closing mission. It teaches nothing new: the player uses the boot
-path, the hardware, memory, processes and files together to bring a stalled Machine
-fully up. Each step is checked by what the Machine does, and the closing Predict
-costs nothing when wrong.
+**Question:** The boot stops before init starts. What stopped it, and how do you
+bring the Machine all the way up?
+
+The Prologue's closing mission, a recall level: it teaches no concept. Each of the
+three wrong words on the command line points back to a level (`root=` to P.4 and
+P.9's `/proc/mounts`, `mem=` to P.8's `free`, `module_blacklist=` to P.5's modules
+and P.9's `virtio_net`), and the closing read is followed through every part met.
+Each step is checked by what the Machine does, and the Predict costs nothing when
+wrong. The story text is the level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **The Watchdog:** Restarting. Not my fault. ...It's stuck. I'm counting, and nobody's resetting me.
+> **The Watchdog:** Restarted. And it's stuck. I'm counting, and nobody's resetting me.
 >
-> **init:** Someone changed the boot entry. Maybe the Dangling, maybe a tired admin. Either way, the Machine can't find its feet.
->
-> **init:** You know every floor now. Bring it up. All the way up: the root, the network card, the memory. Then show me one command going all the way down to a driver and back.
+> **init:** Someone changed the boot entry, as the Watchdog feared. In The Boot Path you added words to the kernel command line. Tonight three words on it are wrong, and you take them out. GRUB's menu is on your terminal: press Enter, and watch how far the boot gets.
 
 ### See it (X-ray)
 
@@ -2638,40 +2561,42 @@ sh: can't access tty; job control turned off
 ~ #
 ```
 
-The kernel, its initcalls and the initramfs all worked; the initramfs's `/init`
-couldn't mount the root named by `root=`, so it opened BusyBox `sh` as root before
-init could start. Nothing is traced until the Machine is up (no tracefs, no bash),
-so X-ray's boot view shows only the boot that succeeds.
+The firmware, GRUB and the kernel did their part; the initramfs's `/init` couldn't
+mount the root named by `root=`, so it opened BusyBox `sh` as root (`~ #`) instead
+of handing over to init. Nothing is traced until the Machine is up.
+
+**Read the stop** (still See it), in the emergency shell: `cat /proc/cmdline` shows
+the three words; `ls /dev` shows `sda` and `sda1`, no `sda3`; `free` shows
+`Mem: 45508` KiB in total (the shell is untraced; these lines were captured from its
+terminal on the current image). init reads the three words as recall:
+
+- `root=/dev/sda3`: no `sda3`; the disk's one filesystem is on `sda1` and holds the
+  kernel's own files. The root is `host9p` (P.9's `/proc/mounts`), which `/init`
+  mounts when there's no `root=`.
+- `mem=64M`: 45508 KiB, where P.8 showed about 218 MiB.
+- `module_blacklist=virtio_net`: the kernel will refuse the card's driver when it is
+  loaded later, from the root.
 
 ### Build it
 
-Four steps, in order. Command chips offer only the commands' names and one-line
-explanations (no arguments): the player chooses what to look at and types it.
+Command chips offer only the commands' names and one-line explanations.
 
-1. **Read the stop**, in the emergency shell (`uid=0`): `cat /proc/cmdline` shows the
-   three words; `ls /dev` shows `sda` and `sda1`, no `sda3`; `free` shows
-   `Mem: 45524` KiB in total. The root is the virtio share `host9p` (P.9's
-   `/proc/mounts`), which `/init` mounts when there's no `root=`; `mem=64M` caps the
-   RAM; `module_blacklist=virtio_net` will make the kernel refuse the card's driver
-   when the start-up script loads it from the root.
-2. **Back to GRUB:** `reboot -f` (`-f`: straight to the kernel; there's no init to
-   ask) prints `reboot: Restarting system`. GRUB's own command line, `c` then `ls`,
-   lists `(hd0) (hd0,msdos1) (fd0) (fd1)`.
-3. **Fix the entry, all of it:** `e`, delete the three words, Ctrl-X. All in one
-   edit: once bash runs the player is `you`, and `reboot` answers
-   `reboot: : Operation not permitted`. With only `root=` fixed, the boot screen
-   shows `modprobe: can't load module virtio_net
+1. **Fix the entry, all of it, in one edit:** `reboot -f` goes back to GRUB; `e`,
+   delete the three words at the end of the `linux` line, Ctrl-X. Once bash runs the
+   player is `you` and can't restart (`reboot: : Operation not permitted`). With only
+   `root=` fixed, the boot screen shows `modprobe: can't load module virtio_net
    (kernel/drivers/net/virtio_net.ko.gz): Operation not permitted`, `free` says
-   45524 and `ls /sys/class/net` shows only `lo`. Then the player checks:
-   `cat /proc/cmdline`; `free` (`Mem: 240008` after a GRUB boot);
-   `ls /sys/class/net` (`eth0  lo`); `readlink /sys/class/net/eth0/device/driver`
-   (`../../../../bus/virtio/drivers/virtio_net`); BusyBox `ps` (`/sbin/init` as
-   PID 1, `[kthreadd]`).
-4. **One command, end to end.** Raising a link needs root (as `you`:
-   `ip: ioctl 0x8914 failed: Operation not permitted`), so the level's `runAs` cue
-   has init run `ip link set eth0 up` as root once `card-bound` is met. Then
-   `cat /sys/class/net/eth0/operstate` prints `up` (v86's virtio card reports a
-   link, `carrier` 1, with nothing behind it).
+   45508 and `ls /sys/class/net` shows only `lo`.
+2. **Prove every part is up** (real output, the `solution` recording):
+   `cat /proc/cmdline`; `free` (`Mem: 239640`); `ls /sys/class/net` (`eth0  lo`);
+   `readlink /sys/class/net/eth0/device/driver`
+   (`../../../../bus/virtio/drivers/virtio_net`, the link from P.6); BusyBox `ps`
+   (`/sbin/init` as PID 1, `[kthreadd]`).
+
+Raising a link needs root (as `you`: `ip: ioctl 0x8914 failed: Operation not
+permitted`), so the level's `runAs` cue has init run `ip link set eth0 up` as root
+once `card-bound` is met; v86's virtio card then reports a link with nothing behind
+it.
 
 - **Checker verifies (behavior):**
   - `root-found` (declared): `cat` read `/proc/cmdline` to the end without
@@ -2689,23 +2614,20 @@ explanations (no arguments): the player chooses what to look at and types it.
 
 ### Watch it
 
-**Predict:** "Which floors of the Section does that one small read pass through?"
-X-ray replays the run: bash `fork`s; the copy `execve`s `cat`; the scheduler runs
-it; `open` walks the path through the VFS to sysfs; `sendfile64` copies the file to
-the terminal while sysfs reports the card's state; the terminal's driver shows the
-three bytes; `cat` calls `exit_group` and bash's `wait4` returns. (Wanted: the
-order-the-path card game; until then the Predict is a question, and costs nothing.)
+**Predict** (before running `cat /sys/class/net/eth0/operstate`): "Whose report will
+the answer be?" The disk's driver, the terminal's driver, or `virtio_net`, the one
+the boot entry had blocked. The answer `up` is `virtio_net`'s. init then follows the
+read through everything met: bash forked and its copy became `cat`; the scheduler
+gave it the CPU; its `open` crossed the Gate and the VFS sent it to sysfs; sysfs
+asked the kernel's network code, which keeps what `virtio_net` reported; the
+terminal's driver showed three bytes; `cat` exited and the prompt came back.
+(Wanted: the order-the-path card game.)
 
-In the world: the Watchdog's meter fills and stays full. "Reset. Properly. First
-time since the Kernelfall." The Kernel Map's Prologue regions are fully drawn, the
-network card glows at the bottom of the Section, and a wire runs from it to the dark
-harbor: "The wire's live. Nobody's talking on it yet."
+> **The Watchdog:** Reset. Properly. First time since the Kernelfall.
 
 ### Debrief
 
-> **init:** You brought the Machine up from a dead stop: the root, the driver, the memory. And you followed one command all the way down to a driver and back.
->
-> **init:** You know what the Machine is made of now, top to bottom. But you've only seen the city from my doorstep. Time you walked the streets you're rebuilding.
+> **init:** You brought the Machine up from a dead stop, and followed one command down to a driver and back. You know what the Machine is made of. But you have only seen the city from my doorstep. In The Streets of Userland, you walk it.
 
 The Surface Survey begins with S.1.
 
@@ -2713,21 +2635,21 @@ The Surface Survey begins with S.1.
 
 1. Nudge: "The Machine stopped before init could start. What did its last lines
    name, and what does `cat /proc/cmdline` say the kernel was told?"
-2. Concept: "`root=` names the root filesystem: the Machine's is the share
-   `host9p`, which its initramfs mounts when there's no `root=` at all.
+2. Concept: "`root=` names the root filesystem: the Machine's is `host9p`, which its
+   initramfs mounts when there's no `root=` at all.
    `module_blacklist=` makes the kernel refuse a module, and `mem=` makes it use
    only that much RAM. Once bash runs you're not root and can't restart, so fix the
    whole line in one edit."
 3. Point at the spot: "Type `reboot -f` in the emergency shell. At GRUB, press `e`,
-   go to the end of the `linux` line, delete `root=/dev/sda3
+   move down to the `linux` line with Ctrl-N and to its end with Ctrl-E, delete
+   `root=/dev/sda3
    module_blacklist=virtio_net mem=64M`, then press Ctrl-X."
 
 ### Codex (chapter: The Machine in Section)
 
 - **The life of a command** (`command-lifecycle`)
-  - **Simple:** A command travels from the shell through the kernel's parts to a
-    driver and back: new process, program loaded, path walked, data read, text
-    written, exit, prompt.
+  - **Simple:** A command travels from the shell through the kernel to a driver and
+    back: new process, program loaded, path walked, data read, text written, exit.
   - **Deep:** `fork()` (`clone()` with glibc) → `kernel_clone()`; `execve()` →
     `do_execveat_common()`; the scheduler runs the new task; `open()` (`openat()`
     with glibc) → `path_openat()`; `read()` → `vfs_read()` → the filesystem (for a
@@ -2751,6 +2673,23 @@ The Surface Survey begins with S.1.
     firmware's memory map). — `init/do_mounts.c`, `kernel/module/main.c`,
     `arch/x86/kernel/e820.c`, `Documentation/admin-guide/kernel-parameters.txt`.
 
+### Moved out of the story
+
+| Fact (old story)                                                       | Now                                           |
+| ---------------------------------------------------------------------- | --------------------------------------------- |
+| "Maybe the Dangling, maybe a tired admin"                              | gone                                          |
+| `quiet` hid the kernel's lines; `/init` and `/newroot`; `exit` retries | the boot's own lines show it; `fidelity`      |
+| the emergency shell is BusyBox `sh`, not bash, and isn't traced        | this spec; `fidelity`                         |
+| the root is a share, not a disk                                        | P.9's `fidelity`; the story says `host9p`     |
+| the kernel's share explains 64 MiB showing as about 44; 256 MiB        | gone here; P.8 has the 256 MiB                |
+| `reboot -f` against plain `reboot`; `reboot: Restarting system`        | the `reboot` chip explains `-f`; rest is gone |
+| GRUB's command line: `c`, `ls`, `(hd0) (hd0,msdos1) (fd0) (fd1)`       | gone                                          |
+| what happens with only `root=` fixed; `reboot`'s refusal as `you`      | this spec; the `root-only` golden run         |
+| `ip link set eth0 up` and its `ioctl 0x8914` refusal                   | this spec; `fidelity` says it needs root      |
+| `sendfile64`, `exit_group`, `wait4` by name in the last read           | `command-lifecycle` Deep                      |
+| the Watchdog's meter; the map and the wire to the harbor               | gone                                          |
+| Debian's `(initramfs)` prompt; `update-grub`                           | gone from the real-world card                 |
+
 ### Real-world card
 
 ```sh
@@ -2760,10 +2699,11 @@ lspci -k | grep -A3 -i ethernet            # is your network card's driver in us
 strace -f -e trace=fork,clone,execve,open,openat,read,write,sendfile64,wait4 sh -c 'cat /sys/class/net/lo/operstate; true'
 ```
 
-`; true` keeps `sh` from exec'ing `cat` in place, so the fork shows. On a test
-virtual machine: at GRUB, press `e`, add `mem=512M` for one boot, and compare `free`
-before and after; to make it last, edit `GRUB_CMDLINE_LINUX` and run
-`grub-mkconfig -o /boot/grub/grub.cfg` (`update-grub` on Debian and Ubuntu).
+`; true` keeps `sh` from exec'ing `cat` in place, so the fork shows. With glibc,
+`clone` and `openat` appear where the Machine's musl uses `fork` and `open`. On a
+test virtual machine: at GRUB, press `e`, add `mem=512M` for one boot, and compare
+`free` before and after; to make it last, edit `GRUB_CMDLINE_LINUX` and run
+`grub-mkconfig -o /boot/grub/grub.cfg`.
 
 ### Taint
 
@@ -2771,21 +2711,21 @@ No Taint rules are live in the Prologue.
 
 ### Fidelity
 
-- **Faithful:** GRUB 2.14's menu, editor and command line (`(hd0) (hd0,msdos1)`);
-  one-boot edits; `module_blacklist=` making the kernel refuse `virtio_net` (EPERM);
-  `mem=64M` leaving 45524 kB; `reboot` and `ip link set` needing root; `operstate`
-  going from `down` to `up`; the order of syscalls in the route.
+- **Faithful:** GRUB 2.14's menu and editor; one-boot edits; `module_blacklist=` making the kernel refuse `virtio_net` (EPERM);
+  `mem=64M` leaving 45508 kB; `reboot` and `ip link set` needing root; `operstate`
+  going from `down` to `up`; the emergency shell's lines, as BusyBox `sh` prints them
+  as root, untraced.
 - **Simplified:** the initramfs `/init` is a short script written for the game,
-  modelled on Alpine's, with its own messages (Debian's and Ubuntu's prompt is
-  `(initramfs)`). The start-up script loads `virtio_net` with `modprobe`; on most
-  systems udev does it from the card's `modalias`. init raises `eth0` through the
-  game's control channel; a real system's network manager or `ifup` does it at boot.
-  `eth0` has no network behind it.
+  modelled on Alpine's, with its own messages. The start-up script loads `virtio_net`
+  with `modprobe`; on most systems udev does it from the card's `modalias`. init
+  raises `eth0` through the game's control channel; a real system's network manager
+  or `ifup` does it at boot. `eth0` has no network behind it: once it's up, v86
+  reports a link, and its frames go nowhere.
 
 ### Lab needs
 
-Done: `lab.boot`, the emergency shell, `reboot -f` back to GRUB, `runAs` as root.
-Wanted: a Watchdog restart from the level UI (`useMachineReboot()`), so a player who
-boots with only part of the line fixed isn't stuck as `you` until the level is set
-up again; the boot view of a boot that stopped in the initramfs (no report reaches
-the page without kf-control); the order-the-path Predict.
+Done: `lab.boot`, the emergency shell, `reboot -f` back to GRUB, `runAs` as root, the
+report of a boot that stopped in the initramfs. Wanted: a Watchdog restart from the
+level UI (`useMachineReboot()`), so a player who boots with only part of the line
+fixed isn't stuck as `you` until the level is set up again; the order-the-path
+Predict.

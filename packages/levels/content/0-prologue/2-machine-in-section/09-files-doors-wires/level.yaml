@@ -2,13 +2,15 @@
 # without a `check` are judged in checker.ts.
 id: prologue-machine-in-section-09-files-doors-wires
 title: Files, Doors and Wires
-summary: "Read one of the Machine's files, a number the kernel works out and a device's setting, all with one small program. You learn filesystems, device files and the network, and why on Linux almost everything is a file."
+summary: "Read one of the Machine's files, a number the kernel works out and a device's setting, all with one small program. You learn filesystems and device files, and why on Linux almost everything is a file."
 minutes: 25
 tracks: [userland, kernel]
 skills: [io-everything-is-a-file, sys-kernel-subsystems]
 prerequisites: [drv-hardware-discovery, mem-virtual-memory-basics]
-teaches: [vfs, mount, proc-fs, network-stack]
-uses: [file-tree, device-file, sysfs, driver, module, kernel-log, syscall, fd, errno, c-basics, compiler]
+teaches: [vfs, mount, device-file]
+# P.10 reads the same card's state: the network stack is only named here, by its card and driver.
+names: [network-stack]
+uses: [file-tree, proc-fs, sysfs, driver, storage, syscall, fd, c-basics, compiler]
 objectives:
   - id: exits-zero
     text: "`./look` exits with status 0."
@@ -22,11 +24,13 @@ objectives:
 hints:
   - "The program reads whatever `path` names. What should it name for the `/proc` run?"
   - "`/proc` and `/sys` files are opened and read exactly like the Machine's other files. Only the path changes."
-  - 'Change the text to `"/proc/uptime"`, run, then to `"/sys/class/net/eth0/address"`, run.'
+  - "Only one line changes: the one that starts `const char *path`. Put the new path between its quotes, then press Run."
 chips:
   - { command: cat, explain: "show a file: /proc/mounts lists every mounted filesystem" }
-  - { command: ls, explain: "ls -l /dev/null /dev/tty /dev/sda shows device files: c or b, major and minor" }
-  - { command: dmesg, explain: "the kernel's own log, from the first line of the boot" }
+  - {
+      command: ls,
+      explain: "ls -l /dev/null /dev/sda shows two device files: c for bytes one after another, b for storage",
+    }
 xray: [syscalls, files, network]
 codex:
   - id: vfs
@@ -121,16 +125,13 @@ taint: []
 fidelity:
   faithful:
     - "the Machine's real /proc/mounts: 9p at /, procfs, sysfs, devtmpfs, devpts, tmpfs, tracefs"
-    - "the VFS function names for 9p, procfs and sysfs reads, as init names them"
+    - "which filesystem's code served each read, as the trace's routes show it: 9p, procfs, sysfs (the vfs card names the functions)"
     - "sysfs's address file printing the address virtio_net stored at probe (dev_addr)"
-    - "the /dev modes, c and b, majors and minors, as devtmpfs makes them with no udev"
-    - "/sys/class/net with eth0 (virtio_net) and lo, and /proc/net/dev"
-    - "cat's open and sendfile64; look's open, read and write, with musl's O_LARGEFILE"
-    - "printk's ring buffer, read by BusyBox dmesg with syslog()"
-    - the source tree's layout
+    - "the /dev modes, c and b, as devtmpfs makes them with no udev"
+    - "look's open, read and write, and the terminal's driver serving its write"
+    - "in the Codex cards only: majors and minors, /sys/class/net and /proc/net/dev, cat's sendfile64, printk's ring buffer, the source tree's layout"
   simplified:
-    - "X-ray shows look's syscalls, not which filesystem's code answered them: the routing under the VFS is init's explanation, not something the trace shows"
-    - "the network trip is a drawing; packets are built later, in Socket Harbor"
+    - "the Machine's own files come over a virtio 9p share, not from a disk; its card's address is given by the emulator, its last three bytes at random"
     - "eth0 has no network behind it: the browser gives the Machine no wire yet"
 story:
   scene: story.md#scene

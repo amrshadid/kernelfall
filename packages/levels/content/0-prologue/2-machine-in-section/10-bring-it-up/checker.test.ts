@@ -17,7 +17,7 @@ const PS = FACTS.ps ?? ''
 const CMDLINE = `BOOT_IMAGE=/boot/vmlinuz-virt ${FACTS['cat /proc/cmdline'] ?? ''}\n`
 // What `free` printed after a boot with mem=64M (runs/…/root-only).
 const FREE_64M = `              total        used        free      shared  buff/cache   available
-Mem:          45524       15044       27284           4        3196       27784
+Mem:          45508       15112       27200           4        3196       27700
 Swap:             0           0           0
 `
 
@@ -78,8 +78,8 @@ describe('Bring the Machine Up', () => {
   })
 
   it("wants the Machine's whole memory, read from /proc/meminfo or from free, and not what mem=64M leaves", () => {
-    expect(metBy(level, catted(324, '/proc/meminfo', 'MemTotal:          45524 kB\n'))).toEqual([])
-    expect(metBy(level, free(FREE_64M, 'MemTotal:          45524 kB\n'))).toEqual([])
+    expect(metBy(level, catted(324, '/proc/meminfo', 'MemTotal:          45508 kB\n'))).toEqual([])
+    expect(metBy(level, free(FREE_64M, 'MemTotal:          45508 kB\n'))).toEqual([])
     expect(metBy(level, catted(324, '/proc/meminfo', MEMINFO))).toEqual(['full-memory'])
     expect(metBy(level, free(`${FACTS.free ?? ''}\n`, MEMINFO))).toEqual(['full-memory'])
   })

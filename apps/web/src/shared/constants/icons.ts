@@ -1,6 +1,9 @@
 /** Path data on a 24px grid, drawn for a 2px stroke to match the rule weight. */
 export const ICON_PATHS = {
   back: 'M15 5 8 12l7 7',
+  // A branch joining a trunk: the game's source.
+  source:
+    'M6 7v10M6 3a2 2 0 1 0 0 4a2 2 0 1 0 0-4M6 17a2 2 0 1 0 0 4a2 2 0 1 0 0-4M18 5a2 2 0 1 0 0 4a2 2 0 1 0 0-4M18 9c0 4-6 3-12 5',
   forward: 'm9 5 7 7-7 7',
   menu: 'M4 7h16M4 12h16M4 17h16',
   replay: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4',

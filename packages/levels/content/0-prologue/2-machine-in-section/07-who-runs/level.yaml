@@ -7,23 +7,10 @@ minutes: 20
 tracks: [userland, kernel]
 skills: [proc-process-basics]
 prerequisites: [sys-kernel-role]
-teaches: [scheduler, parent, proc-fs]
-uses:
-  [
-    process,
-    pid,
-    cpu,
-    kernel-thread,
-    signal,
-    interrupt,
-    device-file,
-    syscall,
-    pipe,
-    redirection,
-    background-job,
-    c-basics,
-    compiler,
-  ]
+teaches: [scheduler, parent, kernel-thread]
+# Met here in one clause each: S.4 teaches `>`; `&` and /dev/null are taught by no built level yet.
+names: [redirection, background-job, device-file]
+uses: [process, pid, cpu, proc-fs, signal, syscall, pipe, c-basics, compiler]
 objectives:
   - id: reads-proc-status
     text: "Read what the kernel keeps about a process, in `/proc/<pid>/status`."

@@ -2,13 +2,15 @@
 # a `check` are judged in checker.ts.
 id: prologue-machine-in-section-05-kernel-up-close
 title: The Kernel Up Close
-summary: "Open the drawing of the Machine in section, see a program killed for touching memory it doesn't own, and ask the kernel its name with uname. You learn what the kernel owns and why every program goes through it."
+summary: "See a program ended for touching the kernel's memory, then ask the kernel its name with uname. You learn what the kernel owns and why every program has to ask."
 minutes: 20
 tracks: [kernel]
 skills: [sys-kernel-role]
 prerequisites: [sys-user-kernel-mode]
-teaches: [memory-address, hex, kernel-space, user-space, signal, monolithic, module, distribution, kernel-thread]
-uses: [kernel, user-kernel-mode, syscall, exit-status, ram, page, command-substitution, c-basics, compiler]
+teaches: [kernel-space, user-space, signal]
+# Met here in one sentence each; their detail is in the Codex.
+names: [memory-address, hex, module, distribution]
+uses: [kernel, process, user-kernel-mode, syscall, exit-status, ram, c-basics, compiler]
 objectives:
   - id: poke-segfaults
     text: "`./poke` tries to read the first byte of kernel space: the CPU faults on that address, and the kernel ends it with `SIGSEGV`."
@@ -30,7 +32,6 @@ hints:
   - "Change the format to `\"%s %s %s\\n\"` and add `u.machine` after `u.release`."
 chips:
   - { command: echo, explain: "echo $? prints how the last command ended: 139 is 128 + signal 11, SIGSEGV" }
-  - { command: cat, explain: "show a file: /proc/modules lists the loaded modules, /etc/os-release the distribution" }
   - { command: uname, explain: "ask the kernel who it is: -s its name, -r its release, -m the CPU type" }
 xray: [syscalls, modules]
 codex:
@@ -68,6 +69,20 @@ codex:
     sources: [arch/x86/include/asm/page_32_types.h, arch/x86/Kconfig, arch/x86/mm/pti.c]
     docs: https://docs.kernel.org/arch/x86/pti.html
     tryIt: cat /proc/self/maps
+  - id: addresses-hex
+    term: addresses and hexadecimal
+    simple: >-
+      Every byte of memory has a number, its address. Addresses are written in
+      hexadecimal: `0x`, then the digits 0 to 9 and a to f.
+    deep: >-
+      Hexadecimal counts in sixteens. A bit is one binary digit, 0 or 1, and eight
+      make a byte; each hex digit stands for exactly four bits, which is why
+      programmers write addresses this way. The Machine is a 32-bit PC, so an address
+      has 32 bits, eight hex digits, and there are 4 GiB of them. 0xc0000000 is
+      3,221,225,472: 3 GiB.
+    sources: [arch/x86/include/asm/page_32_types.h]
+    docs: https://man7.org/linux/man-pages/man7/units.7.html
+    tryIt: printf '%d\n' 0xc0000000
   - id: signals
     term: signals
     simple: >-
@@ -126,8 +141,8 @@ codex:
   - id: kernel-license
     term: the GPL
     simple: >-
-      Linux is free software under the GPL, version 2: use, study, change and share
-      it, and share its source when you share the kernel as a program.
+      Linux is free software under GPL version 2: use, study, change and share it.
+      Whoever ships the kernel must share its source.
     deep: >-
       The kernel is GPL-2.0-only, with a "syscall note" that keeps ordinary programs
       which only use syscalls outside the GPL. Every source file states its license in
@@ -142,13 +157,12 @@ fidelity:
     - uname() and struct utsname, and the kernel's newuname tracepoint
     - "SIGSEGV for a user-mode read of a kernel address, judged from the CPU's fault (exceptions:page_fault_user) and the kill, and status 139 in the shell"
     - the 32-bit split between user space and kernel space at 0xc0000000
-    - "page table isolation off under mitigations=off, as the Machine's dmesg says"
-    - "/proc/modules columns, and its addresses shown as zeros to anyone but root"
-    - "the /lib/modules/<release> layout and its .ko.gz files"
+    - "page table isolation off under mitigations=off (the kernel-user-space card)"
+    - "the /lib/modules/<release> layout and its .ko.gz files (the monolithic-kernel card)"
     - "the release model: mainline, stable and LTS"
     - the license facts
   simplified:
-    - "the drawing's five parts are a map of what the kernel owns, not its real code layout"
+    - "the five things the kernel owns are a map of its job, not its real code layout"
     - "the trace doesn't carry the record uname filled in, so myuname's line is judged by its words and by coming after a uname that answered 0: a line typed into the program after that call would pass too"
 story:
   scene: story.md#scene

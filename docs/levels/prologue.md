@@ -1274,109 +1274,54 @@ UI (`useMachineReboot()`), so the Predict can show the plain entry come back.
 
 ## P.5 — The Kernel Up Close
 
-- **Id:** `prologue-machine-in-section-05-kernel-up-close` · **Region / NPC:** The Machine in Section / init, the Watchdog; on the drawing: the Gatekeeper, the Dockmaster, the Maintainer · **Tracks:** `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-user-kernel-mode` · **Skills unlocked:** `sys-kernel-role`
+- **Id:** `prologue-machine-in-section-05-kernel-up-close` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-user-kernel-mode` · **Skills unlocked:** `sys-kernel-role`
+
+**Question:** Why must a program ask the kernel, instead of taking what it needs?
+`poke` takes, and is ended; `myuname` asks, and is answered.
+
+**Teaches:** `kernel-space`, `user-space`, `signal`. **Names** (one sentence each;
+the Codex has the detail): `memory-address`, `hex`, `module`, `distribution`.
+**Tools:** `poke`, `echo $?`, the `uname` syscall and command. The story text is the
+level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** I keep an old drawing. The Machine, cut open, like a page from a service manual. "Section of the Machine, before the Kernelfall."
+> **init:** In The Boot Path, the kernel was the biggest of the four hands. Tonight we open it. You know the rule from First Words: a program asks the kernel with a syscall. So what happens to a program that doesn't ask?
 >
-> **init:** Bottom floor: the hardware. Top floor: us, the programs. Between them, filling most of the page: the Kernel.
+> **The Watchdog:** I've seen it. It is quick.
 >
-> **The Watchdog:** The Kernel isn't a process like you, child. It's the thing that runs processes. (It keeps a few helpers of its own. They work for it.)
->
-> **init:** Every one of us goes through it. None of us goes around it. Let me show you why we can't.
+> **init:** `poke.c` is in the editor. It tries to read the kernel's own memory, directly.
 
 ### See it (X-ray)
 
-The Section drawing opens inside (a new X-ray view): hardware at the bottom, the
-kernel's parts in the middle, Userland on top. Each command lights the parts it
-touches.
+1. **Name:** _address_, the number of a byte of memory, written in hexadecimal
+   (`0x`, digits `0` to `9` then `a` to `f`). **Do:** Run builds `poke` (a starter
+   the setup doesn't build) and runs it; it reads the byte at `0xc0000000`. Then
+   `echo $?`. **See** (real output):
 
-**Part 1: what the kernel owns.** Five things, and a program reaches none of them
-directly: **CPU time** (who runs, and when), **memory**, **devices**, **files** and
-the **network**. The kernel shares them out, keeps programs apart, and checks every
-request.
+   ```
+   $ ./poke
+   Segmentation fault         ./poke
+   $ echo $?
+   139
+   ```
 
-**Part 2: kernel space and user space.** Every byte of memory has a number, its
-**memory address**; `0x` means hexadecimal, and a **bit** (0 or 1, eight to a byte)
-is what each hex digit packs four of. The Machine is a 32-bit PC: 4 GiB of
-addresses per process. The lower 3 GiB (`0x00000000`–`0xbfffffff`) are **user
-space**; the top 1 GiB, from `0xc0000000`, is **kernel space**, present in every
-process but locked (`CONFIG_VMSPLIT_3G`, `PAGE_OFFSET`).
-
-The player opens `poke.c` (a starter the setup doesn't build) and presses Run, which
-builds `poke` and runs it: it reads the first byte of kernel space, `0xc0000000`.
-Then `echo $?` (real output):
-
-```
-$ ./poke
-Segmentation fault         ./poke
-$ echo $?
-139
-```
-
-```
---- SIGSEGV {si_signo=SIGSEGV, si_code=SEGV_MAPERR, si_addr=0xc0000000} ---
-+++ killed by SIGSEGV +++
-```
-
-The CPU refused the read, because `poke` runs in user mode. The kernel was called in
-to deal with it, and ended `poke` with a **signal**: a short notice the kernel
-delivers to a process. This one, `SIGSEGV` ("segmentation violation", a bad memory
-access, number 11), ends the process unless it was prepared for it; the shell
-reports 128 + 11 = 139. Other signals: `SIGINT` when you press Ctrl-C, `SIGTERM` for
-"please stop". "Not its memory, not the hardware. It has to ask."
-
-Page-table isolation (PTI, against Meltdown) would hide most of the kernel while
-user code runs; the Machine boots with `mitigations=off`, and its `dmesg` says
-`Kernel/User page tables isolation: disabled on command line.`
-
-**Part 3: one big program, with add-ons.** Linux is a **monolithic** kernel: the
-scheduler, memory, filesystems, drivers and networking all run in kernel mode, in
-one program. (A **microkernel**, like seL4 or QNX's, keeps only the basics in the
-kernel and runs drivers and filesystems as separate processes that pass messages;
-safer when a driver fails, slower to talk.) Linux can still grow while it runs:
-**modules**, pieces of the kernel kept in files and added when needed.
-
-```
-$ ls /lib/modules/$(uname -r)/kernel
-arch      drivers   kernel    net       sound
-crypto    fs        lib       security  virt
-$ cat /proc/modules
-virtio_net 81920 0 - Live 0x00000000
-net_failover 16384 1 virtio_net, Live 0x00000000
-failover 12288 1 net_failover, Live 0x00000000
-ext4 749568 0 - Live 0x00000000
-...
-```
-
-The Dockmaster speaks from the drawing: "Modules wait on disk until they're needed.
-I load them. When the Deep wakes up, you'll write one." 868 modules ship as
-`.ko.gz` files; twelve are loaded. Each line gives the size, then the **reference
-count** (how many things use the module now: often the modules named after it, like
-`ext4` using `jbd2`; `9p`'s `1 -` is the mounted root filesystem), then the address,
-shown as zeros for anyone but root.
-
-**Part 4: Linux and the distribution.** `uname -sr` prints `Linux 6.18.63-0-virt`:
-that's the kernel. `cat /etc/os-release` prints `PRETTY_NAME="Alpine Linux v3.24"`:
-that's the **distribution**, Linux plus everything around it. init: "Linux is only
-the kernel. I, the shell, the C library, `ls` and `cat`: we're the rest." Alpine
-uses musl and BusyBox, not the GNU tools and C library, so it's "Alpine Linux",
-not "GNU/Linux".
-
-**Part 5: which Linux.** The Maintainer, from the drawing's last panel: "New kernels
-come out of **mainline** about every nine or ten weeks. **Stable** releases add
-fixes to them. Once a year, one becomes **LTS**, long-term support, and gets fixes
-for years. This Machine runs 6.18 LTS, so everything you learn here stays true while
-you learn it." The release reads like a label: `6.18`, its 59th stable update,
-Alpine's build `0` of the `virt` flavour. And one line about the license: Linux is
-free software under the **GPL, version 2**: anyone may use, study, change and share
-it, and whoever shares the kernel as a program must share its source too.
+2. **Name:** _user space_ and _kernel space_. Every process has 4 GiB of addresses to
+   itself: the lower 3 GiB are user space, where its own program and data live; the
+   top 1 GiB, from `0xc0000000`, is kernel space, the kernel's memory, there in every
+   process and locked while the CPU is in user mode.
+3. **Name:** _signal_, a short notice the kernel delivers to a process. The CPU
+   refused the read and called the kernel, which ended `poke` with `SIGSEGV`, number
+   11, a bad memory access. `echo $?` prints the last command's exit status, and the
+   shell reports "ended by signal 11" as 128 + 11.
 
 ### Build it
 
-The player writes their own `uname`: the `uname` command is a thin wrapper around a
-syscall of the same name.
+The player finishes their own `uname`. init first says what the lock protects: the
+kernel owns the CPU's time, the memory, the devices, the files and the network,
+shares them out and checks every request; it is one big program that can add pieces
+to itself while it runs, _modules_. So a program that wants any of it has to ask, and
+`uname` is the syscall that asks the kernel who it is.
 
 - **Starter provides:** `myuname.c`, complete except one line:
 
@@ -1419,11 +1364,10 @@ syscall of the same name.
 ### Watch it
 
 **Predict:** "Your program and the `uname` command: will they print the same
-release?" Both made the same syscall, and X-ray shows them side by side:
-
-```
-uname({sysname="Linux", nodename="kernelfall", ...}) = 0
-```
+release?" Yes: both made the same syscall and got the same answer, because the
+kernel keeps that record in its own memory, the memory `poke` could not read. X-ray
+shows both as `uname`, served by the kernel function `__ia32_sys_newuname` (the
+trace itself calls the syscall `newuname`):
 
 ```
 $ ./myuname
@@ -1432,16 +1376,14 @@ $ uname -srm
 Linux 6.18.63-0-virt i686
 ```
 
-`i686` is a 32-bit x86 CPU of the Pentium Pro family or later; the Machine's calls
-itself a Pentium III. The Section drawing gets its first label, "kernel", and a dotted line around it:
-"monolithic". The Gatekeeper's portrait appears at the line between user and kernel
-space: "Every request comes through me. One day you'll come through in person."
+`i686` is the kernel's word for this kind of 32-bit PC CPU. `Linux` is the kernel alone: with
+a shell, tools and init around it, it makes a _distribution_, and the Machine's is
+Alpine. init closes on the two programs: `poke` reached across the Gate and was
+ended; `myuname` asked at the Gate and was answered.
 
 ### Debrief
 
-> **init:** It owns the CPU, the memory, the devices, the files and the wires, and it shares them out. That's a kernel.
->
-> **init:** But how does it know what hardware it has? Nobody tells it at the factory. Let's go down to the bottom floor.
+> **init:** So the kernel's memory is locked to every program. Take, and the kernel ends you. Ask, and it answers. It owns every device too, but who tells it which devices it has? In Finding the Hardware, we go down to the bottom of the drawing.
 
 P.6 begins.
 
@@ -1478,6 +1420,15 @@ P.6 begins.
     `arch/x86/Kconfig`, `arch/x86/mm/pti.c`.
   - **Read:** https://docs.kernel.org/arch/x86/pti.html. Deepened by P.8
     (pages and maps).
+- **Addresses and hexadecimal** (`addresses-hex`)
+  - **Simple:** Every byte of memory has a number, its address. Addresses are
+    written in hexadecimal: `0x`, then the digits 0 to 9 and a to f.
+  - **Deep:** Hexadecimal counts in sixteens. A bit is one binary digit, 0 or 1,
+    and eight make a byte; each hex digit stands for exactly four bits, which is why
+    programmers write addresses this way. The Machine is a 32-bit PC, so an address
+    has 32 bits, eight hex digits, and there are 4 GiB of them. `0xc0000000` is
+    3,221,225,472: 3 GiB. — `arch/x86/include/asm/page_32_types.h`.
+  - **Read:** man 7 `units`. Try: `printf '%d\n' 0xc0000000`.
 - **Signals** (`signals`)
   - **Simple:** Short notices the kernel delivers to a process. Some end it:
     `SIGSEGV` for a bad memory access, `SIGINT` for Ctrl-C.
@@ -1516,14 +1467,35 @@ P.6 begins.
   - **Read:** https://docs.kernel.org/process/2.Process.html. Deepened by 2.13
     (how mainline works).
 - **The GPL** (`kernel-license`)
-  - **Simple:** Linux is free software under the GPL, version 2: use, study, change
-    and share it, and share its source when you share the kernel as a program.
+  - **Simple:** Linux is free software under GPL version 2: use, study, change and
+    share it. Whoever ships the kernel must share its source.
   - **Deep:** The kernel is `GPL-2.0-only`, with a "syscall note" that keeps
     ordinary programs which only use syscalls outside the GPL. Every source file
     states its license in an `SPDX-License-Identifier` line. Modules declare theirs
     with `MODULE_LICENSE()`. — `COPYING`, `LICENSES/`,
     `Documentation/process/license-rules.rst`.
   - **Read:** https://docs.kernel.org/process/license-rules.html. Deepened by 2.2.
+
+### Moved out of the story
+
+| Fact (old story)                                                        | Now                                                        |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| the old drawing; "bottom floor, top floor"                              | gone: P.1 introduced the Section drawing                   |
+| bits, eight to a byte; a hex digit is four bits; 3,221,225,472          | `addresses-hex` Deep                                       |
+| `0x00000000` to `0xbfffffff`; 32 bits make 4 GiB                        | `kernel-user-space` Deep and `addresses-hex` Deep          |
+| `strace`'s `SIGSEGV` lines, `si_addr`, `SEGV_MAPERR`                    | `kernel-resources` Deep has `SEGV_MAPERR`; rest is gone    |
+| `SIGINT` for Ctrl-C, `SIGTERM`; a process may be ready for a signal     | `signals` Simple has `SIGINT`; `SIGTERM` waits for S.3     |
+| page table isolation, Meltdown, `mitigations=off`                       | `kernel-user-space` Deep                                   |
+| monolithic against microkernel; seL4, QNX                               | `monolithic-kernel` Deep; the story says "one big program" |
+| `/lib/modules/$(uname -r)`, `/proc/modules`, 868 modules, twelve loaded | `monolithic-kernel` Deep; the counts are gone; 2.2         |
+| a module's reference count; `ext4` and `jbd2`; `9p`'s `1 -`             | gone; 2.2 (your first module)                              |
+| `/etc/os-release`; GNU/Linux; musl and BusyBox                          | `linux-distribution` Deep; the story names Alpine          |
+| mainline, stable, LTS; reading the release label                        | `kernel-versions` Simple and Deep                          |
+| the GPL                                                                 | `kernel-license`                                           |
+| `i686` is the Pentium Pro's family; the Machine's CPU is a Pentium III  | gone                                                       |
+| `newuname` dates from when the record gained a sixth field              | gone; the story keeps the name                             |
+| the Dockmaster, the Maintainer, the Gatekeeper                          | gone: they return in their own regions                     |
+| "It keeps a few helpers of its own": the kernel's threads               | gone; P.7 shows them in `ps`                               |
 
 ### Real-world card
 
@@ -1881,101 +1853,90 @@ Met with level content only: `lab.files` writes `board.c` to `/usr/local/src`,
 
 ## P.7 — Who Runs
 
-- **Id:** `prologue-machine-in-section-07-who-runs` · **Region / NPC:** The Machine in Section, the processes floor / init, the Watchdog; on the drawing: the Verger · **Tracks:** `userland`, `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-kernel-role` · **Skills unlocked:** `proc-process-basics`
+- **Id:** `prologue-machine-in-section-07-who-runs` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `userland`, `kernel` · **Time:** ~20 min · **Prerequisites:** `sys-kernel-role` · **Skills unlocked:** `proc-process-basics`
+
+**Question:** With one CPU, how do all the Machine's processes run at once? Most are
+asleep, and the scheduler gives the ready ones turns.
+
+**Teaches:** `scheduler`, `parent`, `kernel-thread`. **Names** (one clause each):
+`redirection` (S.4 teaches it), `background-job` and `device-file` (no built level
+teaches them yet). **Tools:** `ps`, `/proc/$$/status`, `yes`, `top`, `kill`,
+`getppid`. The story text is the level's `story.md`; this section lists its beats.
+Every block is one recorded session, so its PIDs agree: the shell is 472 throughout.
 
 ### Scene
 
-> **init:** The bottom floor's done: the hardware, and a driver for each part. One floor up, someone has to decide who gets to use the CPU.
+> **init:** In Finding the Hardware, the kernel gave every device a driver. One of those devices is the CPU, and the Machine has just one. Yet `ps` is about to show you dozens of processes. How do they all run?
 >
-> **init:** Remember: a program is a file; a process is a program running, with its own memory and its own number. Every process also has a parent: the process that started it.
+> **The Watchdog:** One CPU. One. Everybody wants it.
 >
-> **The Watchdog:** And one CPU. One. Everybody wants it.
->
-> **init:** So the kernel takes turns for us, many times a second. Let's watch.
+> **init:** They take turns, many times a second, and the kernel decides whose turn it is.
 
 ### See it (X-ray)
 
-1. BusyBox `ps` lists every process (real output, cut with `...`; PIDs vary):
+1. **Do** (the first line): `ps` (real output, cut with `...`):
 
    ```
    $ ps
    PID   USER     TIME  COMMAND
-       1 root      0:00 /sbin/init
+       1 root      0:01 /sbin/init
        2 root      0:00 [kthreadd]
        3 root      0:00 [pool_workqueue_]
    ...
-      15 root      0:00 [ksoftirqd/0]
+     472 you       0:00 -bash
    ...
-      39 root      0:00 [kswapd0]
-   ...
-     471 root      0:01 cat /sys/kernel/tracing/trace_pipe
-     473 root      0:00 {kf-control} /bin/sh /usr/sbin/kf-control
-     480 you       0:00 -bash
-     491 you       0:00 ps
+     485 you       0:00 ps
    ```
 
-   PID 1 is init. PID 2, `kthreadd`, is the parent of the **kernel threads**, in
-   brackets, dozens of them: the kernel's own workers, which the scheduler runs like
-   processes but which only ever run kernel code (`ksoftirqd/0` finishes interrupt
-   work for the one CPU; `kswapd0` frees memory). At the bottom: the trace reader
-   that feeds X-ray, the game's control shell, the player's login shell `-bash`, and
-   `ps`.
-2. `cat /proc/$$/status` (`$$`: the shell's own PID) shows what the kernel keeps
-   about the player's shell; the level shows an excerpt:
+   **Name:** _kernel threads_, the names in brackets: the kernel's own workers,
+   which take turns on the CPU like processes but run only the kernel's code. PID 1
+   is init; near the bottom, the player's shell and `ps` itself.
+2. **Name:** _parent_, the process that started a process. `/proc` has a folder per
+   PID, and `$$` is the shell's word for its own. **Do:** `cat /proc/$$/status`:
 
    ```
    Name:	bash
+   ...
    State:	S (sleeping)
-   Pid:	480
+   ...
+   Pid:	472
    PPid:	1
    ...
-   VmRSS:	    2236 kB
-   ...
-   voluntary_ctxt_switches:	218
-   nonvoluntary_ctxt_switches:	294
    ```
 
-   Every count and size here changes from run to run; the story says so.
-
-   `S (sleeping)`: waiting for you to type. `PPid: 1`: its parent is init. `VmRSS`:
-   the memory it is using right now. The two counters say how often it gave up the
-   CPU because it had to wait (voluntary), or had it taken away because its turn was
-   over (nonvoluntary).
-3. **The scheduler.** `nproc` prints `1`. The player types init's line (real
-   output from a recorded run):
-
-   ```
-   $ yes > /dev/null & yes > /dev/null & yes > /dev/null & sleep 4; top -b -n 1 | head -12; kill %1 %2 %3
-   [1] 495
-   [2] 496
-   [3] 497
-   Mem: 21200K used, 202452K free, 8K shrd, 0K buff, 2852K cached
-   CPU:   5% usr  54% sys   0% nic   0% idle   0% io  39% irq   0% sirq
-   Load average: 0.90 0.21 0.07 5/62 500
-     PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND
-     471     1 root     R     1716   1%   0  25% cat /sys/kernel/tracing/trace_pipe
-     495   480 you      R     1652   1%   0  10% yes
-     497   480 you      R     1652   1%   0   9% yes
-     496   480 you      R     1652   1%   0   9% yes
-     499   480 you      R     1664   1%   0   7% top -b -n 1
-   ...
-   ```
-
-   All three `R` (running, or ready to run), all on CPU `0`: one runs at a time, the
-   others wait in the **run queue** and take turns in short slices. The trace of
-   every `write` they make costs CPU too: the trace reader's 25%, the `sys` share,
-   and the `irq` share, mostly `ttyS1`, the serial line carrying the trace out (in
-   those four seconds it interrupted about 5,000 times, as often as the timer;
-   `ttyS0` 80). Watching isn't free. X-ray shows the one CPU's lane, with the
-   three taking turns.
-4. **Many at once.** One picture: two processes add 1 to the same counter; one is
-   stopped halfway through its addition while the other does its own, and one
-   addition is lost. One CPU is enough. The Verger, on the drawing: "That's why the
-   kernel has locks, and why I write down the order every lock is taken." (Lock
-   Cathedral, 2.9.)
+   `S (sleeping)`: waiting for the player to type, so it needs no CPU. `PPid: 1`:
+   its parent is init.
+3. Almost every process on the list is asleep like the shell, waiting for a key, a
+   file or a timer; the kernel shares the CPU only among the few that are ready to
+   run. That is the first half of the answer.
 
 ### Build it
 
+- **The crowd.** The player types init's line as it is: three `yes`, four seconds,
+  one look with `top`, then `kill`, which sends each a signal (real output):
+
+  ```
+  $ yes > /dev/null & yes > /dev/null & yes > /dev/null & sleep 4; top -b -n 1 | head -12; kill %1 %2 %3
+  [1] 487
+  [2] 488
+  [3] 489
+  Mem: 19268K used, 204336K free, 4K shrd, 0K buff, 2848K cached
+  CPU:   4% usr  34% sys   0% nic   0% idle   0% io  61% irq   0% sirq
+  Load average: 1.26 0.30 0.10 4/59 492
+    PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND
+    471     1 root     R     1716   1%   0  39% cat /sys/kernel/tracing/trace_pipe
+    488   472 you      R     1652   1%   0  12% yes
+    487   472 you      R     1652   1%   0  12% yes
+    489   472 you      R     1652   1%   0  12% yes
+    491   472 you      R     1664   1%   0  11% top -b -n 1
+  ...
+  ```
+
+  One clause each: `> /dev/null` sends output to a device that throws it away; `&`
+  starts a program in the background, so the shell doesn't wait. All three show `R`,
+  running or ready to run; only one is on the CPU at any instant. **Name:** the
+  _scheduler_, the part of the kernel that decides who runs and for how long. The
+  `cat` above them is X-ray's own feed: watching costs CPU time too.
 - **Starter provides:** `mypid.c` (not `whoami.c`: `whoami` is a BusyBox applet),
   complete except one line:
 
@@ -2003,27 +1964,27 @@ Met with level content only: `lab.files` writes `board.c` to `/usr/local/src`,
 
 ### Watch it
 
-**Predict:** "Run `./mypid` twice. Same PID both times? Same parent?" Different
-PIDs (each run is a new process); the same parent (the shell started both).
+**Predict:** "Run `./mypid` twice. Same PID both times? Same parent?" A new PID
+each time (every run is a new process, and the kernel hands out the next free
+number); the same parent (the shell started both, and 472 is the PID `ps` showed).
 
 ```
 $ ./mypid
-I am process 502
-My parent is 480
+I am process 493
+My parent is 472
 $ ./mypid
-I am process 503
-My parent is 480
+I am process 494
+My parent is 472
 ```
 
-The processes floor of the Section drawing fills with small figures: init at the
-root, the shell under it, the kernel threads off to one side. Labels appear: the
-Process District (1.4–1.8), the Clockwork Court (3.6–3.8), the Lock Cathedral (2.9).
+init closes on the family tree: init started the shell, the shell started `mypid`,
+and the kernel threads all descend from `kthreadd`, PID 2. After the crowd, bash also
+prints a `Terminated` line for a `yes` before the next prompt; the story's excerpt
+leaves it out.
 
 ### Debrief
 
-> **init:** Every process has a number, a parent and a state, and the kernel takes turns giving each one the CPU.
->
-> **init:** But each of them also thinks it has the whole Machine's memory to itself. It doesn't. Let's see how the kernel pulls that off, in Pages and Maps.
+> **init:** Every process has a number, a parent and a state, and the scheduler gives each one a turn on the CPU. Each of them also believes it has the Machine's memory to itself. It doesn't. In Pages and Maps, you see how the kernel pulls that off.
 
 P.8 begins.
 
@@ -2066,6 +2027,23 @@ P.8 begins.
     frees memory when it runs low; `kworker` threads run workqueues. —
     `kernel/kthread.c`, `kernel/softirq.c`, `mm/vmscan.c`.
   - **Read:** man 1 `ps`. Deepened by 2.10b (workqueues).
+
+### Moved out of the story
+
+| Fact (old story)                                                          | Now                                                     |
+| ------------------------------------------------------------------------- | ------------------------------------------------------- |
+| "a program is a file; a process is a program running"                     | P.1 taught it; `process` Simple                         |
+| `kthreadd` is the parent of the kernel threads                            | the story's last line; `kernel-threads` Deep            |
+| `ksoftirqd/0`, `kswapd0`                                                  | `kernel-threads` Deep                                   |
+| the two programs of root's near the bottom of `ps`; `-bash`'s dash        | gone; the `cat` line in `top` gets one sentence         |
+| what `/proc` is                                                           | P.1 named it; P.9 teaches it                            |
+| "your PIDs will differ"; counts change from moment to moment              | gone: a banned hedge                                    |
+| `VmRSS`; voluntary and nonvoluntary context switches                      | `scheduler` card's try-it (`grep ctxt`); P.8 for memory |
+| `nproc` prints 1                                                          | the `nproc` chip; the real-world card                   |
+| the run queue; "a short slice of time"; the `CPU` column is always 0      | `scheduler` Deep; the story says "a short turn"         |
+| what tracing costs: the `sys` and `irq` shares, `ttyS1`, 5,000 interrupts | `fidelity`; one sentence stays                          |
+| a race on a shared counter; the Verger and locks                          | 2.9 (many users at once)                                |
+| the Section drawing filling with figures; district labels                 | gone                                                    |
 
 ### Real-world card
 

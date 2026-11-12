@@ -270,6 +270,7 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
     lines: [
       built('mypid.c'),
       ...typed(
+        'ps',
         'cat /proc/$$/status',
         'yes > /dev/null & yes > /dev/null & yes > /dev/null & sleep 4; top -b -n 1 | head -12; kill %1 %2 %3',
         './mypid',

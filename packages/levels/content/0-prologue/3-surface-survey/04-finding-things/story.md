@@ -10,6 +10,8 @@
 
 > **init:** Three examples, from `/home/you`. `find` takes a folder to start from, then _tests_ that each path must pass.
 
+---
+
 ```
 $ find /etc -name motd
 /etc/motd
@@ -41,6 +43,8 @@ find: /sys/kernel/tracing: Permission denied
 /usr/bin/passwd
 ```
 
+---
+
 > **init:** Two results, buried in complaints. Watch them leave in X-ray: the results through `writev(1, ...)`, _standard output_. The complaints through `write(2, ...)`, _standard error_: file descriptor 2, kept for error messages, so results and errors can be told apart.
 >
 > **init:** What's behind those locks? `/root` is root's home, and its lock is `rwx------`. Under `/proc`, each process's `fd`, `fdinfo`, `ns` and `map_files` show its open files and more: for my processes and the kernel's threads, they're root's, so they're closed to you. Yours are open.
@@ -66,6 +70,8 @@ attic/shelf
 
 > **init:** Who did that, `find` or bash? Watch X-ray. Bash forks a child to run `find`, as always. Then, before the child becomes `find`, it does three more calls. The child of `find attic -type d > folders.txt` (trimmed: just before these, it closes and reads bash's own pipe, which holds it until bash is ready):
 
+---
+
 ```
 open("folders.txt", O_WRONLY|O_CREAT|O_TRUNC|O_LARGEFILE, 0666) = 3
 dup2(3, 1)                                                       = 1
@@ -86,6 +92,8 @@ execve("/usr/bin/find", ["find", "attic", "-type", "d"], ...)    = 0
 > - Find the files in `/tmp` that belong to `guest`.
 > - Run `find / -name passwd`. Click one line that's a result and one that's an error; X-ray shows each one's fd. Then run it again with the complaints sent to `/dev/null`.
 
+---
+
 ```
 $ find attic -name lantern-plan.txt
 attic/boxes/old/lantern-plan.txt
@@ -100,6 +108,12 @@ Someday.
 ## Watch it
 
 > **init:** `find / -name passwd > found.txt`: which lines still show on your screen?
+>
+> - the results
+> - [x] the complaints
+> - both
+
+---
 
 ```
 $ find / -name passwd > found.txt

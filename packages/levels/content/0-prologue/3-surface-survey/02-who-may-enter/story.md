@@ -21,6 +21,8 @@ cat: can't open '/etc/shadow': Permission denied
 
 > **init:** Who are you, to the kernel? `id` asks. A _group_ is a named set of users that can share files; yours, `you`, holds only you.
 
+---
+
 ```
 $ id
 uid=1000(you) gid=1000(you) groups=1000(you)
@@ -52,6 +54,8 @@ brw-------    1 root     root        8,   0 Oct 31 16:30 /dev/sda
 
 > **init:** Your turn to read locks. For each line: may you read it? May you change it? Answer before the next line lights.
 
+---
+
 ```
 $ ls -l notes.txt /etc/passwd /etc/shadow
 -rw-r--r--    1 root     root           735 Oct 31 16:31 /etc/passwd
@@ -79,6 +83,8 @@ $ ls -l hi
 -rwxr--r--    1 you      you          17208 Oct 31 16:31 hi
 ```
 
+---
+
 > **init:** Bash forked a child to run `hi`, and the kernel refused the child's `execve` with `EACCES`. The child printed why and exited with status 126, "found, but couldn't run". With `x` back for its owner, it runs. Group and others still have no `x`: `-x` took it from everyone, `u+x` gave it back to you alone.
 
 A folder's `x`:
@@ -98,6 +104,8 @@ Lamps to check: Userland, the Harbor, the Gate. Not yet.
 >
 > **init:** Now your errand. Look at `ls -l notes.txt`: who may read it? Watch the neighbour, `guest`, uid 1001, try. I knock for them, as root: `runuser -u guest -- cat /home/you/notes.txt` runs `cat` as `guest`. (Only root may use `runuser`. Anyone else who wants to become another user needs `su` and that user's password.)
 
+---
+
 ```
 # runuser -u guest -- cat /home/you/notes.txt
 Lamps to check: Userland, the Harbor, the Gate. Not yet.
@@ -108,6 +116,12 @@ Lamps to check: Userland, the Harbor, the Gate. Not yet.
 ## Watch it
 
 > **init:** With `notes.txt` at `-rw-------`, who can read it: you (uid 1000), the neighbour (uid 1001), me (uid 0)? You and the neighbour try first; then I'll tell you how my own try went.
+>
+> - only you
+> - [x] you and me, but not the neighbour
+> - all three of us
+
+---
 
 ```
 $ chmod 600 notes.txt

@@ -18,9 +18,19 @@ export interface BuildHistory {
   readonly latestErrors: number
 }
 
+/** A command line that finished earlier in the play-through. */
+export interface FinishedCommand {
+  readonly commandLine: string
+  readonly status: number
+}
+
 /** The lab events of one command line, and what the compiles reported; or a boot that just ran. */
 export interface CheckInput {
   readonly events: readonly LabEvent[]
+  /** As typed. Missing outside a play-through (a boot, the placement check, tests of the events alone). */
+  readonly commandLine?: string
+  /** The commands finished before this one since the level started, oldest first. Missing: read as none. */
+  readonly history?: readonly FinishedCommand[]
   /** Missing where no compiler is wired in (tests of the lab events alone): read as none. */
   readonly warnings?: readonly CompilerWarning[]
   /** Missing where no compiler is wired in: read as no failed build. */
@@ -33,6 +43,8 @@ export interface CheckInput {
 export interface CheckReport {
   readonly objectivesMet: readonly string[]
   readonly taint: readonly TaintEvent[]
+  /** For unmet objectives, by id: what the Machine saw instead, one sentence, never the fix. */
+  readonly observed?: Readonly<Record<string, string>>
 }
 
 /** Judges behavior in the event stream, never the player's source. Must be pure. */
@@ -49,4 +61,6 @@ export interface CheckVerdict {
   readonly passed: boolean
   readonly missing: readonly Objective[]
   readonly taint: readonly TaintEvent[]
+  /** By the id of a missing objective: what the latest run showed instead. */
+  readonly observed?: Readonly<Record<string, string>> | undefined
 }

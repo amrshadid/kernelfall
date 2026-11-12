@@ -9,6 +9,27 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Added
 
+- **The Guide shows a step one beat at a time.** It stops at the next thing you do and
+  shows the rest once you've run it (or pressed Continue), so a result is on your
+  terminal before it is explained, and a Predict's answer waits for your run. Level
+  authors mark a pause with `---` in `story.md`.
+- **init's drawing of the Machine is on screen in Power On.** It hangs beside the
+  terminal, dark, and each command you run draws itself on it: the command in Userland,
+  how many requests crossed the Gate, and the kernel parts that served them.
+- **init's questions wait for your answer.** A question in the Guide now offers its
+  answers; pick one (or "Just show me") and your call is marked beside what really
+  happens. No score. When the question is about something you are about to run, your
+  call is kept and the answer is marked only after you run it. 14 of the 16 levels ask
+  one; level authors write it as a list under the question in `story.md`.
+- **Recall cards when a level ends.** The level-complete screen names what the level
+  taught and deals three Codex cards from earlier levels, face down: say what each one
+  is, turn it, and mark it "I knew it" or "Not yet". No score; a card you missed comes
+  back first. The last level of a region deals five cards from the whole region. Your
+  marks are saved with your progress.
+- **A missed objective says what your last run did instead**, for example "Your program
+  exited with status 3, not 0".
+- `make` on the Machine, the loopback interface up, and `/dev/fd`, so bash's `<(…)`
+  works.
 - **Run shows its progress:** "Building…" while gcc compiles, "Running…" while the
   program runs (an interactive one until it exits), then Run again.
 - `pnpm vm:facts` records what the Machine prints for the commands levels quote (uname,
@@ -22,6 +43,15 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Changed
 
+- The Machine runs kernel 6.18.63. `tcc` is gone: it could never link a program there.
+- **A quieter Guide.** The Scene shows only its story: the objectives appear with the
+  first thing you are asked to do, and the level's Codex cards fold to one line until
+  Watch it.
+- **X-ray fits a small laptop screen.** On a 1280×720 screen its drawing is larger and the
+  sentence under it is no longer hidden: the controls keep to one row, and on a short
+  screen the title block gives its height to the drawing.
+- The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
+- After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p
   root, the IDE disk, virtio-net, and bash as init's shell.
 

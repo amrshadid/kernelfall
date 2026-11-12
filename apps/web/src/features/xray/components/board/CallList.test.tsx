@@ -2,7 +2,7 @@
 import type { CallListView, XrayCall } from '@features/xray/types'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CallList } from './CallList'
+import { CallList, CallListShell } from './CallList'
 
 afterEach(cleanup)
 
@@ -81,5 +81,36 @@ describe('CallList', () => {
     render(<CallList view={view(false, true)} selectedId={null} onSelect={vi.fn()} onToggle={vi.fn()} />)
     expect(screen.getByText(/4 calls so far/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: /^execve/ })).toBeNull()
+  })
+})
+
+describe('CallListShell', () => {
+  const shell = (all: boolean, onToggleAll = vi.fn()) =>
+    render(
+      <CallListShell
+        view={view(false)}
+        selectedId={4}
+        onSelect={vi.fn()}
+        onToggle={vi.fn()}
+        all={all}
+        onToggleAll={onToggleAll}
+      />
+    )
+
+  it('folds the list to the call on show, with a way to list them all', () => {
+    const onToggleAll = vi.fn()
+    shell(false, onToggleAll)
+    expect(screen.getByText('write(1, "hi\\n", 3) = 0')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /the program/ })).toBeNull()
+    const toggle = screen.getByRole('button', { name: 'All 4 calls' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(toggle)
+    expect(onToggleAll).toHaveBeenCalled()
+  })
+
+  it('lists every call once opened', () => {
+    shell(true)
+    expect(screen.getByRole('button', { name: /the program/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Only this call' }).getAttribute('aria-expanded')).toBe('true')
   })
 })

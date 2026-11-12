@@ -1,6 +1,7 @@
 export { BootDrawing, type BootDrawingProps } from './BootDrawing'
 export { ByteCells, type ByteCellsProps } from './ByteCells'
 export { CpuLanesDrawing, type CpuLanesDrawingProps } from './CpuLanesDrawing'
+export { CrossingDrawing, type CrossingDrawingProps } from './CrossingDrawing'
 export { CrossingTag, type CrossingTagProps } from './CrossingTag'
 export { DrawingBox, type DrawingBoxProps } from './DrawingBox'
 export { DrawingTable, type DrawingTableProps } from './DrawingTable'

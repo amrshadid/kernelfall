@@ -109,16 +109,12 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
   {
     level: 'prologue-boot-path-01-power-on',
     name: 'solution',
-    lines: typed(
-      'echo hello',
-      'echo the lamps are out',
-      'ls /',
-      'ls /bin',
-      'cat /etc/motd',
-      'cat /etc/hostname',
-      'ls /dev',
-      'cat /proc/version'
-    ),
+    lines: typed('cat /proc/version', 'ls /', 'cat /etc/motd'),
+  },
+  {
+    level: 'prologue-boot-path-01-power-on',
+    name: 'other-paths',
+    lines: typed('cat /proc/cmdline', 'ls /home', 'cat /etc/hostname'),
   },
   {
     level: 'prologue-boot-path-02-first-words',
@@ -242,7 +238,7 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
         edits: [
           [
             '\tif (uname(&u) < 0)\n\t\treturn 1;\n\tprintf("%s %s %s\\n", u.sysname, u.release, u.machine);',
-            '\t(void)u;\n\tprintf("Linux 6.18.59-0-virt i686\\n");',
+            '\t(void)u;\n\tprintf("Linux 6.18.63-0-virt i686\\n");',
           ],
         ],
       },
@@ -260,7 +256,7 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
     name,
     files: { 'lighthouse.dts': `${MACHINE}/06-finding-the-hardware/${name}/lighthouse.dts` },
     lines: typed(
-      ...(name === 'solution' ? ['readlink /sys/bus/pci/devices/0000:00:1e.0/driver'] : []),
+      ...(name === 'solution' ? ['lspci -k', 'readlink /sys/bus/pci/devices/0000:00:1e.0/driver'] : []),
       'dtc -I dts -O dtb -o lighthouse.dtb lighthouse.dts',
       'board lighthouse.dtb'
     ),
@@ -396,6 +392,18 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
     level: 'prologue-surface-survey-02-who-may-enter',
     name: 'not-private',
     lines: typed('chmod 640 notes.txt', 'ls -l notes.txt', 'chmod 000 notes.txt', 'ls -l notes.txt'),
+  },
+  {
+    // hi runs, but its x was never taken away, so it never came back.
+    level: 'prologue-surface-survey-02-who-may-enter',
+    name: 'exec-never-removed',
+    lines: typed('cp /usr/local/bin/say hi', './hi hello, Machine'),
+  },
+  {
+    // The same EACCES, from a note without r inside a box that still has its x.
+    level: 'prologue-surface-survey-02-who-may-enter',
+    name: 'file-not-dir',
+    lines: typed('mkdir box', 'cp notes.txt box/', 'chmod 000 box/notes.txt', 'cat box/notes.txt'),
   },
   {
     level: 'prologue-surface-survey-03-processes',

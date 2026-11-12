@@ -1,4 +1,13 @@
-import type { GuideAction, GuideCheckReport, GuideChip, GuidePlacement, LevelGuide } from '@features/level/types'
+import type {
+  GuideAction,
+  GuideBeat,
+  GuideCheckReport,
+  GuideChip,
+  GuidePace,
+  GuidePart,
+  GuidePlacement,
+  LevelGuide,
+} from '@features/level/types'
 import type { UseLevelCheckResult } from '@kernelfall/game/hooks'
 import { type CommandChip, HINT_TIERS, type LevelDefinition, type LevelRunState } from '@kernelfall/game/types'
 import type { StoryBlock } from '@kernelfall/levels/types'
@@ -20,6 +29,39 @@ export interface GuideInput {
   readonly actions: readonly GuideAction[]
   readonly runChip: (commandLine: string) => void
   readonly placement: GuidePlacement | null
+  readonly pace: GuidePace
+}
+
+/** The step's story cut at its pauses and after each question; a step with neither is one beat. */
+export function beatsOf(blocks: readonly StoryBlock[]): readonly GuideBeat[] {
+  const beats: GuidePart[][] = [[]]
+  let predicts = 0
+  for (const [at, block] of blocks.entries()) {
+    const beat = beats.at(-1) ?? []
+    const last = beat.at(-1)
+    if (block.kind === 'pause') {
+      beats.push([])
+    } else if (block.kind === 'predict') {
+      beat.push({
+        kind: 'predict',
+        id: predicts++,
+        line: { speaker: block.speaker, text: block.text },
+        options: block.options,
+        held: blocks[at + 1]?.kind === 'pause',
+        picked: null,
+        revealed: false,
+        onPick: null,
+      })
+      beats.push([])
+    } else if (block.kind === 'code') {
+      beat.push({ kind: 'code', text: block.text })
+    } else if (last?.kind === 'lines') {
+      beat[beat.length - 1] = { kind: 'lines', lines: [...last.lines, { speaker: block.speaker, text: block.text }] }
+    } else {
+      beat.push({ kind: 'lines', lines: [{ speaker: block.speaker, text: block.text }] })
+    }
+  }
+  return beats.filter((beat) => beat.length > 0)
 }
 
 /** The checker's verdict so far, while building; null before the first judged run. */
@@ -34,7 +76,7 @@ export function checkReportOf(
   }
   return {
     heading: `run ${run.attempts} · ${objectiveCount - verdict.missing.length} of ${objectiveCount} met`,
-    missing: verdict.missing.map((objective) => objective.text),
+    missing: verdict.missing.map(({ id, text }) => ({ text, observed: verdict.observed?.[id] ?? null })),
     taint: verdict.taint.map((event) => `${event.ruleId}: ${event.detail}`),
     held: check.heldTaint.length > 0 ? HELD_PASS_LINE : null,
   }
@@ -61,12 +103,37 @@ export function guideOf(input: GuideInput): LevelGuide {
   const { level, run, blocks, shown, reviewing, check } = input
   const label = STEPS.find((step) => step.id === shown)?.label ?? ''
   const building = (run.phase === 'build' || run.phase === 'oops') && !reviewing
+  const beats = beatsOf(blocks)
+  const { pace } = input
+  // A step looked back at was read to its end.
+  const answered = (id: number) => reviewing !== null || Object.hasOwn(pace.picks, id)
+  const open = beats.findIndex((beat) => beat.some((part) => part.kind === 'predict' && !answered(part.id)))
+  // Nothing past an open question shows, whatever the player runs meanwhile.
+  const limit = open === -1 ? beats.length : open + 1
+  const reached = reviewing ? beats.length : Math.min(Math.max(pace.shown, 1), limit)
+  const asking = open !== -1 && reached === limit
   return {
     stepLabel: label,
     reviewNote: reviewing ? `Looking again at ${label}. Your progress is kept.` : null,
-    lines: blocks.flatMap((block) => (block.kind === 'line' ? [{ speaker: block.speaker, text: block.text }] : [])),
-    code: blocks.flatMap((block) => (block.kind === 'code' ? [block.text] : [])),
-    showObjectives: true,
+    beats: beats.slice(0, reached).map((beat, at) =>
+      beat.map((part) =>
+        part.kind !== 'predict'
+          ? part
+          : {
+              ...part,
+              picked: pace.picks[part.id] ?? null,
+              // A held question shows what happens only once the player's run brought the next beat.
+              revealed: answered(part.id) && (reviewing !== null || !part.held || at < reached - 1),
+              onPick: answered(part.id)
+                ? null
+                : (option) => pace.pick(part.id, option, part.held && option !== null ? reached : reached + 1),
+            }
+      )
+    ),
+    onContinue: reached < beats.length && !asking ? pace.advance : null,
+    // The scene is read first; the list comes with the first thing the player is asked to do.
+    showObjectives:
+      reviewing !== null || (shown !== 'scene' && (shown !== 'see' || input.objectives.some((o) => o.passed))),
     objectives: input.objectives,
     checkReport: reviewing ? null : checkReportOf(run, check, level.objectives.length),
     chips: building ? chipsOf(level.chips ?? [], input.runChip) : [],
@@ -84,6 +151,7 @@ export function guideOf(input: GuideInput): LevelGuide {
       // Over the level, not the Codex screen: reading a card never leaves the mission.
       href: hrefOf({ name: 'play', levelId: level.id, card: card.id }),
     })),
+    codexOpen: reviewing !== null || shown === 'watch' || shown === 'card',
     actions: input.actions,
     note: buildNoteOf(building, check.hasChecker),
   }

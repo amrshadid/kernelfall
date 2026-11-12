@@ -1,5 +1,6 @@
 import type {
   GuideAction,
+  GuidePace,
   GuidePlacement,
   LevelDialogs,
   LevelLayoutModel,
@@ -11,7 +12,7 @@ import { guideActionsOf } from '@features/level/utils/actions'
 import { levelCardOf } from '@features/level/utils/card'
 import { guideOf } from '@features/level/utils/guide'
 import { currentStepOf, guideLinesFor, objectiveStates } from '@features/level/utils/view'
-import type { UseLevelActionsResult, UseLevelCheckResult } from '@kernelfall/game/hooks'
+import type { UseLevelActionsResult, UseLevelCheckResult, UseRecallResult } from '@kernelfall/game/hooks'
 import { HINT_TIERS, type LevelDefinition, type LevelRunState, type TaintEntry } from '@kernelfall/game/types'
 import { isHintOffered } from '@kernelfall/game/utils'
 import type { LevelLabel, LoadedContent } from '@kernelfall/levels/types'
@@ -48,6 +49,8 @@ export interface LevelLayoutInput {
   /** Runs a chip's command line in the terminal, as if typed. */
   readonly runChip: (commandLine: string) => void
   readonly placement: GuidePlacement | null
+  readonly pace: GuidePace
+  readonly recall: UseRecallResult
   /** Plays the level again from its scene, on a fresh Machine. */
   readonly replay: () => void
   /** Reboots through GRUB, keeping the level's progress. */
@@ -107,6 +110,7 @@ export function levelLayoutOf(input: LevelLayoutInput): LevelLayoutModel {
       check,
       runChip: input.runChip,
       placement: input.placement,
+      pace: input.pace,
       actions: dialogs.reviewing
         ? [back]
         : guideActionsOf(run, {
@@ -141,6 +145,7 @@ export function levelLayoutOf(input: LevelLayoutInput): LevelLayoutModel {
             taint,
             story,
             content,
+            recall: input.recall,
             next: actions.next,
             navigate: input.navigate,
             replay: input.replay,

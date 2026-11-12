@@ -162,6 +162,40 @@ describe('the VM trace', () => {
     expect(moved(toTerminal?.[0])).toBe('kernelfall\n')
   })
 
+  it('attaches the route its first VFS hook saw to each file call, none to the program execve loads', () => {
+    // Route lines from the Machine: BusyBox cat loading itself and musl, then copying /etc/hostname.
+    const OPEN = '(vfs_open+0x1f/0xd0 <- do_dentry_open)'
+    const NINE = 'fop=v9fs_file_operations_dotl+0x0/0xa0 [9p]'
+    const commandText = [
+      line(434, 'bash', '8.0', 'tracing_mark_write: kf-start     3  cat /etc/hostname'),
+      line(488, 'bash', '8.1', 'sys_execve(filename: 0xb7dd3950, argv: 0xb7de7470, envp: 0xb7e02ac0)'),
+      line(488, 'bash', '8.2', `route_open: ${OPEN} fs="9p" m=33261 h0=v9fs_file_open+0x0/0x330 [9p] ${NINE}`),
+      line(488, 'cat', '8.3', 'sys_execve -> 0x0'),
+      line(488, 'cat', '8.4', 'sys_open(filename: 0x4b8b00, flags: 0x8000, mode: 0x0)'),
+      line(488, 'cat', '8.5', `route_open: ${OPEN} fs="9p" m=33188 h0=v9fs_file_open+0x0/0x330 [9p] ${NINE}`),
+      line(488, 'cat', '8.6', 'sys_open -> 0x3'),
+      line(488, 'cat', '8.7', 'sys_sendfile64(out_fd: 1, in_fd: 3, offset: 0, count: 0x1000000)'),
+      ...['8.8', '8.9'].map((ts) =>
+        line(
+          488,
+          'cat',
+          ts,
+          `route_splice: (do_splice_read+0x0/0xc0) fs="9p" m=33188 h0=v9fs_file_splice_read+0x0/0x40 [9p] ${NINE}`
+        )
+      ),
+      line(488, 'cat', '9.0', 'sys_sendfile64 -> 0xb'),
+      line(488, 'cat', '9.1', 'sys_close(fd: 3)'),
+      line(488, 'cat', '9.2', 'sys_close -> 0x0'),
+      line(434, 'bash', '9.3', 'tracing_mark_write: kf-end 0'),
+    ].join('')
+    const exits = (run(commandText).finished[0]?.events ?? []).filter((e) => e.type === 'sys_exit')
+    const routeOf = (name: string) => exits.find((e) => e.type === 'sys_exit' && e.name === name)
+    expect(routeOf('execve')).not.toHaveProperty('route')
+    expect(routeOf('open')).toMatchObject({ route: { kind: 'fs', fs: '9p', fn: 'v9fs_file_open' } })
+    expect(routeOf('sendfile64')).toMatchObject({ route: { kind: 'fs', fs: '9p', fn: 'v9fs_file_splice_read' } })
+    expect(routeOf('close')).not.toHaveProperty('route')
+  })
+
   it("joins a splice's copies in order, whatever order a copy's chunks come in, up to the first one cut", () => {
     const words = (s: string) =>
       Array.from({ length: 64 }, (_, i) => {
@@ -344,8 +378,10 @@ describe('the VM trace', () => {
     expect(events[0]).toMatchObject({ type: 'sys_enter', name: 'fork' })
   })
 
-  it("leaves out the shell's line editing between commands: keys, echo, prompt", () => {
+  it("leaves out the shell's line editing between commands: keys, echo, prompt, a resized terminal", () => {
     const editing = [
+      line(434, 'bash', '7.8', 'signal_deliver: sig=28 errno=0 code=128 sa_handler=4d5f55 sa_flags=4000000'),
+      line(434, 'bash', '7.9', 'sys_sigreturn()'),
       line(434, 'bash', '8.0', 'sys_read(fd: 0, buf: 0xbfc99f5b, count: 1)'),
       line(434, 'bash', '8.1', 'read_0: (__ia32_sys_read+0x10/0x20 <- ksys_read) fd=0x0 ret=1 b0=0x6c'),
       line(434, 'bash', '8.2', 'sys_read -> 0x1'),

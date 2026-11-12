@@ -67,6 +67,33 @@ describe('toXrayCalls', () => {
     expect(callsOf(events)[0]?.buffer).toMatchObject({ more: true, count: text.length })
     expect(callsOf(events)[0]?.buffer?.cells).toHaveLength(MAX_BUFFER_CELLS)
   })
+
+  it('gives what reached the terminal to the writev or sendfile64 that wrote it', () => {
+    const events = stamp([
+      { type: 'sys_enter', pid: 2, nr: 146, name: 'writev', args: [1, 0x1000, 2] },
+      { type: 'console_write', bytes: bytes('bin  dev\n') },
+      { type: 'sys_exit', pid: 2, nr: 146, name: 'writev', ret: 9 },
+      { type: 'sys_enter', pid: 2, nr: 239, name: 'sendfile64', args: [1, 3, 0, 0x1000000] },
+      { type: 'console_write', bytes: bytes('hostname\n') },
+      { type: 'sys_exit', pid: 2, nr: 239, name: 'sendfile64', ret: 9 },
+    ])
+    expect(callsOf(events, 'ls /').map((c) => c.console)).toEqual(['bin  dev\n', 'hostname\n'])
+  })
+
+  it("keeps a pipeline's output with the process that wrote it, not one still writing to the pipe", () => {
+    const events = stamp([
+      { type: 'sys_enter', pid: 3, nr: 146, name: 'writev', args: [1, 0x1000, 2] },
+      { type: 'sched_process_fork', parentPid: 3, childPid: 4 },
+      { type: 'sys_enter', pid: 4, nr: 4, name: 'write', args: [1, 0x2000, 3], data: bytes('hi\n') },
+      { type: 'console_write', bytes: bytes('hi\n') },
+      { type: 'sys_exit', pid: 3, nr: 146, name: 'writev', ret: 9 },
+      { type: 'sys_exit', pid: 4, nr: 4, name: 'write', ret: 3 },
+    ])
+    expect(callsOf(events, 'dmesg | grep hi').map((c) => [c.name, c.console])).toEqual([
+      ['writev', null],
+      ['write', 'hi\n'],
+    ])
+  })
 })
 
 describe('cellLabel', () => {

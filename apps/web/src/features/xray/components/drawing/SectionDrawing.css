@@ -1,38 +1,114 @@
-/* A section drawing: three floors cut open, the kernel's floor the widest, like a service manual's plate. */
+/* A section drawing: three floors cut open, the Gate ruled in red between programs and the kernel. */
 .xr-section {
   display: grid;
-  gap: 0;
   border: var(--rule);
   background: var(--sheet);
 }
 
 .xr-section__floor {
   display: grid;
-  grid-template-columns: 7rem minmax(0, 1fr);
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  border-bottom: var(--rule);
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem 0.75rem;
 }
 
-.xr-section__floor:last-child {
-  border-bottom: 0;
+.xr-section__floor--userland {
+  padding-bottom: 0;
+}
+
+.xr-section__floor--hardware {
+  border-top: var(--rule);
   background-image: repeating-linear-gradient(-45deg, transparent 0 6px, var(--soft) 6px 7px);
+}
+
+.xr-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5rem;
 }
 
 .xr-section__floor-name {
   font-size: 0.8125rem;
   font-weight: 800;
+  font-variation-settings: "wdth" 112;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xr-section__note {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.xr-section__program {
+  justify-self: start;
+  position: relative;
+  padding: 0.375rem 0.5rem;
+  border: 1px dashed var(--ink-2);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.xr-section__program--ran {
+  border: 2px solid var(--ink);
+  background: var(--sheet);
+  color: var(--ink);
+}
+
+.xr-section__program code {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+/* The line a program's requests take down to the Gate. */
+.xr-section__program--ran::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 1rem;
+  height: 0.875rem;
+  border-left: 2px solid var(--red);
+}
+
+.xr-section__gate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 0.5rem;
+  margin: 0.25rem -0.75rem 0;
+  padding: 0.25rem 0.75rem;
+  border-top: 3px solid var(--red);
+  font-size: 0.75rem;
+}
+
+.xr-section__gate-name {
+  font-weight: 800;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xr-section__gate-count {
+  color: var(--ink-2);
+}
+
+.xr-section--ran .xr-section__gate-count {
+  font-family: var(--mono);
+  color: var(--red);
 }
 
 .xr-section__parts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr));
+  gap: 0.375rem;
   list-style: none;
 }
 
 .xr-section__part {
   display: grid;
+  align-content: start;
   gap: 0.125rem;
   padding: 0.375rem 0.5rem;
   border: var(--rule-thin);
@@ -46,18 +122,39 @@
   color: var(--ink);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .xr-section__part--lit {
+    animation: xr-section-light 600ms ease-out;
+  }
+}
+
+@keyframes xr-section-light {
+  from {
+    background: var(--red);
+  }
+}
+
 .xr-section__name {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
-.xr-section__source {
-  font-family: var(--mono);
-  font-size: 0.6875rem;
-}
-
+.xr-section__count,
+.xr-section__source,
 .xr-section__calls {
   font-family: var(--mono);
   font-size: 0.6875rem;
+  overflow-wrap: anywhere;
+}
+
+.xr-section__count,
+.xr-section__calls {
   color: var(--red);
+}
+
+/* Simple shows where the run went; Deep adds the source tree and the calls by name. */
+.xr[data-depth="simple"] .xr-section__source,
+.xr[data-depth="simple"] .xr-section__calls {
+  display: none;
 }

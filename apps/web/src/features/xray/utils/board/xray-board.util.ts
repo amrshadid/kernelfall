@@ -94,6 +94,9 @@ export function xrayCaption(figure: XrayFigure | null): string {
   if (figure?.kind === 'syscalls') {
     return `Fig. 1. ${figure.storyboard.call.text}, end to end.`
   }
+  if (figure?.kind === 'crossing') {
+    return `Fig. 1. ${figure.storyboard.call.text}, across the Gate and back.`
+  }
   if (figure?.kind === 'processes') {
     const { parent, child, exec } = figure.storyboard.episode
     return child === null
@@ -101,7 +104,10 @@ export function xrayCaption(figure: XrayFigure | null): string {
       : `Fig. 2. ${parent.program} forks PID ${child}${exec ? `, which runs ${exec.path}` : ''}.`
   }
   if (figure?.kind === 'section') {
-    return `Fig. 3. Section of the Machine: the parts \`${figure.commandLine.trim()}\` passed through.`
+    const command = figure.commandLine.trim()
+    return command
+      ? `Fig. 3. Section of the Machine: the parts \`${command}\` passed through.`
+      : 'Fig. 3. Section of the Machine. Run a command, and the parts it passes through light up.'
   }
   if (figure?.kind === 'route') {
     return `Fig. 4. The route of \`${figure.view.commandLine.trim()}\`: each call, the process that made it, and the part that served it.`
@@ -124,6 +130,10 @@ export function memoryKeysOf(
 ): XrayMemoryKeys {
   const level = levelId ?? FREE_PLAY
   const kind =
-    figure?.kind === 'syscalls' ? figure.storyboard.call.name : figure && isWholeRun(lens) ? figure.kind : PROCESS_KIND
+    figure?.kind === 'syscalls' || figure?.kind === 'crossing'
+      ? figure.storyboard.call.name
+      : figure && isWholeRun(lens)
+        ? figure.kind
+        : PROCESS_KIND
   return { memoryKey: `${level}:${lens}:${kind}`, autoplayKey: `${level}:${step ?? ANY_STEP}` }
 }

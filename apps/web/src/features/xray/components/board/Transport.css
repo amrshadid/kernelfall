@@ -96,6 +96,21 @@
   white-space: nowrap;
 }
 
+/* In the fitted dock the controls keep to one row, so the drawing gets the height; the sentence
+   above already counts the stage. */
+.xr--fit .xr__count {
+  display: none;
+}
+
+.xr--fit .xr__transport .kf-btn {
+  min-height: 2rem;
+  padding-inline: 0.5rem;
+}
+
+.xr--fit .xr__play {
+  min-width: 4rem;
+}
+
 .xr .xr__speed .kf-seg__options button {
   padding: 0.25rem 0.375rem;
   font-size: 0.75rem;

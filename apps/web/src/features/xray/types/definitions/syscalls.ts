@@ -36,8 +36,6 @@ export interface SyscallScene {
   readonly printed: boolean
   /** Back in the program, which has the return value. */
   readonly back: boolean
-  /** "In the kernel now" at Simple: the function, a plain sentence, its file. */
-  readonly desk: { readonly fn: string; readonly say: string; readonly file: string }
 }
 
 export interface SyscallStoryboard {

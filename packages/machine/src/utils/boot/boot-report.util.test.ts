@@ -58,6 +58,21 @@ describe("the guest's boot report", () => {
     expect(parseBootReport(stuck).boot?.summary).toMatchObject({ outcome: 'initramfs', failedStage: 'root' })
   })
 
+  it("reads the root a stopped boot's initramfs failed to mount, and mount's message", () => {
+    const stopped = `@kf:stopped\n/dev/sda2\next4\nmount: mounting /dev/sda2 on /newroot failed: No such device\n${BOOT_REPORT.replace('host9p / 9p', 'rootfs / rootfs')}`
+    expect(parseBootReport(stopped).boot?.summary).toMatchObject({
+      outcome: 'initramfs',
+      failedStage: 'root',
+      rootDevice: 'rootfs',
+      failedRoot: {
+        device: '/dev/sda2',
+        fstype: 'ext4',
+        error: 'mount: mounting /dev/sda2 on /newroot failed: No such device',
+      },
+    })
+    expect(parseBootReport(BOOT_REPORT).boot?.summary).not.toHaveProperty('failedRoot')
+  })
+
   it('joins a line without a timestamp to the one before, and has no boot without a log', () => {
     expect(parseKernelLog('[    1.000000] first\n  more\n[    2.500000] second\n')).toEqual([
       { time: 1, text: 'first\n  more' },

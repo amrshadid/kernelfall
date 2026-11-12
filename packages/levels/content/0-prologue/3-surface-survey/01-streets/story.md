@@ -14,6 +14,8 @@
 
 > **init:** First: where are you? Every process has a _working directory_, the folder it is "standing in". Type `pwd`, for "print working directory".
 
+---
+
 ```
 $ pwd
 /home/you
@@ -34,6 +36,8 @@ $ cat ../../etc/motd     # relative: up to /home, up to /, down into etc
 $ cd /etc
 $ cat motd               # relative to the new working directory
 ```
+
+---
 
 > **init:** Watch `cd /etc` in X-ray. No program starts. Bash makes the call itself: `chdir("/etc") = 0`. It has to: a working directory belongs to one process. A program started for the job would move itself, exit, and leave the shell where it was.
 >
@@ -99,6 +103,8 @@ The kernel panicked tonight, and every process froze.
 Find the way down, and bring the kernel back.
 ```
 
+---
+
 > **init:** Compare the two in X-ray. `cd home/you` arrives as `chdir("/home/you")`: bash made the path absolute itself, so the kernel can't tell it from `cd /home/you`. `cat` is different: `open("../../etc/motd", O_RDONLY|O_LARGEFILE) = 3`. The kernel got the relative path and walked it from `cat`'s working directory, `/home/you`: up to `/home`, up to `/`, down into `etc`.
 
 Making folders. `-p` makes every missing folder on the way, so the last line makes `notes` and `old` at once:
@@ -118,6 +124,8 @@ $ ls -i /etc/motd /tmp/survey/maps/motd
     142 /etc/motd                    6 /tmp/survey/maps/motd
 ```
 
+---
+
 > **init:** Two different numbers: a copy is a new file. Your numbers may differ from mine; what matters is that they differ from each other.
 
 Moving and renaming:
@@ -132,6 +140,8 @@ $ ls -i motd.old
 $ mv motd.old ../notes/
 ```
 
+---
+
 > **init:** The same number before and after, and again in `notes`. The file didn't move. Only its name did.
 
 Here the street picture stops being true. A folder isn't a place where a file sits: it is a list of names, each pointing at an inode. Moving a file inside one filesystem only rewrites that list.
@@ -145,6 +155,8 @@ rmdir: '../notes': Directory not empty
 ```
 
 > **init:** `notes` still holds `old`, and `rmdir` removes only empty folders. Now finish the errand: leave `/tmp/survey` holding exactly `maps/os-release` and an empty `notes/`, and stand in `/tmp/survey`. `ls -R /tmp/survey` shows every folder inside, one after another.
+
+---
 
 X-ray on the new commands:
 
@@ -175,6 +187,11 @@ rmdir("../notes")                                             = -1 ENOTEMPTY (Di
 ## Watch it
 
 > **init:** Before you look: how big is `/proc/uptime` on the disk? You've seen `/proc` answer a `read` before.
+>
+> - [x] 0 bytes
+> - as many bytes as the text it prints
+
+---
 
 ```
 $ ls -l /proc/uptime

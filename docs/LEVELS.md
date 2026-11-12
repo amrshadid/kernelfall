@@ -104,6 +104,7 @@ tracks: [c, userland] # c | userland | kernel | net | debug (one or more)
 skills: [write-to-stdout] # skill-tree nodes it unlocks (one or more)
 prerequisites: [] # skills needed to play it
 teaches: [syscall, fd] # concepts from concepts.yaml it introduces (budget 3)
+names: [shell] # concepts it only names on the big picture; a later level teaches them
 uses: [process] # concepts an earlier level taught that it relies on
 objectives: # what the checker verifies by behavior (one or more)
   - id: prints-hello
@@ -115,7 +116,7 @@ hints: # exactly three: nudge, concept, point at the spot
   - Look at the line where main() returns …
 chips: # optional: commands "build it" offers; whole lines before P.3, names alone from P.3 on
   - { command: ls /bin, explain: "list the folder /bin" }
-xray: [syscalls] # syscalls | processes | files | network | modules | memory | locks | boot (Act III adds vm | sched | trace | order | buses | storage | dump); [] for none
+xray: [syscalls] # syscalls | processes | files | network | modules | memory | locks | boot | section (Act III adds vm | sched | trace | order | buses | storage | dump); [] for none
 xrayFocus: [pipe, fork, dup2] # optional: calls X-ray keeps open beyond those the declared checks name (the shell's side)
 codex: # cards it adds (one or more)
   - id: write-syscall # unique across the game
@@ -209,7 +210,7 @@ Facts about the Machine that levels must respect:
 - It is a 32-bit PC (i386): Alpine 3.24, kernel 6.18 (`linux-virt`), one CPU, 256 MiB.
   Syscall numbers, registers and the syscall table are i386's (`syscall_32.tbl`).
 - The shell is bash 5.3; most commands are BusyBox, so their options and output are
-  BusyBox's unless the image ships the GNU tool. gcc 15, tcc, musl, `strace` and man
+  BusyBox's unless the image ships the GNU tool. gcc 15, `make`, musl, `strace` and man
   pages are installed.
 - The root filesystem is 9p (`/` is not on a block device). The data disk is
   `/dev/sda1` (ext4, label `kernelfall`), not mounted until a level or the player
@@ -265,8 +266,13 @@ export const checker = defineChecker({
 ```
 
 It reports objectives and Taint rules by their ids in `level.yaml`, and the engine
-merges its report with the declared checks. It must be pure: the same events always
-give the same report.
+merges its report with the declared checks. It must be pure: the same input always
+gives the same report.
+
+Besides `events`, the input holds `commandLine` (as typed) and `history`: the
+`{ commandLine, status }` of each command finished earlier since the level started
+(oldest first, empty again on Replay). Declared checks ignore both; S.2 reads the
+earlier `chmod` lines to know which modes the kernel was judging.
 
 ### Add a level
 
@@ -291,6 +297,7 @@ Level tests judge the kernel's real events, recorded on the real image:
    program reads.
 3. `pnpm vm:record <level id>` boots the image in Node, sets up the level, types each
    line and saves the events as `src/test/runs/<level>/<run>.json.gz`. Commit them.
+   The tests judge each command with the run's earlier commands as its `history`.
 4. List the level in `src/test/level-checkers.test.ts`. An objective the Machine can't
    show yet goes in its `KNOWN_GAPS`, with the reason.
 
@@ -310,11 +317,46 @@ Every spec writes its cards the same way, under `### Codex (chapter: <region>)`:
 A card's `deepens:` ids must exist earlier in play order, and a required level's
 card never deepens a side level's card.
 
+### Pauses in `story.md`
+
+A line holding only `---` is a pause. The Guide shows a step's text up to the next pause,
+and what follows once the player finishes a command (or presses **Continue**). Put one
+after every line that asks the player to do something, so the result is seen in the
+terminal before it is explained.
+
+```md
+> **init:** Delete the `;` after `return 0` and press Run.
+
+---
+
+> **init:** Read it part by part. `hello.c:19:17` is where: …
+```
+
+A question the player should answer first is a line followed by a list of answers, with
+`[x]` on the one that really happens. The Guide stops there until the player picks one
+(or asks to be shown), then marks their call beside what happens. Nothing is scored. The
+answers must be checked on the Machine like any other fact.
+
+```md
+> **init:** When `cat` showed my note, who read the file?
+>
+> - `cat` itself
+> - [x] the kernel
+
+> **init:** The kernel. The `cat` process can't touch a file on its own. …
+```
+
+When the question is about something the player is about to run ("Before you run it: …"),
+put a `---` after the answers. Their call is then kept, and what happens is marked only
+once their run (or **Continue**) brings the next part.
+
 ### Concepts and budgets
 
 A level's `teaches` and `uses` name concepts of `concepts.yaml`, as its text really
-introduces and relies on them. Tests check the chain in play order: a concept used
-before a level teaches it, a concept taught twice, and a Prologue or Survey concept no
+introduces and relies on them. `names` lists concepts a big-picture level only names
+(P.1's Section drawing): later levels may use them, and one teaches them properly.
+Tests check the chain in play order: a concept used before a level names or teaches it,
+a concept taught twice, and a Prologue or Survey concept no
 later level uses or teaches again are errors. Today's breaks are listed, each with its
 reason, in `KNOWN_CONCEPT_GAPS` (`src/test/concept-chain.test.ts`) until the level is
 rewritten.

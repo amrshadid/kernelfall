@@ -14,6 +14,8 @@
 
 > **init:** `ps` lists every process. Run it. It's a long list: here are its top and its bottom.
 
+---
+
 ```
 $ ps
 PID   USER     TIME  COMMAND
@@ -41,6 +43,8 @@ Your PIDs will differ a little: the kernel hands out the next free number each t
 
 > **init:** See what the kernel keeps about your shell: `cat /proc/$$/status`. It's long. These are the lines that matter today:
 
+---
+
 ```
 Name:	bash
 State:	S (sleeping)
@@ -60,6 +64,8 @@ nonvoluntary_ctxt_switches:	294
 **The scheduler.** The **scheduler** is the part of the kernel that decides which process runs on the CPU, and for how long. `nproc` prints `1`: one CPU. Here's a crowd for it: `yes`, a program that prints `y` forever, three times at once.
 
 > **init:** Type this line as it is. `> /dev/null` throws each `yes`'s output away, and `&` starts it in the background, so the shell doesn't wait for it. Then `top` takes one look at who's using the CPU, and `kill` stops all three.
+
+---
 
 ```
 $ yes > /dev/null & yes > /dev/null & yes > /dev/null & sleep 4; top -b -n 1 | head -12; kill %1 %2 %3
@@ -97,6 +103,12 @@ X-ray shows the one CPU's lane, with the three `yes` taking turns on it, slice a
 ## Watch it
 
 > **init:** Before you run it twice: same PID both times? Same parent?
+>
+> - The same PID and the same parent
+> - [x] A new PID, the same parent
+> - A new PID and a new parent
+
+---
 
 ```
 $ ./mypid

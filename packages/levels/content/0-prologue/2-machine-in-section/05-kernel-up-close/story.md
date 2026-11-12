@@ -24,6 +24,8 @@ Every byte of memory has a number, its **memory address**. `0x` means the number
 
 > **init:** `poke` is a small program that tries to read the first byte of kernel space directly, at `0xc0000000`. Open `poke.c` in the editor and press Run: it builds `poke` and runs it. Then type `echo $?` to see how it ended.
 
+---
+
 ```
 $ ./poke
 Segmentation fault         ./poke
@@ -66,7 +68,7 @@ ext4 749568 0 - Live 0x00000000
 >
 > **init:** 868 modules wait in those folders, each a `.ko.gz` file: a kernel object, compressed. Twelve are loaded now. `virtio_net` is the network card's driver, `ext4` reads the disk's filesystem. Each line gives the module's size in bytes, then its _reference count_: how many things are using it right now. Often those are the modules named after the count, like `ext4` using `jbd2`. `9p` shows `1 -`: no module uses it, but the Machine's root filesystem is mounted with it. Last comes its address, shown as zeros to anyone but root.
 
-**Linux and the distribution.** `uname -sr` prints `Linux 6.18.59-0-virt`: that's the kernel. `cat /etc/os-release` prints, among other lines, `PRETTY_NAME="Alpine Linux v3.24"`: that's the **distribution**, Linux plus everything around it.
+**Linux and the distribution.** `uname -sr` prints `Linux 6.18.63-0-virt`: that's the kernel. `cat /etc/os-release` prints, among other lines, `PRETTY_NAME="Alpine Linux v3.24"`: that's the **distribution**, Linux plus everything around it.
 
 > **init:** Linux is only the kernel. I, the shell, the C library, `ls` and `cat`: we're the rest. Debian, Fedora and Android all run the Linux kernel with different things on top. Many distributions use the GNU project's tools and C library, so they call themselves GNU/Linux. Alpine uses musl for its C library and BusyBox for most tools, so it's just Alpine Linux.
 >
@@ -87,12 +89,17 @@ ext4 749568 0 - Live 0x00000000
 ## Watch it
 
 > **init:** Before you run it: your program and the `uname` command. Will they print the same release?
+>
+> - [x] yes, the same
+> - no, they differ
+
+---
 
 ```
 $ ./myuname
-Linux 6.18.59-0-virt i686
+Linux 6.18.63-0-virt i686
 $ uname -srm
-Linux 6.18.59-0-virt i686
+Linux 6.18.63-0-virt i686
 ```
 
 ```

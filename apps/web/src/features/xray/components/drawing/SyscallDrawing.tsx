@@ -1,4 +1,4 @@
-import type { SyscallScene, SyscallStoryboard, XrayDepth } from '@features/xray/types'
+import type { SyscallScene, SyscallStoryboard } from '@features/xray/types'
 import {
   CELL_HEIGHT,
   DRAWING_WIDTH,
@@ -11,8 +11,6 @@ import {
   REGISTER_ROW,
   SYSCALL_RIGHT_W as RIGHT_W,
   SYSCALL_RIGHT_X as RIGHT_X,
-  SLIP_PAD,
-  SYSCALL_DESK_HEIGHT,
   syscallDrawingLayout,
   syscallDrawingText,
   SYSCALL_TAG_X as TAG_X,
@@ -29,14 +27,12 @@ import './Drawing.css'
 export interface SyscallDrawingProps {
   storyboard: SyscallStoryboard
   scene: SyscallScene
-  /** Simple and Deep draw different layers; the drawing is as tall as the one on show. */
-  depth: XrayDepth
   /** The drawing's accessible name: the figure and the stage on show. */
   label: string
 }
 
-/** Everything it prints comes from the trace's events for this call. */
-export function SyscallDrawing({ storyboard, scene, depth, label }: SyscallDrawingProps) {
+/** Deep's drawing of one syscall; everything it prints comes from the trace's events for this call. */
+export function SyscallDrawing({ storyboard, scene, label }: SyscallDrawingProps) {
   const { call, path } = storyboard
   const {
     height,
@@ -50,8 +46,8 @@ export function SyscallDrawing({ storyboard, scene, depth, label }: SyscallDrawi
     slot,
     registers,
     ptRegs,
-  } = syscallDrawingLayout(storyboard, scene, depth)
-  const text = syscallDrawingText(storyboard, scene)
+  } = syscallDrawingLayout(storyboard, scene)
+  const text = syscallDrawingText(storyboard)
 
   return (
     <svg viewBox={`0 0 ${DRAWING_WIDTH} ${height}`} role="img" aria-label={label}>
@@ -82,41 +78,6 @@ export function SyscallDrawing({ storyboard, scene, depth, label }: SyscallDrawi
           {text.returnLine}
         </text>
       </DrawingBox>
-
-      <g className="xr-simple">
-        <DrawingBox
-          x={RIGHT_X}
-          y={26}
-          width={RIGHT_W}
-          height={120}
-          title="Request slip"
-          on={scene.step === 'registers' || scene.step === 'answer'}
-        >
-          <text className="xr-m xr-mb" x={RIGHT_X + SLIP_PAD} y={66}>
-            {scene.loaded ? call.name : '(blank)'}
-          </text>
-          {text.slip.map((line, i) => (
-            <text
-              key={line}
-              className={`xr-m xr-fade${scene.loaded ? '' : ' xr-hide'}`}
-              x={RIGHT_X + SLIP_PAD}
-              y={84 + i * 16}
-            >
-              {line}
-            </text>
-          ))}
-          <text
-            className={`xr-m xr-mb xr-red xr-fade${scene.answered ? '' : ' xr-hide'}`}
-            x={RIGHT_X + SLIP_PAD}
-            y={122}
-          >
-            {text.answer}
-          </text>
-          <text key={scene.ring} className="xr-m xr-dim xr-flip" x={RIGHT_X + SLIP_PAD} y={138}>
-            {inKernel ? 'CPU: kernel mode' : 'CPU: user mode'}
-          </text>
-        </DrawingBox>
-      </g>
 
       <g className="xr-deep">
         <DrawingTable
@@ -162,27 +123,6 @@ export function SyscallDrawing({ storyboard, scene, depth, label }: SyscallDrawi
       {scene.step === 'gate' && (
         <CrossingTag key={call.id} name={call.name} nr={call.nr} x={TAG_X} y={LINE_Y} maxRight={GATE_X - GATE_GAP} />
       )}
-
-      <g className="xr-simple">
-        <DrawingBox
-          x={14}
-          y={KERNEL_TOP}
-          width={372}
-          height={SYSCALL_DESK_HEIGHT}
-          title="In the kernel now"
-          on={inKernel}
-        >
-          <text className="xr-m xr-mb xr-big" x={26} y={KERNEL_TOP + 44}>
-            {scene.desk.fn}
-          </text>
-          <text className="xr-say" x={26} y={KERNEL_TOP + 62}>
-            {text.deskSay}
-          </text>
-          <text className="xr-m xr-dim" x={26} y={KERNEL_TOP + 77}>
-            {scene.desk.file}
-          </text>
-        </DrawingBox>
-      </g>
 
       <g className="xr-deep">
         <text className="xr-ttl" x={14} y={KERNEL_TOP + 12}>

@@ -79,7 +79,7 @@ concepts:
   - { id: device-file, term: "device file (/dev)", part: vfs, codex: device-files }
   - { id: mount, term: "mount and the root filesystem", part: vfs, codex: filesystems }
   - { id: vfs, term: the VFS, part: vfs, codex: vfs }
-  - { id: sysfs, term: "/sys, the devices' tree", part: vfs }
+  - { id: sysfs, term: "/sys, the devices' tree", part: vfs, codex: sysfs }
   - { id: inode, term: "inode: a name points at a file", part: vfs, codex: directory-entries }
 
   # Security

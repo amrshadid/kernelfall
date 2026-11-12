@@ -8,7 +8,7 @@ import type {
   CallRow,
   XrayCall,
 } from '@features/xray/types'
-import { baseName, SHELL_PROGRAM } from '@features/xray/utils/calls'
+import { baseName, CONSOLE_WRITERS, SHELL_PROGRAM } from '@features/xray/utils/calls'
 import { signalName } from '@features/xray/utils/processes'
 import type { RunEvent } from '@kernelfall/machine/hooks'
 import type { TraceRun } from '@kernelfall/machine/types'
@@ -411,10 +411,68 @@ export function callGroupsOf(
   }))
 }
 
-/** The call the drawing starts on: the lesson's first output, else its first call; null without a focus. */
+/** The calls a group shows as its own rows, never one hidden in a fold. */
+function shownCalls(group: CallGroup): readonly XrayCall[] {
+  return group.rows.flatMap((row) => (row.kind === 'call' ? [row.call] : []))
+}
+
+/** Its rows, and the calls of its "× n" folds: a run of writes to the terminal folds as one. */
+function outputCalls(group: CallGroup): readonly XrayCall[] {
+  return group.rows.flatMap((row) => (row.kind === 'call' ? [row.call] : row.fold === 'repeat' ? row.calls : []))
+}
+
+const reachesTerminal = (call: XrayCall) =>
+  CONSOLE_WRITERS.has(call.name) &&
+  call.console !== null &&
+  call.outcome.kind === 'returned' &&
+  call.outcome.errno === null
+
+/**
+ * Without a lesson: the first output that reached the terminal, else the program's first call after
+ * execve, else the shell's first call; always one shown as its own row.
+ */
+function defaultLeadId(groups: readonly CallGroup[]): number | null {
+  const printed = groups
+    .flatMap(outputCalls)
+    .sort((a, b) => a.id - b.id)
+    .find(reachesTerminal)
+  if (printed) {
+    return printed.id
+  }
+  for (const group of groups.filter((g) => g.role === 'program')) {
+    const calls = shownCalls(group)
+    const exec = calls.findIndex((call) => call.family === 'execve' && call.outcome.kind === 'returned')
+    const after = calls[exec + 1]
+    if (exec >= 0 && after) {
+      return after.id
+    }
+  }
+  const shell = groups.find((g) => g.role === 'shell')
+  if (!shell) {
+    return null
+  }
+  // A builtin's work is the call that changes the shell (cd's chdir), after its lookups and set-up.
+  const calls = shownCalls(shell)
+  return (calls.find((call) => BUILTIN_WORK.has(call.name)) ?? calls[0])?.id ?? null
+}
+
+const BUILTIN_WORK = new Set(['chdir', 'fchdir', 'kill', 'umask', 'prlimit64', 'setrlimit'])
+
+/**
+ * The call the drawing starts on: the lesson's first output on the terminal, from the last process
+ * that printed (after `gcc … && ./hello`, the program, not the compiler's writes to its own files);
+ * else its first output, else its first call, else defaultLeadId's pick.
+ */
 export function leadCallId(groups: readonly CallGroup[]): number | null {
   const focused = lessonCalls(groups)
-  return (focused.find((call) => OUTPUT_CALLS.has(call.name)) ?? focused[0])?.id ?? null
+  if (focused.length === 0) {
+    return defaultLeadId(groups)
+  }
+  const printed = focused.filter(reachesTerminal)
+  const last = printed.at(-1)?.pid
+  const lead =
+    printed.find((call) => call.pid === last) ?? focused.find((call) => OUTPUT_CALLS.has(call.name)) ?? focused[0]
+  return lead?.id ?? null
 }
 
 /** Every call the level teaches, in the order they were made. */

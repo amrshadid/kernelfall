@@ -62,6 +62,15 @@ describe('readProgress', () => {
     expect(issues.result(null).ok).toBe(true)
   })
 
+  it('reads the recall marks, and leaves them out of a save that has none', () => {
+    const recall = [{ cardId: 'pipe', knew: true, asked: 2, at: 9 }]
+    const { progress, issues } = read(JSON.parse(JSON.stringify({ ...FULL, recall })))
+
+    expect(progress.recall).toEqual(recall)
+    expect(read(JSON.parse(JSON.stringify(FULL))).progress).not.toHaveProperty('recall')
+    expect(issues.result(null).ok).toBe(true)
+  })
+
   it('reads an empty progress', () => {
     const { progress, issues } = read(emptyProgress())
 

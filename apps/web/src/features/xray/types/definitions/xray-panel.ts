@@ -1,6 +1,7 @@
 import type { BootView } from './boot'
 import type { CallListView } from './call-list'
 import type { CpuLanesView } from './cpu-lanes'
+import type { CrossingStoryboard } from './crossing'
 import type { ProcessStoryboard } from './processes'
 import type { RouteView } from './route'
 import type { SectionView } from './section'
@@ -10,6 +11,8 @@ import type { SyscallStoryboard } from './syscalls'
 
 export type XrayFigure =
   | { readonly kind: 'syscalls'; readonly storyboard: SyscallStoryboard }
+  /** One syscall at Simple: a crossing of the Gate in a few beats. */
+  | { readonly kind: 'crossing'; readonly storyboard: CrossingStoryboard }
   | { readonly kind: 'processes'; readonly storyboard: ProcessStoryboard }
   /** A whole run at once, with no stages to play. */
   | { readonly kind: 'section'; readonly view: SectionView; readonly commandLine: string }
@@ -40,6 +43,8 @@ export interface XrayControls {
   readonly log: LogRun | null
   /** The Syscalls view's calls, by process, with the noise folded. */
   readonly callList: CallListView | null
+  /** The whole call list shows; otherwise a crossing in the dock lists only the call on show. */
+  readonly allCalls: boolean
   readonly expanded: boolean
 }
 
@@ -56,6 +61,7 @@ export interface XrayControlActions {
 export interface XrayBoardActions extends XrayControlActions {
   /** Opens or closes a process group or a fold of the call list, by key. */
   toggleRow(key: string): void
+  toggleAllCalls(): void
 }
 
 /** The player's X-ray choices: lens, depth, Predict, and which run and call to show. */

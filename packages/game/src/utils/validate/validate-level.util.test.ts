@@ -4,7 +4,7 @@ import type { LevelLocation } from '#types/definitions/level'
 import { validateLevel } from '#utils/validate/validate-level.util'
 
 const LEVEL_FIELDS =
-  'id, title, summary, minutes, tracks, skills, prerequisites, teaches, uses, objectives, hints, chips, xray, xrayFocus, codex, taint, fidelity, story, lab, runAs'
+  'id, title, summary, minutes, tracks, skills, prerequisites, teaches, names, uses, objectives, hints, chips, xray, xrayFocus, codex, taint, fidelity, story, lab, runAs'
 
 function errorsFor(input: unknown, location: LevelLocation = EXAMPLE_LOCATION): readonly string[] {
   const result = validateLevel(input, location)
@@ -208,7 +208,7 @@ describe('validateLevel: teaches and uses', () => {
       ok: false,
       errors: [
         'teaches: "syscall" appears more than once',
-        'uses: "syscall" is also a concept this level teaches',
+        'uses: "syscall" is also a concept this level teaches or names',
         'teaches[1]: "pipe" is not a concept of concepts.yaml',
       ],
     })

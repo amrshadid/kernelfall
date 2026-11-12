@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_HEADLINE } from './level-card.constants'
 import { type CardInput, levelCardOf } from './level-card.util'
 
+const POWER_ON = 'prologue-boot-path-01-power-on'
 const FIRST_WORDS = 'prologue-boot-path-02-first-words'
 const SPEAK_TO_SHELL = 'prologue-boot-path-03-speak-to-shell'
 const RUN_ANYTHING = 'act1-process-district-04-run-anything'
@@ -34,6 +35,7 @@ function cardInput(levelId: string, fields: Partial<CardInput> = {}): CardInput 
     taint: 0,
     story: content.stories.get(levelId),
     content,
+    recall: { deck: { region: null, cards: [] }, mark: vi.fn(async () => {}) },
     next: vi.fn(async () => ({ success: true }) as const),
     navigate: vi.fn(),
     replay: vi.fn(),
@@ -80,6 +82,42 @@ describe('levelCardOf', () => {
     card.onMap()
     await vi.waitFor(() => expect(input.navigate).toHaveBeenCalledWith({ name: 'map' }))
     expect(input.next).not.toHaveBeenCalled()
+  })
+
+  it('names what the level taught, and asks nothing when no earlier card is due', () => {
+    const card = levelCardOf(cardInput(POWER_ON))
+    expect(card.learned).toEqual(['the kernel', 'program and process', 'the file tree and paths'])
+    expect(card.recall).toBeNull()
+  })
+
+  it("asks the dealt cards with their plain-words line, and keeps the player's call", () => {
+    const content = loaded()
+    const kernel = content.game.level(POWER_ON)?.codex.find((entry) => entry.id === 'kernel')
+    if (!kernel) {
+      throw new Error('no kernel card')
+    }
+    const mark = vi.fn(async () => {})
+    const card = levelCardOf(
+      cardInput(FIRST_WORDS, { recall: { deck: { region: null, cards: [{ card: kernel, levelId: POWER_ON }] }, mark } })
+    )
+    expect(card.recall?.title).toBe('Before you go on')
+    expect(card.recall?.note).toMatch(/^1 card from earlier levels\. /)
+    expect(card.recall?.cards).toEqual([
+      { id: 'kernel', term: 'the kernel', answer: kernel.simple, seenIn: labelOf(content, POWER_ON)?.heading },
+    ])
+
+    card.recall?.onMark('kernel', false)
+    expect(mark).toHaveBeenCalledWith('kernel', false)
+  })
+
+  it('looks back over the region at its last level', () => {
+    const content = loaded()
+    const cards = (content.game.level(POWER_ON)?.codex ?? []).slice(0, 2).map((card) => ({ card, levelId: POWER_ON }))
+    const card = levelCardOf(
+      cardInput(FIRST_WORDS, { recall: { deck: { region: { name: 'First Boot', levels: 4 }, cards }, mark: vi.fn() } })
+    )
+    expect(card.recall?.title).toBe('First Boot: the region in 2 cards')
+    expect(card.recall?.note).toMatch(/^2 cards from this region's 4 levels\. /)
   })
 
   it('files the card, then replays the level', async () => {

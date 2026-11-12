@@ -23,4 +23,31 @@ describe('the content budgets', () => {
     })
     expect(missing).toEqual([])
   })
+
+  it('give every question at least two answers, exactly one of them what happens, outside the scene and debrief', () => {
+    const asked = ['see-it', 'build-it', 'watch-it']
+    const wrong = content.game.levels.flatMap((level) =>
+      [...(content.stories.get(level.id) ?? [])].flatMap(([section, blocks]) =>
+        blocks
+          .filter((block) => block.kind === 'predict')
+          .filter(
+            (block) =>
+              block.options.length < 2 ||
+              block.options.filter((option) => option.right).length !== 1 ||
+              !asked.includes(section)
+          )
+          .map((block) => `${level.id}#${section}: ${block.text}`)
+      )
+    )
+    expect(wrong).toEqual([])
+  })
+
+  it('ask a question in most built levels', () => {
+    const asking = content.game.levels.filter((level) =>
+      [...(content.stories.get(level.id)?.values() ?? [])].some((blocks) =>
+        blocks.some((block) => block.kind === 'predict')
+      )
+    )
+    expect(asking).toHaveLength(14)
+  })
 })

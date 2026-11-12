@@ -1,6 +1,7 @@
 export type * from './boot'
 export type * from './call-list'
 export type * from './cpu-lanes'
+export type * from './crossing'
 export type * from './drawing'
 export type * from './processes'
 export type * from './route'

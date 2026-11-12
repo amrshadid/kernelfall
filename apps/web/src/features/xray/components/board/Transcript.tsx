@@ -17,7 +17,7 @@ export function Transcript({ entries, current }: TranscriptProps) {
             <p>
               <b>{entry.title}</b> {entry.what}
             </p>
-            <p>Why: {entry.why}</p>
+            {entry.why !== '' && <p>Why: {entry.why}</p>}
           </li>
         ))}
       </ol>

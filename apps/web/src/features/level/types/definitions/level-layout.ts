@@ -16,6 +16,42 @@ export interface GuideLine {
   readonly text: string
 }
 
+/** A question the player answers before the story does. No score. */
+export interface GuidePredict {
+  readonly kind: 'predict'
+  /** Its place among the step's questions. */
+  readonly id: number
+  readonly line: GuideLine
+  readonly options: readonly { readonly text: string; readonly right: boolean }[]
+  /** A pause follows it in the story: the answer waits for the player's run, not only their pick. */
+  readonly held: boolean
+  /** The option the player chose; null if they asked to be shown, or haven't answered. */
+  readonly picked: number | null
+  /** What happens is marked; false while unanswered, or answered and still waiting for the run. */
+  readonly revealed: boolean
+  /** Answers it (null: just show me); null once answered. */
+  readonly onPick: ((option: number | null) => void) | null
+}
+
+/** A run of lines, a code sample or a question, in the order the story has them. */
+export type GuidePart =
+  | { readonly kind: 'lines'; readonly lines: readonly GuideLine[] }
+  | { readonly kind: 'code'; readonly text: string }
+  | GuidePredict
+
+/** The transcript up to the next thing the player does. */
+export type GuideBeat = readonly GuidePart[]
+
+/** How many beats the player has reached on the step shown, and what they answered. */
+export interface GuidePace {
+  readonly shown: number
+  /** By question id; null where the player asked to be shown. */
+  readonly picks: Readonly<Record<number, number | null>>
+  advance(): void
+  /** Records an answer and shows the story up to `shown` beats. */
+  pick(predict: number, option: number | null, shown: number): void
+}
+
 export interface GuideObjective {
   readonly id: string
   readonly text: string
@@ -26,7 +62,8 @@ export interface GuideObjective {
 export interface GuideCheckReport {
   /** e.g. "Run 3 · 2 of 4 met". */
   readonly heading: string
-  readonly missing: readonly string[]
+  /** Each with what the last run showed instead, when the checker could say. */
+  readonly missing: readonly { readonly text: string; readonly observed: string | null }[]
   /** Taint the last run would add, by rule, e.g. "zombies-left: 1 of 10 children…". */
   readonly taint: readonly string[]
   /** init's word when every objective is met but the run added Taint; null otherwise. */
@@ -84,8 +121,10 @@ export interface LevelGuide {
   readonly stepLabel: string
   /** Set while looking back at a done step. */
   readonly reviewNote: string | null
-  readonly lines: readonly GuideLine[]
-  readonly code: readonly string[]
+  /** The beats reached so far; the last one is where the player is. */
+  readonly beats: readonly GuideBeat[]
+  /** Shows the next beat without running anything; null on the last one. */
+  readonly onContinue: (() => void) | null
   readonly showObjectives: boolean
   readonly objectives: readonly GuideObjective[]
   /** What the checker said about the last run, while building; null before the first one. */
@@ -97,11 +136,33 @@ export interface LevelGuide {
   readonly hints: readonly GuideHint[]
   readonly seeAlso: readonly { readonly term: string; readonly href: string }[]
   readonly codex: readonly { readonly id: string; readonly term: string; readonly href: string }[]
+  /** The cards lie open once the level's terms have been met; before, they fold to one line. */
+  readonly codexOpen: boolean
   readonly actions: readonly GuideAction[]
   readonly note: string | null
 }
 
+export interface RecallCard {
+  readonly id: string
+  readonly term: string
+  readonly answer: string
+  /** The level that filed it, "P.1 Power On". */
+  readonly seenIn: string
+}
+
+/** Cards from earlier levels to recall before going on; the player marks each one themselves. */
+export interface LevelRecall {
+  readonly title: string
+  readonly note: string
+  readonly cards: readonly RecallCard[]
+  onMark(cardId: string, knew: boolean): void
+}
+
 export interface LevelCard {
+  /** The terms this level taught, as the player met them. */
+  readonly learned: readonly string[]
+  /** Null when there is nothing earlier to recall. */
+  readonly recall: LevelRecall | null
   readonly cards: readonly CodexCardData[]
   readonly simplified: readonly string[]
   readonly seenIn: string

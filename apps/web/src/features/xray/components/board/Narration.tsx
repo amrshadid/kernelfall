@@ -35,9 +35,11 @@ export function Narration({ stage, index, count, guessNext, guess, depth }: Narr
         <p className="xr__what" aria-live="polite">
           <InlineText text={stage.what} />
         </p>
-        <p className="xr__why">
-          <b>Why this way:</b> <InlineText text={stage.why} />
-        </p>
+        {stage.why !== '' && (
+          <p className="xr__why">
+            <b>Why this way:</b> <InlineText text={stage.why} />
+          </p>
+        )}
         {stage.gate !== undefined && (
           <div className="xr__gatekeeper xr-simple">
             <svg viewBox="0 0 34 40" aria-hidden="true">
@@ -57,12 +59,14 @@ export function Narration({ stage, index, count, guessNext, guess, depth }: Narr
           </p>
         )}
         {/* Keyed by depth so switching to Deep opens it, while the player can still fold it. */}
-        <details key={depth} open={depth === 'deep'}>
-          <summary>Go deeper</summary>
-          <p>
-            <InlineText text={stage.deeper} />
-          </p>
-        </details>
+        {stage.deeper !== '' && (
+          <details key={depth} open={depth === 'deep'}>
+            <summary>Go deeper</summary>
+            <p>
+              <InlineText text={stage.deeper} />
+            </p>
+          </details>
+        )}
         {stage.sources.length > 0 && (
           <details>
             <summary>Source</summary>

@@ -34,16 +34,18 @@ import { mergeTree, writeV86Fs } from '#vm-image/v86-fs'
 const ALPINE = 'https://dl-cdn.alpinelinux.org/alpine/v3.24'
 const MINIROOTFS = 'alpine-minirootfs-3.24.3-x86.tar.gz'
 const KERNEL_PACKAGE = 'linux-virt'
+// The kernel's build tree, for the player's modules: a module loads only on the exact build it was made
+// for, and Alpine deletes a superseded build, so it is pinned and mirrored with the kernel. Not in the
+// image until a level builds a module: its 13,000 files double what `find /` walks (S.4).
+const KERNEL_TREE_PACKAGE = 'linux-virt-dev'
 // e2fsprogs makes the data disk's ext4 (disk.ts), and gives the player mkfs, fsck and debugfs.
 // BusyBox has no man pages of its own: coreutils-doc's GNU pages are what a real distribution shows.
 const PACKAGES = [
   'bash',
   'gcc',
+  'make',
   'musl-dev',
   'strace',
-  'tcc',
-  'tcc-libs-static',
-  'tcc-dev',
   'busybox-static',
   'file',
   'e2fsprogs',
@@ -130,12 +132,13 @@ async function main() {
   const rootfs = readTarGz(rootfsArchive)
 
   const kernelPackage = index.packages.get(KERNEL_PACKAGE)
-  if (!kernelPackage) {
-    throw new Error(`Alpine has no ${KERNEL_PACKAGE}`)
+  const kernelTree = index.packages.get(KERNEL_TREE_PACKAGE)
+  if (!kernelPackage || !kernelTree) {
+    throw new Error(`Alpine has no ${KERNEL_PACKAGE} or no ${KERNEL_TREE_PACKAGE}`)
   }
   // Without the kernel's own dependencies (mkinitfs, kmod): they build initramfs images on a real install; ours is made here.
   const skipped = new Set([...installedNames(rootfs), ...NOT_INSTALLED])
-  const wanted = [...resolve(PACKAGES, index, skipped), kernelPackage]
+  const wanted = [...resolve(PACKAGES, index, skipped), kernelPackage, kernelTree]
   const packages: ArchiveEntry[][] = []
   for (const found of wanted) {
     const locked = lock.packages[found.name]
@@ -156,9 +159,14 @@ async function main() {
         lock.packages[found.name] = { version, sha256: hash }
       })
     }
-    packages.push(readTarGz(data))
+    if (found !== kernelTree) {
+      packages.push(readTarGz(data))
+    }
   }
   console.log(`${wanted.length} packages: ${wanted.map((found) => found.name).join(' ')}`)
+  if (lock.packages[KERNEL_PACKAGE]?.version !== lock.packages[KERNEL_TREE_PACKAGE]?.version) {
+    throw new Error(`${KERNEL_PACKAGE} and ${KERNEL_TREE_PACKAGE} are pinned to different versions: re-pin both`)
+  }
 
   const kernelRelease = packages
     .flat()

@@ -7,7 +7,7 @@ path is in [LEVELS.md](../LEVELS.md#4-the-journey).
 
 Kernel source paths follow Linux 6.18 (LTS). Every output, message and syscall below
 was copied from a run on the Machine (one CPU, i386, Alpine 3.24, kernel
-`6.18.59-0-virt`, bash 5.3, BusyBox, musl); the level files hold the same text.
+`6.18.63-0-virt`, bash 5.3, BusyBox, musl); the level files hold the same text.
 
 **Five levels, about 1 hour 45 minutes,** played after the Prologue's capstone
 (P.10). The shell itself is taught earlier, in the Prologue's
@@ -344,8 +344,10 @@ The disk opens only for root (no udev here, so no `disk` group on the node).
   `runuser -u guest -- cat /home/you/notes.txt`: before, it prints the note; after
   `chmod 600`, `cat: can't open '/home/you/notes.txt': Permission denied`. Then
   `chmod 666 /etc/motd` → `chmod: /etc/motd: Operation not permitted`.
-- **Checker:** a failed `execve` with `EACCES` and an exec of `hi`; a player `cat`
-  through `box` refused and allowed; an `ls -l` line for `notes.txt` with `r` for the
+- **Checker:** a failed `execve` with `EACCES`, and an exec of `hi` after an earlier
+  `chmod` took its owner's `x` away; a player `cat` through `box` refused while an
+  earlier `chmod` (or none since `mkdir box`) left `box` without its owner's `x`, and
+  allowed; an `ls -l` line for `notes.txt` with `r` for the
   owner only (BusyBox colours the name on a terminal, so the line is read as plain
   text); the neighbour's `cat` (run by `runuser`, `su` or `setpriv`: in the same task, or
   in a child it forked, as `runuser` does for its PAM session) refused with `EACCES`;
@@ -371,6 +373,9 @@ S.3, Processes from Outside, begins.
 Everything shown is the Machine's real check. The Machine has no sudo, ACLs or
 SELinux. The neighbour's knock is init's: once `note-private` is met, the game runs
 `cat /home/you/notes.txt` as `guest` through `runuser`, as root (level.yaml `runAs`).
+The refusals and runs are judged from the kernel's events; the modes `hi` and `box`
+had before are read from the earlier command lines (a plain `chmod` that exited 0, and
+`mkdir box`), since a check sees one command's events.
 
 ---
 

@@ -63,9 +63,8 @@ codex:
   - id: command-lifecycle
     term: the life of a command
     simple: >-
-      A command travels from the shell through the kernel's parts to a driver and
-      back: new process, program loaded, path walked, data read, text written, exit,
-      prompt.
+      A command travels from the shell through the kernel to a driver and
+      back: new process, program loaded, path walked, data read, text written, exit.
     deep: >-
       fork() (clone() with glibc) → kernel_clone(); execve() → do_execveat_common();
       the scheduler runs the new task; open() (openat() with glibc) → path_openat();
@@ -106,7 +105,7 @@ codex:
 taint: []
 fidelity:
   faithful:
-    - "GRUB 2.14's menu, editor and command line, and its names for the disk: (hd0) (hd0,msdos1)"
+    - "GRUB 2.14's menu and editor"
     - "an edit made with e in GRUB lasts one boot"
     - "module_blacklist= making the kernel refuse virtio_net (modprobe: Operation not permitted)"
     - "mem=64M leaving the kernel 45524 kB in total"

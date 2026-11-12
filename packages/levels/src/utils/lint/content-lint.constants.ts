@@ -40,4 +40,5 @@ export const ENFORCED_LEVELS: readonly LevelId[] = [
   'prologue-machine-in-section-07-who-runs',
   'prologue-machine-in-section-08-pages-and-maps',
   'prologue-machine-in-section-09-files-doors-wires',
+  'prologue-machine-in-section-10-bring-it-up',
 ]

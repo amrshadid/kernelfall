@@ -2525,20 +2525,23 @@ and bring back an ext4 objective.
 
 ## P.10 — Bring the Machine Up (capstone)
 
-- **Id:** `prologue-machine-in-section-10-bring-it-up` · **Region / NPC:** the whole Machine / the Watchdog, init, udev (on the drawing) · **Tracks:** `kernel`, `userland` · **Time:** ~30 min · **Prerequisites:** `sys-kernel-subsystems`, `sys-boot-chain` · **Skills unlocked:** `sys-command-lifecycle`
+- **Id:** `prologue-machine-in-section-10-bring-it-up` · **Region / NPC:** the whole Machine / the Watchdog, init · **Tracks:** `kernel`, `userland` · **Time:** ~30 min · **Prerequisites:** `sys-kernel-subsystems`, `sys-boot-chain` · **Skills unlocked:** `sys-command-lifecycle`
 
-The Prologue's closing mission. It teaches nothing new: the player uses the boot
-path, the hardware, memory, processes and files together to bring a stalled Machine
-fully up. Each step is checked by what the Machine does, and the closing Predict
-costs nothing when wrong.
+**Question:** The boot stops before init starts. What stopped it, and how do you
+bring the Machine all the way up?
+
+The Prologue's closing mission, a recall level: it teaches no concept. Each of the
+three wrong words on the command line points back to a level (`root=` to P.4 and
+P.9's `/proc/mounts`, `mem=` to P.8's `free`, `module_blacklist=` to P.5's modules
+and P.9's `virtio_net`), and the closing read is followed through every part met.
+Each step is checked by what the Machine does, and the Predict costs nothing when
+wrong. The story text is the level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **The Watchdog:** Restarting. Not my fault. ...It's stuck. I'm counting, and nobody's resetting me.
+> **The Watchdog:** Restarted. And it's stuck. I'm counting, and nobody's resetting me.
 >
-> **init:** Someone changed the boot entry. Maybe the Dangling, maybe a tired admin. Either way, the Machine can't find its feet.
->
-> **init:** You know every floor now. Bring it up. All the way up: the root, the network card, the memory. Then show me one command going all the way down to a driver and back.
+> **init:** Someone changed the boot entry, as the Watchdog feared. In The Boot Path you added words to the kernel command line. Tonight three words on it are wrong, and you take them out. GRUB's menu is on your terminal: press Enter, and watch how far the boot gets.
 
 ### See it (X-ray)
 
@@ -2558,40 +2561,41 @@ sh: can't access tty; job control turned off
 ~ #
 ```
 
-The kernel, its initcalls and the initramfs all worked; the initramfs's `/init`
-couldn't mount the root named by `root=`, so it opened BusyBox `sh` as root before
-init could start. Nothing is traced until the Machine is up (no tracefs, no bash),
-so X-ray's boot view shows only the boot that succeeds.
+The firmware, GRUB and the kernel did their part; the initramfs's `/init` couldn't
+mount the root named by `root=`, so it opened BusyBox `sh` as root (`~ #`) instead
+of handing over to init. Nothing is traced until the Machine is up.
+
+**Read the stop** (still See it), in the emergency shell: `cat /proc/cmdline` shows
+the three words; `ls /dev` shows `sda` and `sda1`, no `sda3`; `free` shows
+`Mem: 45524` KiB in total. init reads the three words as recall:
+
+- `root=/dev/sda3`: no `sda3`; the disk's one partition, `sda1`, holds `/boot`. The
+  root is `host9p` (P.9's `/proc/mounts`), which `/init` mounts when there's no
+  `root=`.
+- `mem=64M`: 45524 KiB, where P.8 showed about 218 MiB.
+- `module_blacklist=virtio_net`: the kernel will refuse the card's driver when it is
+  loaded later, from the root.
 
 ### Build it
 
-Four steps, in order. Command chips offer only the commands' names and one-line
-explanations (no arguments): the player chooses what to look at and types it.
+Command chips offer only the commands' names and one-line explanations.
 
-1. **Read the stop**, in the emergency shell (`uid=0`): `cat /proc/cmdline` shows the
-   three words; `ls /dev` shows `sda` and `sda1`, no `sda3`; `free` shows
-   `Mem: 45524` KiB in total. The root is the virtio share `host9p` (P.9's
-   `/proc/mounts`), which `/init` mounts when there's no `root=`; `mem=64M` caps the
-   RAM; `module_blacklist=virtio_net` will make the kernel refuse the card's driver
-   when the start-up script loads it from the root.
-2. **Back to GRUB:** `reboot -f` (`-f`: straight to the kernel; there's no init to
-   ask) prints `reboot: Restarting system`. GRUB's own command line, `c` then `ls`,
-   lists `(hd0) (hd0,msdos1) (fd0) (fd1)`.
-3. **Fix the entry, all of it:** `e`, delete the three words, Ctrl-X. All in one
-   edit: once bash runs the player is `you`, and `reboot` answers
-   `reboot: : Operation not permitted`. With only `root=` fixed, the boot screen
-   shows `modprobe: can't load module virtio_net
+1. **Fix the entry, all of it, in one edit:** `reboot -f` goes back to GRUB; `e`,
+   delete the three words at the end of the `linux` line, Ctrl-X. Once bash runs the
+   player is `you` and can't restart (`reboot: : Operation not permitted`). With only
+   `root=` fixed, the boot screen shows `modprobe: can't load module virtio_net
    (kernel/drivers/net/virtio_net.ko.gz): Operation not permitted`, `free` says
-   45524 and `ls /sys/class/net` shows only `lo`. Then the player checks:
-   `cat /proc/cmdline`; `free` (`Mem: 240008` after a GRUB boot);
-   `ls /sys/class/net` (`eth0  lo`); `readlink /sys/class/net/eth0/device/driver`
-   (`../../../../bus/virtio/drivers/virtio_net`); BusyBox `ps` (`/sbin/init` as
-   PID 1, `[kthreadd]`).
-4. **One command, end to end.** Raising a link needs root (as `you`:
-   `ip: ioctl 0x8914 failed: Operation not permitted`), so the level's `runAs` cue
-   has init run `ip link set eth0 up` as root once `card-bound` is met. Then
-   `cat /sys/class/net/eth0/operstate` prints `up` (v86's virtio card reports a
-   link, `carrier` 1, with nothing behind it).
+   45524 and `ls /sys/class/net` shows only `lo`.
+2. **Prove every part is up** (real output, the `solution` recording):
+   `cat /proc/cmdline`; `free` (`Mem: 239640`); `ls /sys/class/net` (`eth0  lo`);
+   `readlink /sys/class/net/eth0/device/driver`
+   (`../../../../bus/virtio/drivers/virtio_net`, the link from P.6); BusyBox `ps`
+   (`/sbin/init` as PID 1, `[kthreadd]`).
+
+Raising a link needs root (as `you`: `ip: ioctl 0x8914 failed: Operation not
+permitted`), so the level's `runAs` cue has init run `ip link set eth0 up` as root
+once `card-bound` is met; v86's virtio card then reports a link with nothing behind
+it.
 
 - **Checker verifies (behavior):**
   - `root-found` (declared): `cat` read `/proc/cmdline` to the end without
@@ -2609,23 +2613,20 @@ explanations (no arguments): the player chooses what to look at and types it.
 
 ### Watch it
 
-**Predict:** "Which floors of the Section does that one small read pass through?"
-X-ray replays the run: bash `fork`s; the copy `execve`s `cat`; the scheduler runs
-it; `open` walks the path through the VFS to sysfs; `sendfile64` copies the file to
-the terminal while sysfs reports the card's state; the terminal's driver shows the
-three bytes; `cat` calls `exit_group` and bash's `wait4` returns. (Wanted: the
-order-the-path card game; until then the Predict is a question, and costs nothing.)
+**Predict** (before running `cat /sys/class/net/eth0/operstate`): "Whose report will
+the answer be?" The disk's driver, the terminal's driver, or `virtio_net`, the one
+the boot entry had blocked. The answer `up` is `virtio_net`'s. init then follows the
+read through everything met: bash forked and its copy became `cat`; the scheduler
+gave it the CPU; its `open` crossed the Gate and the VFS sent it to sysfs; sysfs
+asked the kernel's network code, which keeps what `virtio_net` reported; the
+terminal's driver showed three bytes; `cat` exited and the prompt came back.
+(Wanted: the order-the-path card game.)
 
-In the world: the Watchdog's meter fills and stays full. "Reset. Properly. First
-time since the Kernelfall." The Kernel Map's Prologue regions are fully drawn, the
-network card glows at the bottom of the Section, and a wire runs from it to the dark
-harbor: "The wire's live. Nobody's talking on it yet."
+> **The Watchdog:** Reset. Properly. First time since the Kernelfall.
 
 ### Debrief
 
-> **init:** You brought the Machine up from a dead stop: the root, the driver, the memory. And you followed one command all the way down to a driver and back.
->
-> **init:** You know what the Machine is made of now, top to bottom. But you've only seen the city from my doorstep. Time you walked the streets you're rebuilding.
+> **init:** You brought the Machine up from a dead stop, and followed one command down to a driver and back. You know what the Machine is made of. But you have only seen the city from my doorstep. In The Streets of Userland, you walk it.
 
 The Surface Survey begins with S.1.
 
@@ -2645,9 +2646,8 @@ The Surface Survey begins with S.1.
 ### Codex (chapter: The Machine in Section)
 
 - **The life of a command** (`command-lifecycle`)
-  - **Simple:** A command travels from the shell through the kernel's parts to a
-    driver and back: new process, program loaded, path walked, data read, text
-    written, exit, prompt.
+  - **Simple:** A command travels from the shell through the kernel to a driver and
+    back: new process, program loaded, path walked, data read, text written, exit.
   - **Deep:** `fork()` (`clone()` with glibc) → `kernel_clone()`; `execve()` →
     `do_execveat_common()`; the scheduler runs the new task; `open()` (`openat()`
     with glibc) → `path_openat()`; `read()` → `vfs_read()` → the filesystem (for a
@@ -2671,6 +2671,23 @@ The Surface Survey begins with S.1.
     firmware's memory map). — `init/do_mounts.c`, `kernel/module/main.c`,
     `arch/x86/kernel/e820.c`, `Documentation/admin-guide/kernel-parameters.txt`.
 
+### Moved out of the story
+
+| Fact (old story)                                                       | Now                                             |
+| ---------------------------------------------------------------------- | ----------------------------------------------- |
+| "Maybe the Dangling, maybe a tired admin"                              | gone                                            |
+| `quiet` hid the kernel's lines; `/init` and `/newroot`; `exit` retries | the boot's own lines show it; `fidelity`        |
+| the emergency shell is BusyBox `sh`, not bash, and isn't traced        | this spec; `fidelity`                           |
+| the root is a share, not a disk                                        | P.9's `/proc/mounts`; the hint says "the share" |
+| 45524 KiB is what's left of 64 MiB; the Machine has 256 MiB            | `boot-parameters-that-break` Deep; P.8          |
+| `reboot -f` against plain `reboot`; `reboot: Restarting system`        | the `reboot` chip                               |
+| GRUB's command line: `c`, `ls`, `(hd0) (hd0,msdos1) (fd0) (fd1)`       | gone                                            |
+| what happens with only `root=` fixed; `reboot`'s refusal as `you`      | this spec; the `root-only` golden run           |
+| `ip link set eth0 up` and its `ioctl 0x8914` refusal                   | this spec; `fidelity`                           |
+| `sendfile64`, `exit_group`, `wait4` by name in the last read           | `command-lifecycle` Deep                        |
+| the Watchdog's meter; the map and the wire to the harbor               | gone                                            |
+| Debian's `(initramfs)` prompt; `update-grub`                           | gone from the real-world card                   |
+
 ### Real-world card
 
 ```sh
@@ -2691,8 +2708,7 @@ No Taint rules are live in the Prologue.
 
 ### Fidelity
 
-- **Faithful:** GRUB 2.14's menu, editor and command line (`(hd0) (hd0,msdos1)`);
-  one-boot edits; `module_blacklist=` making the kernel refuse `virtio_net` (EPERM);
+- **Faithful:** GRUB 2.14's menu and editor; one-boot edits; `module_blacklist=` making the kernel refuse `virtio_net` (EPERM);
   `mem=64M` leaving 45524 kB; `reboot` and `ip link set` needing root; `operstate`
   going from `down` to `up`; the order of syscalls in the route.
 - **Simplified:** the initramfs `/init` is a short script written for the game,

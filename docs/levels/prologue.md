@@ -697,48 +697,42 @@ build command; gcc's diagnostics as marks in the editor.
 
 - **Id:** `prologue-boot-path-03-speak-to-shell` · **Region / NPC:** init's doorstep in Userland / init, the Watchdog · **Tracks:** `userland` · **Time:** ~20 min · **Prerequisites:** `sys-user-kernel-mode` · **Skills unlocked:** `sys-shell-basics`
 
-From this level on, the player types every command. The Field Guide (a Codex page of
-commands and folders, specified in [surface-survey.md](surface-survey.md#the-field-guide-codex-page))
-opens here.
+**Question:** How does the shell turn the line you type into a running program? X-ray
+answers with bash's own requests: the words it hands `execve`, and its search
+through `PATH`.
+
+**Teaches:** `argv`, `path-search`, `env`. **Names** (met here, not taught):
+`builtin` (S.1 teaches it); `fork`, `pid`, `exit-status` and `errno` (Act I's: 1.4
+uses them, and no built level teaches them yet); `man-page` (a tool, not a lesson).
+**Tools:** `/bin/echo`, `ls`, `wc`, `man`, `printenv`, `env`, Tab. From this level on
+the player types every command. The Field Guide (a Codex page of commands and
+folders, specified in [surface-survey.md](surface-survey.md#the-field-guide-codex-page))
+opens here. The story text is the level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** So far you've clicked my chips. Now speak to the shell yourself, every word. One day you'll build one.
+> **init:** In First Words, `execve` started `/bin/echo` with a list of words. Who made that list, and who found the file? The shell: bash, the program that reads each line you type. One day you'll build one.
 >
-> **init:** The Machine's shell is bash, the same program millions of Linux machines run. It prints a _prompt_, `kernelfall:~$ `: the Machine's name, a colon, the folder you're in, and `$`, which means "your turn". `~` is short for your home folder, `/home/you`. You type a line. It cuts the line into words, finds the program the first word names, runs it, waits for it to finish, and prompts again.
+> **The Watchdog:** And whatever it starts asks the kernel for everything. You've seen it.
 >
-> **The Watchdog:** And whatever it runs asks the kernel for everything. You've seen it.
->
-> **init:** The first word is the _command_. The other words are its _arguments_. The ones that start with a dash are _options_. And when you forget what a command does, the Machine keeps a manual.
-
-Every level starts on a freshly restored Machine, so init asks the player to press
-Run once: it builds `hello` from init's own `hello.c` in the editor (the same few
-lines as P.2's reference) and runs it.
+> **init:** I've left my own `hello.c` in the editor, the same lines as yours. Press Run once to build it: you'll need `hello` at the end.
 
 ### See it (X-ray)
 
-The syscalls view. init types three lines, and X-ray shows how the shell cut each one
-into words and handed them to the program (as the list `["...", "..."]` in
-`execve`):
+1. **Do** (the first line): `/bin/echo one two three`, then `ls -l /etc`. **See:**
+   the words the shell handed each program, in `execve`:
 
-```
-execve("/bin/echo", ["/bin/echo", "one", "two", "three"], ...) = 0
-execve("/bin/echo", ["/bin/echo", "one", "two"], ...)          = 0
-execve("/bin/ls", ["ls", "-l", "/etc"], ...)                   = 0
-```
+   ```
+   execve("/bin/echo", ["/bin/echo", "one", "two", "three"], ...) = 0
+   execve("/bin/ls", ["ls", "-l", "/etc"], ...)                   = 0
+   ```
 
-- init types `/bin/echo`, not `echo`: plain `echo` is a bash builtin and starts no
-  program, so there would be no `execve` to watch.
-- `/bin/echo one two three`: three arguments.
-- `/bin/echo one      two`: two arguments. The shell splits on spaces; how many
-  spaces doesn't matter, and `echo` puts one space back between them.
-- `ls -l /etc`: `-l` is an option (it changes _how_ `ls` works: one long line per
-  file), `/etc` an argument (it says _what_ to work on). The shell doesn't know what
-  `-l` means; `ls` does. The program gets all the words, its own name first (as
-  typed), as a list called its argument vector, `argv`.
-
-Then init runs `man ls`, and X-ray shows something new: bash looking before it
-starts anything (recorded on the Machine, trimmed; PIDs differ per run):
+   **Name:** _command_, _arguments_, _option_, and the list of all the words, the
+   program's name first: `argv`.
+2. init wrote `/bin/echo`, a path, because plain `echo` is a _builtin_: the shell
+   does it itself and starts no program. For `ls` the shell had to find the file.
+3. **Do:** `man ls`, then `q`. **See:** bash looking before it starts anything
+   (recorded on the Machine, trimmed; the PID changes from run to run):
 
 ```
 statx("/usr/local/sbin/man", ...) = -1 ENOENT (No such file or directory)
@@ -750,15 +744,14 @@ fork()                            = 491
 [491] execve("/usr/bin/man", ["man", "ls"], ...) = 0
 ```
 
-init: "I never told it where `man` lives. It looked." `statx` asks the kernel about
-a file; three times it answered `ENOENT` ("no such file"), the fourth folder had it,
-and `faccessat2` checked that the player may run it. Then bash made a copy of itself
-(`fork`, a new **PID**), and the copy became `man` (`execve`). `printenv PATH`
-prints `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`. `PATH` is
-one of the process's **environment variables**: a list of `NAME=value` settings
-every process gets from its parent. It lists the folders the shell searches, in
-order, separated by `:`. The next `man wc` shows no search: bash remembered where
-`man` is (`hash` lists what it remembers).
+**Name:** `statx` asks the kernel about a file; three folders answered `ENOENT`,
+no such file, and the fourth had `man`. The shell copied itself with `fork`, and
+the copy, its child, became `man` with `execve`; the number `fork` answered is the copy's
+_PID_.
+4. **Do:** `printenv PATH`, which prints
+`/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`. **Name:**
+_environment variable_: one of the `NAME=value` settings every process gets from
+its parent. `PATH` lists the folders the shell searches, in order.
 
 ### Build it
 
@@ -768,43 +761,22 @@ fills a Field Guide entry. Outputs below are the Machine's.
 
 - **Starter provides:** init's `hello.c` (P.2's reference) in the editor (Run builds
   `hello` in `/home/you`), and the Field Guide page.
-- **Player does, with worked examples first:**
-  - **Arguments.** `/bin/echo one two three`, then `/bin/echo` with four words of
-    their own.
-  - **Options.** `ls`, `ls -l`, `ls -a`, then `ls -la` (two options joined: most
-    programs accept that). `ls -a` shows two extra names, `.` (this folder) and
-    `..` (the one above): `.        ..       hello    hello.c`. Names starting
-    with `.` are hidden without `-a`.
-  - **Arguments and options together.** `wc /etc/motd` (3 lines, 21 words, 124
-    bytes), then `wc -l /etc/motd` (`3 /etc/motd`), then
-    `wc -w /etc/motd`.
-  - **The manual.** `man ls`: find what `-a` does ("do not ignore entries starting
-    with ."), arrows scroll, `q` quits (the pager is BusyBox `less`). `man wc`:
-    find the option that counts bytes (`-c, --bytes`). The pages for `ls` and `wc`
-    are GNU coreutils'; the Machine's `ls` and `wc` are BusyBox, so init points at
-    `ls --help` for BusyBox's own list (`-a  Include names starting with .`).
-    `man 2 write`: the manual's section 2 is syscalls; there's P.2's `write()`.
-  - **Tab.** Type `cat /etc/mot` and press **Tab**: the shell finishes `/etc/motd`.
-    `cat /etc/mo` stops at the fork; Tab again lists the four names
-    (`modprobe.d`, `modules`, `modules-load.d`, `motd`). Then `printen` + Tab
-    (finishes `printenv`; `ec` would stop, since `echo` and `econftool` both fit),
-    and `ls /us` + Tab (finishes `/usr/`). X-ray shows the shell itself (no new
-    program) reading the folders' names to finish yours.
-  - **The environment.** `printenv HOME` (`/home/you`), `printenv USER` (`you`),
-    `printenv PATH`, then `env` (all of them: `SHELL=/bin/bash`, `HOME`, `USER`,
-    `PATH`, `PAGER=less` and more). Then `env GREETING=hi printenv GREETING`:
-    `env` starts `printenv` with one extra setting, and `printenv` prints `hi`. Run
-    `printenv GREETING` alone: nothing (status 1). The setting existed only for
-    that one child.
-  - **`PATH`.** `ls /bin` and find `ls` itself in the list: commands are files.
-    `type ls cd`: `ls is hashed (/bin/ls)`, a file bash found in `PATH` and
-    remembered (the `hash` from See it), and `cd is a shell builtin`. Then `hello`, then
-    `./hello` (Watch it).
+- **Player does:**
+  - **Arguments.** `/bin/echo` with four words of their own.
+  - **Options.** `ls -l`, `ls -a`, then both joined in one word, `ls -la`.
+  - **An option and an argument together.** `wc -l /etc/motd` (`3 /etc/motd`).
+  - **The manual.** `man wc`: arrows scroll, `q` quits (the pager is BusyBox
+    `less`). `man 2 write`: section 2 is the syscalls; there is P.2's `write()`.
+  - **Tab.** `cat /etc/mot`, Tab (finishes `/etc/motd`), then Enter; the same with
+    `printen` (finishes `printenv`).
+  - **The environment.** `env GREETING=hi printenv GREETING`: `env` starts
+    `printenv` with one extra setting, and it prints `hi`. `printenv GREETING`
+    alone prints nothing: the setting lived only in that one child.
 - **Checker verifies (behavior, from the kernel's events):**
   - `/bin/echo` ran with at least four arguments after its name.
   - `ls` ran with two options joined in one word (`-la` or similar), and `wc` with
     an option and a non-option argument (`wc -l /etc/motd`).
-  - `man ls`, `man wc` and `man` with a section number ran, each exiting 0.
+  - `man ls` or `man wc`, and `man` with a section number, ran, each exiting 0.
   - bash completed a file name in `/etc` and a command name in a `PATH` folder
     with Tab: its own `getdents64` read the folder to its end before Enter. A glob
     (`cat /etc/mo*`) reads the same folder after Enter and doesn't count; the
@@ -822,9 +794,9 @@ fills a Field Guide entry. Outputs below are the Machine's.
 
 ### Watch it
 
-**Predict:** `hello` is in `/home/you`, where you're standing. If you type just
-`hello`, where will the shell look for it? Here, in `/home/you`; in the six `PATH`
-folders; or everywhere. Then the player runs it:
+**Predict:** `hello` is in `/home/you`, the folder you're in. Type just `hello`:
+where will the shell look for it? Here, in `/home/you`; in the six `PATH` folders;
+or everywhere. Then the player runs it:
 
 ```
 $ hello
@@ -845,25 +817,16 @@ fork()                              = 500
 [500] exit_group(127)               = ?
 ```
 
-The shell searched only the `PATH` folders, never the one you're in (the trace's
-earlier `statx(".")` is about the folder itself). Its copy printed the message on
-fd 2 and exited with 127, the shell's status for "command not found"; no `execve`
-ran (`echo $?` shows the 127). A name with a `/` in it is a path, so the shell
-doesn't search: `./hello` means "`hello`, in `.`, this folder", and X-ray shows
-just `fork` and `execve("./hello", ["./hello"], ...) = 0`. (The current folder is
-left out of `PATH` on purpose: a program called `ls` dropped in a shared folder like
-`/tmp` must not run in place of the real one.)
-
-In the world: a signpost appears at init's door, its arms pointing down the six
-`PATH` folders. The Field Guide page fills its first rows.
+The shell searched only the `PATH` folders, never the one you're in. Its child
+printed the message on file descriptor 2 and ended with status 127, the shell's
+number for "command not found" (0 would mean all went well); no `execve` ran. A name with a `/` in it is a path, so the
+shell doesn't search, and `.` means the folder you're in. That folder is left out of
+`PATH` on purpose: a program named `ls`, dropped in a shared folder, must never run
+in place of the real one.
 
 ### Debrief
 
-> **init:** Now you can speak to a shell. Command, arguments, options, and `man` when you forget. Tab when you're lazy. `PATH` when it can't find something.
->
-> **init:** Good, because the next thing I'll show you happens before any shell exists: how the Machine woke up when you pressed the power button. In The Boot Path, we watch it again, slowly.
->
-> **The Watchdog:** You saw it scroll past in a blur. Earlier tonight, something down there went wrong at that speed.
+> **init:** So the shell cuts your line into words, finds the program through `PATH`, and starts it with `fork` and `execve`. All of that needs a Machine that is already running. In The Boot Path you watch how it woke when you pressed the power button.
 
 P.4 begins.
 
@@ -934,8 +897,7 @@ P.4 begins.
     trace=%%stat,execve,fork,clone bash -c 'nosuchcmd; true'`. Deepened by 1.5.
 - **The manual** (`man-pages`)
   - **Simple:** `man ls` shows the manual page for `ls`. A number picks a section:
-    `man 2 write` is the syscall, `man 1 printf` the command and `man 3 printf`
-    the C function.
+    `man 2 write` is the syscall `write`.
   - **Deep:** Sections: 1 commands, 2 syscalls, 3 C library functions, 4 devices,
     5 file formats, 7 overviews, 8 admin commands. The Linux man-pages project
     documents the kernel's user-space interface; the kernel's own documentation
@@ -944,6 +906,28 @@ P.4 begins.
     are BusyBox, whose `--help` lists the options it really takes. Every card in
     this Codex names its man pages this way.
   - **Read:** man 1 `man`, man 7 `man-pages`.
+
+### Moved out of the story
+
+| Fact (old story)                                                        | Now                                                    |
+| ----------------------------------------------------------------------- | ------------------------------------------------------ |
+| the prompt `kernelfall:~$`, `~` for home, `$` for "your turn"           | `shell` Deep keeps `$` and `#`; the rest is gone       |
+| "every level starts on a freshly restored Machine"                      | gone: init leaves `hello.c` in the editor              |
+| runs of spaces: `/bin/echo one      two` is two arguments               | gone (`fidelity` lists it); 1.1 cuts a line into words |
+| `-l` changes how, `/etc` says what; the shell doesn't know what `-l` is | `arguments` Simple and Deep                            |
+| `faccessat2` asks "may I run this file?"                                | X-ray shows the call; `path-search` Deep, unnamed      |
+| `hash`: bash remembers where it found a command                         | `path-search` Deep                                     |
+| `.` and `..`, hidden names, `ls -a`'s output                            | S.1 (the streets of Userland)                          |
+| `wc` alone and `wc -w`; `man ls` and finding `-a`; `man wc` and `-c`    | one `wc -l`, one manual page; the chips explain        |
+| the manual's pages are GNU's, the programs BusyBox's; `ls --help`       | `man-pages` Deep                                       |
+| sections 1 and 3 of the manual                                          | `man-pages` Deep                                       |
+| Tab on `cat /etc/mo` listing four names; `ls /us` and Tab               | gone; the checker still tells Tab from a glob          |
+| `printenv HOME`, `USER`, `env` for all of them                          | `environment` Simple; the chips                        |
+| `ls /bin`: commands are files; `type ls cd`                             | `command` Deep and the `type` chip; S.1                |
+| the `statx(".")` before the search                                      | `fidelity` (simplified)                                |
+| `echo $?` shows the 127                                                 | gone here; P.5 asks for it and must explain it         |
+| the signpost at init's door                                             | gone                                                   |
+| the Watchdog's line about the blur                                      | gone: one Watchdog line per level                      |
 
 ### Real-world card
 
@@ -1001,36 +985,32 @@ work left for this level.
 starts at GRUB 2.14's menu on the player's terminal). Every menu, editor and `dmesg`
 line below is copied from a real run.
 
+**Question:** How does the Machine get from the power button to its first program?
+Four hands pass it along: firmware, bootloader, kernel, init. The player edits what
+the second tells the third.
+
+**Teaches:** `boot-chain`, `kernel-cmdline`, `kernel-log`. **Names** (met here, not
+taught): `user-space` (P.5 teaches it), `pipe` (S.5 teaches it), `driver` and
+`initramfs` (P.6 and P.10 build on them; no built level teaches them yet), `uefi`. **Tools:** GRUB's `e`, `/proc/cmdline`, `dmesg`, `grep`,
+`/sys/firmware/efi`. The story text is the level's `story.md`; this section lists its
+beats.
+
 ### Scene
 
-> **init:** **Booting** is everything between the power button and the first programs. You saw it as a blur when you pressed the power button. Let's do it again, slowly.
+> **init:** In Speak to the Shell, bash started every program you named. I started bash. So who started me? The Watchdog has restarted the Machine, so you can watch it wake.
 >
-> **The Watchdog:** I restarted it on purpose. Once. Don't make a habit of it.
+> **The Watchdog:** On purpose. Once. Don't make a habit of it.
 >
-> **init:** Watch who hands the Machine to whom. The firmware wakes first and knows nothing about Linux. It finds a bootloader. The bootloader loads the kernel. The kernel wakes its own parts, finds our files, and starts me.
->
-> **init:** And the bootloader is waiting for you right now. Most people never look. Today, you look.
+> **init:** _Booting_ is everything between the power button and me. Four hands pass the Machine along: firmware, bootloader, kernel, init. The second is waiting on your terminal.
 
 ### See it (X-ray)
 
-The level opens on GRUB's real menu. init walks the stages; after the boot, X-ray's
-**boot view** lays them out in lanes from the Machine's own `dmesg`.
+The level opens on GRUB's real menu; after the boot, X-ray's **boot view** lays the
+steps out from the Machine's own `dmesg`.
 
-1. **Firmware** is software stored on the computer's board itself; it runs first,
-   checks the hardware and starts a bootloader from a disk. Two kinds exist:
-   - **BIOS**, on older PCs: it reads the disk's first 512 bytes (the MBR) and runs
-     the tiny program in it.
-   - **UEFI**, on current PCs: it reads a small part of the disk set aside for it,
-     the **EFI system partition** (a **partition** is a part of a disk that holds
-     its own set of files), and runs a program file from it, like
-     `\EFI\debian\grubx64.efi`. Its list of what to boot is kept in a little memory
-     on the board that survives power-off (NVRAM).
-
-   The Machine's firmware is SeaBIOS, a BIOS; it has no UEFI at all. It runs GRUB's
-   first piece from the MBR of the Machine's 16 MiB disk, `/dev/sda`.
-2. **Bootloader: GRUB.** A **bootloader** is the small program that loads the
-   kernel. One disk can hold several kernels and even other operating systems, each
-   a **menu entry**; the Machine has one:
+1. **Name:** _bootloader_ (GRUB, the small program that loads the kernel) and
+   _firmware_ (software stored on the board itself, which ran first and started GRUB
+   from the disk). The Machine's menu has one entry:
 
    ```
                                 GNU GRUB  version 2.14
@@ -1044,7 +1024,7 @@ The level opens on GRUB's real menu. init walks the stages; after the boot, X-ra
          before booting or `c' for a command-line.
    ```
 
-   `e` shows what an entry really is:
+2. **Do** (the first line): press `e`. **See:** what an entry really is:
 
    ```
    setparams 'Alpine, with Linux virt'
@@ -1059,62 +1039,43 @@ The level opens on GRUB's real menu. init walks the stages; after the boot, X-ra
    initrd        /boot/initramfs-virt
    ```
 
-   `search` finds `/dev/sda1`, the partition holding `/boot`, by its ID. `linux`
-   names the kernel's file (`vmlinuz`, compressed to load faster) and, after it, the
-   **kernel command line**: settings for this boot, separated by spaces
-   (`console=ttyS0` sends the kernel's messages to the serial terminal, `quiet` keeps
-   most of them off it). `initrd` names the initramfs (step 5).
-3. **Kernel.** `start_kernel()` sets up the CPU, memory, interrupts, the scheduler
-   and the console. Its first lines (the Machine's `dmesg`):
-
-   ```
-   [    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
-   [    0.000000] BIOS-provided physical RAM map:
-   [    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
-   ```
-
-   The number in brackets is seconds since the kernel started; then its version,
-   who built it and with which compiler (gcc, as in P.2). The `BIOS-e820` lines are
-   the firmware's memory map.
-4. **initcalls.** Hundreds of start-up functions, in a fixed order of levels, from
-   `pure` and `core` up to `late`. Drivers get set up here: the disk controller's
-   `ata_piix` among them (P.6).
-5. **initramfs and root.** The kernel unpacks the **initramfs** and runs its `/init`
-   (`Run /init as init process`). That program **mounts** the root filesystem named
-   by `root=` at `/`. The Machine's entry has no `root=`: its `/init` mounts its
-   default, the virtio share `host9p` that carries the Machine's files (P.1, P.9).
-6. **PID 1.** `/init` hands over to `/sbin/init` from the root, as process 1.
+   **Name:** the _kernel command line_: the words after the kernel's file on the
+   `linux` line, settings for this boot (`console=ttyS0` sends the kernel's messages
+   to the terminal, `quiet` keeps most of them off it). Only that line is explained.
+3. The other two hands, in one paragraph: the kernel wakes its own parts and then
+   its drivers, the code for each kind of device; it runs the initramfs, a small set
+   of files GRUB loaded beside it, which finds the Machine's files, attaches them at
+   `/` and hands over to `/sbin/init` as process 1.
 
 ### Build it
 
 The player boots the Machine their own way. GRUB's keys are real: `e` edits the
 entry; in the editor Ctrl-N/Ctrl-P move a line, Ctrl-E goes to its end, Ctrl-X (or
-F10) boots the edit, Esc discards it.
+F10) boots the edit, Esc discards it. The story names Ctrl-N, Ctrl-E and Ctrl-X.
 
 - **Starter provides:** GRUB's menu and chips for `cat`, `dmesg`, `grep` and `ls`.
 - **Player does:** on the `linux` line, deletes `quiet`, adds `initcall_debug` and a
   word of their own, `greeting=hello`; boots with Ctrl-X; then reads what the
-  kernel was told and did:
+  kernel was told and did. `|` gets one clause: it sends `dmesg`'s lines to `grep`,
+  which keeps only the lines holding a word.
 
 ```
 $ cat /proc/cmdline
 BOOT_IMAGE=/boot/vmlinuz-virt console=ttyS0 rw tsc=reliable mitigations=off random.trust_cpu=on log_buf_len=128K initcall_debug greeting=hello
-$ dmesg | grep -i "command line"
-[    0.055345] Kernel/User page tables isolation: disabled on command line.
-[    0.087062] Kernel command line: BOOT_IMAGE=/boot/vmlinuz-virt console=ttyS0 rw tsc=reliable mitigations=off random.trust_cpu=on log_buf_len=128K initcall_debug greeting=hello
-[    0.090320] Unknown kernel command line parameters "greeting=hello", will be passed to user space.
-$ dmesg | grep -m 4 "calling  "
-[    0.305347] calling  con_init+0x0/0x270 @ 0
-[    0.309103] calling  hvc_console_init+0x0/0x30 @ 0
-[    0.309202] calling  xen_cons_init+0x0/0x50 @ 0
-[    0.309298] calling  univ8250_console_init+0x0/0x58 @ 0
+$ dmesg | grep "command line"
+[    0.310190] Kernel/User page tables isolation: disabled on command line.
+[    0.479757] Kernel command line: BOOT_IMAGE=/boot/vmlinuz-virt console=ttyS0 rw tsc=reliable mitigations=off random.trust_cpu=on log_buf_len=128K initcall_debug greeting=hello
+[    0.484263] Unknown kernel command line parameters "greeting=hello", will be passed to user space.
+$ dmesg | grep serial8250_init
+[    3.264988] calling  serial8250_init+0x0/0x170 @ 1
+[    3.312852] initcall serial8250_init+0x0/0x170 returned 0 after 47826 usecs
 ```
 
-GRUB puts `BOOT_IMAGE=` at the front; the kernel doesn't list it among the unknown
-words. "User space" means the programs outside the kernel, here init: the word is
-in init's environment (root-only `/proc/1/environ`), not in the player's later bash.
-Modules loaded later get the same lines, named in brackets:
-`initcall init_p9+0x0/0x58 [9pnet] returned 0 after 640 usecs`.
+The kernel didn't know `greeting=hello`, so it put it in init's environment, as `env`
+did for `printenv` in P.3, and said so; "user space" is its name for the programs
+outside it. `serial8250_init` is one _initcall_, a start-up function: it set up the
+driver for `ttyS0`, the terminal's line. The number in brackets counts seconds since
+the kernel started; the times change from boot to boot.
 
 - **Checker verifies (behavior):**
   - `booted-your-way` (declared): `cat` read `/proc/cmdline` to the end, with
@@ -1131,28 +1092,27 @@ Modules loaded later get the same lines, named in brackets:
 
 ### Watch it
 
-**Predict:** "Did your edit change anything for the next boot?" No: GRUB's editor
-worked on a copy in memory; the entry stays in `/boot/grub/grub.cfg` on `/dev/sda1`.
-On most systems a lasting change goes in `/etc/default/grub`, then `grub-mkconfig`
-(`update-grub` on Debian and Ubuntu), as root. On the Machine `grub-mkconfig` can't
-probe the 9p root; root would edit `grub.cfg` itself.
+**Predict:** "Did your edit change the next boot?" No: GRUB's editor worked on a copy
+in memory; the entry itself is in `grub.cfg` on the Machine's disk (`/dev/sda1`,
+which is not mounted, so the story gives no path), and nobody wrote to it, so
+the next restart boots with `quiet` again.
 
 ```
 $ ls /sys/firmware/efi
 ls: /sys/firmware/efi: No such file or directory
 ```
 
-`/sys/firmware/efi` exists only when the kernel was started by UEFI: the Machine
-booted the old way, through its BIOS. In the world: the boot path on the Kernel Map lights from
-firmware to init, and the region First Boot is fully drawn.
+One last look at the first hand: that folder exists only when the firmware is UEFI,
+the kind on today's PCs; the Machine's is the older kind, a BIOS. X-ray's boot view
+lays the boot out from the firmware to init.
 
 ### Debrief
 
-> **init:** Firmware, GRUB, the kernel, its initcalls, my initramfs, the disk, and me. Now you know every hand the Machine passes through.
+> **init:** Firmware, bootloader, kernel, init: now you know every hand the Machine passes through, and that the bootloader tells the kernel how to boot.
 >
-> **The Watchdog:** And you know where to look when one of them drops it.
+> **The Watchdog:** And where to look when one of them drops it.
 >
-> **init:** One hand is bigger than all the others: the kernel. Let me open it up for you.
+> **init:** One hand is bigger than the others: the kernel. Next, I open it for you.
 
 P.5 begins. At this point init offers the region's placement check (see the top of
 this spec); a player who passes it goes straight to P.10.
@@ -1163,8 +1123,8 @@ this spec); a player who passes it goes straight to P.10.
    you want to take away, and what do you want to add?"
 2. Concept: "Words on the command line are separated by spaces. `quiet` keeps most
    messages off the screen; `initcall_debug` logs each initcall; a word the kernel
-   doesn't know is passed on to init. `dmesg | grep` finds one line in the kernel's
-   log."
+   doesn't know is passed on to init. `dmesg | grep` keeps only the lines of the
+   kernel's log that hold a word."
 3. Point at the spot: "Press `e`, then Ctrl-N until the cursor is on the `linux`
    line and Ctrl-E to reach its end. Delete `quiet`, type `initcall_debug
    greeting=hello`, and press Ctrl-X."
@@ -1173,7 +1133,7 @@ this spec); a player who passes it goes straight to P.10.
 
 - **Boot sequence** (`boot-sequence`)
   - **Simple:** The Machine wakes in steps: firmware, bootloader, kernel, its
-    start-up calls, initramfs, the root disk, then init.
+    start-up calls, initramfs, the root filesystem, then init.
   - **Deep:** The kernel initializes itself in `start_kernel()`, then
     `rest_init()` starts `kernel_init()`, which becomes PID 1, and `kthreadd`
     (PID 2), the parent of kernel threads. `kernel_init()` runs the initcalls, then
@@ -1198,8 +1158,7 @@ this spec); a player who passes it goes straight to P.10.
     Deepened by P.7 (the process tree).
 - **Firmware: BIOS and UEFI** (`firmware`)
   - **Simple:** The first code to run, stored on the board. It checks the hardware
-    and starts a bootloader. UEFI is today's standard; BIOS is the old one, and the
-    Machine's (SeaBIOS).
+    and starts a bootloader. The Machine's is SeaBIOS, a BIOS.
   - **Deep:** BIOS runs the 446 bytes of boot code in a disk's first sector (the
     MBR). UEFI reads a FAT-formatted EFI system partition, runs an EFI program from
     it, and keeps its boot entries in NVRAM (`efibootmgr` lists them). With Secure
@@ -1211,14 +1170,13 @@ this spec); a player who passes it goes straight to P.10.
   - **Simple:** GRUB lists the kernels (and other systems) on the disk, loads the
     one you choose, and hands it a command line.
   - **Deep:** Each menu entry is a short script: `search` finds the partition
-    holding `/boot`, then a `linux` line (the kernel's file and its command line)
-    and an `initrd` line. Distributions keep the previous kernel as a fallback and
-    add a recovery entry; dual-boot machines list other systems too. The menu lives
-    in `/boot/grub/grub.cfg`, usually generated by `grub-mkconfig` (`update-grub` on
-    Debian and Ubuntu) from `/etc/default/grub` and `/etc/grub.d/`. `e` edits an
-    entry for one boot only. GRUB puts `BOOT_IMAGE=` at the front of the command
-    line. The kernel can also be started by UEFI directly (the EFI stub). —
-    `arch/x86/boot/`, `Documentation/arch/x86/boot.rst`.
+    holding `/boot`, `linux` names the kernel's file and its command line, `initrd`
+    the initramfs. The menu lives in `/boot/grub/grub.cfg`, usually generated by
+    `grub-mkconfig` from `/etc/default/grub`; `e` edits an entry for one boot only.
+    GRUB puts `BOOT_IMAGE=`, the kernel's file, at the front of the command line.
+    Distributions keep the previous kernel as a fallback entry, and dual-boot
+    machines list other systems too. — `arch/x86/boot/`,
+    `Documentation/arch/x86/boot.rst`.
   - **Read:** `info grub`, https://www.gnu.org/software/grub/manual/grub/.
 - **The kernel command line** (`kernel-command-line`)
   - **Simple:** Settings passed to the kernel at boot, like `console=ttyS0` or
@@ -1244,7 +1202,7 @@ this spec); a player who passes it goes straight to P.10.
   - **Read:** https://docs.kernel.org/admin-guide/kernel-parameters.html
     (`initcall_debug`). Deepened by 2.2 (`module_init`).
 - **initramfs and the root filesystem** (`initramfs`)
-  - **Simple:** A small set of files in memory whose `/init` finds the real disk,
+  - **Simple:** A small set of files in memory whose `/init` finds the real root filesystem,
     attaches it as `/`, and hands over to the real init.
   - **Deep:** The bootloader loads the initramfs (a cpio archive) next to the
     kernel; the kernel unpacks it into a RAM-backed root and runs `/init`. That
@@ -1254,6 +1212,27 @@ this spec); a player who passes it goes straight to P.10.
     `init/initramfs.c`, `init/do_mounts.c`,
     `Documentation/filesystems/ramfs-rootfs-initramfs.rst`.
   - **Read:** man 8 `switch_root`, man 7 `bootparam`.
+
+### Moved out of the story
+
+| Fact (old story)                                                        | Now                                                      |
+| ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| BIOS reads the MBR; UEFI reads the EFI system partition; NVRAM          | `firmware` Deep; the story keeps "BIOS, not UEFI"        |
+| a partition; `/dev/sda`, where GRUB's first piece lives                 | P.10's repair (`ls /dev`, `(hd0,msdos1)`)                |
+| several kernels and other systems as menu entries; a laptop's menu      | `bootloader` Deep                                        |
+| `search` and `initrd`; `insmod`; `vmlinuz` is compressed                | `bootloader` Deep has the first two; the rest is gone    |
+| `start_kernel()` sets up the CPU, memory, interrupts, the scheduler     | `boot-sequence` Deep names it; the list is gone (P.7)    |
+| the kernel's first `dmesg` lines; the `BIOS-e820` memory map            | `firmware` Deep has e820; the version line is P.1's      |
+| initcall levels, `pure` to `late`; the disk controller's driver         | `initcalls` Deep names four levels; the rest is gone     |
+| `root=`, the root filesystem, mounting, `Run /init as init process`     | `initramfs` Deep; P.9 teaches mounts, P.10 `root=`       |
+| the Machine's root is a share, not a disk                               | `fidelity`; P.9 reads it in `/proc/mounts`               |
+| Ctrl-P and Esc in GRUB's editor                                         | this spec; `fidelity` lists Esc                          |
+| `BOOT_IMAGE=` is GRUB's word                                            | `bootloader` Deep                                        |
+| init's environment is root-only, in `/proc/1/environ`                   | gone; `environment` Deep (P.3) has `/proc/<pid>/environ` |
+| the two initcall lines' format, `@ 0`, modules in brackets, `[9pnet]`   | `initcalls` Deep has the brackets; the rest is gone      |
+| `grep -i`, `-m 4`, `-c`                                                 | gone: the commands need no options now                   |
+| `/etc/default/grub`, `grub-mkconfig`, root; why it fails on the Machine | `bootloader` Deep and `fidelity`                         |
+| the Kernel Map lighting from firmware to init                           | the region recap on the level's card                     |
 
 ### Real-world card
 

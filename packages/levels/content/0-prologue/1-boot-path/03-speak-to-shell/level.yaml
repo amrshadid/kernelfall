@@ -9,7 +9,10 @@ minutes: 20
 tracks: [userland]
 skills: [sys-shell-basics]
 prerequisites: [sys-user-kernel-mode]
-teaches: [argv, path-search, env, exit-status, errno, fork, man-page, pid, builtin]
+teaches: [argv, path-search, env]
+# Met here, not taught: S.1 teaches builtins; fork, PIDs, exit status and errno are
+# Act I's (1.4 uses them, no built level teaches them yet); man is a tool, not a lesson.
+names: [fork, pid, exit-status, errno, builtin, man-page]
 uses: [shell, command, syscall, fd, exec, process, file-tree]
 objectives:
   # Plain echo is the shell's builtin and starts no program; /bin/echo shows its argv.
@@ -22,12 +25,9 @@ objectives:
   - id: option-and-file
     text: "`wc` runs with an option and a file to work on, like `wc -l /etc/motd`."
     check: { kind: ran, program: wc, args: { match: ["^-[A-Za-z]+$", "^[^-]"] }, status: 0 }
-  - id: man-ls
-    text: "`man ls` shows the manual page of `ls`, and you quit it with `q`."
-    check: { kind: ran, program: man, args: { match: ["^ls$"] }, status: 0 }
-  - id: man-wc
-    text: "`man wc` shows the manual page of `wc`."
-    check: { kind: ran, program: man, args: { match: ["^wc$"] }, status: 0 }
+  - id: man-page
+    text: "`man` shows a command's manual page, like `man wc`, and you quit it with `q`."
+    check: { kind: ran, program: man, args: { match: ["^(ls|wc)$"] }, status: 0 }
   - id: man-section
     text: "`man` shows a page from a section you chose by number, like `man 2 write`."
     check: { kind: ran, program: man, args: { match: ["^[1-8]$"] }, status: 0 }
@@ -134,7 +134,7 @@ codex:
     term: the manual
     simple: >-
       man ls shows the manual page for ls. A number picks a section: man 2 write is
-      the syscall, man 1 printf the command and man 3 printf the C function.
+      the syscall write.
     deep: >-
       Sections: 1 commands, 2 syscalls, 3 C library functions, 4 devices, 5 file
       formats, 7 overviews, 8 admin commands. The Linux man-pages project documents

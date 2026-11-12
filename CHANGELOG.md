@@ -55,6 +55,12 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - **X-ray fits a small laptop screen.** On a 1280×720 screen its drawing is larger and the
   sentence under it is no longer hidden: the controls keep to one row, and on a short
   screen the title block gives its height to the drawing.
+- **First Boot is rewritten to the content standard.** First Words (P.2), Speak to the
+  Shell (P.3) and The Boot Path (P.4) each answer one question, teach three ideas
+  (they taught seven, nine and eight), and use about half the words. What left the
+  stories is in their Codex cards or in the level that teaches it. P.3 has one manual
+  objective instead of two, and P.4's commands need no options:
+  `dmesg | grep "command line"` and `dmesg | grep serial8250_init`.
 - The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p

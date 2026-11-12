@@ -2,9 +2,10 @@ import type { ImportPreview, SettingsValues } from '@features/settings/types'
 import { ManHead, ScreenFrame } from '@shared/components/layout'
 import { Dialog } from '@shared/components/modals'
 import { Button, ButtonLink, Icon } from '@shared/components/ui'
-import { APP_VERSION_LABEL } from '@shared/constants/app'
+import { APP_COMMIT, APP_REPOSITORY_URL, APP_VERSION, APP_VERSION_LABEL } from '@shared/constants/app'
 import { hrefOf } from '@shared/navigation'
 import { type ScreenChrome, SETTINGS_SECTIONS, type SettingsSectionId } from '@shared/types'
+import { aboutOf } from '@shared/utils/app'
 import { useState } from 'react'
 import { AboutSection } from './AboutSection'
 import { DisplaySection } from './DisplaySection'
@@ -23,6 +24,8 @@ const CONTENTS_LABELS: Readonly<Record<SettingsSectionId, string>> = {
   privacy: 'Privacy',
   about: 'About',
 }
+
+const ABOUT = aboutOf(APP_VERSION, APP_COMMIT, APP_REPOSITORY_URL)
 
 export interface SettingsPresentationProps {
   chrome: ScreenChrome
@@ -127,7 +130,7 @@ export function SettingsPresentation(props: SettingsPresentationProps) {
               onChange={onChange}
             />
           )}
-          {props.section === 'about' && <AboutSection version={APP_VERSION_LABEL} storage={props.storage} />}
+          {props.section === 'about' && <AboutSection about={ABOUT} storage={props.storage} />}
         </div>
       </main>
 

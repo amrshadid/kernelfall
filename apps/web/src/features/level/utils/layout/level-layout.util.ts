@@ -18,7 +18,7 @@ import { isHintOffered } from '@kernelfall/game/utils'
 import type { LevelLabel, LoadedContent } from '@kernelfall/levels/types'
 import type { VmStatus } from '@kernelfall/machine/types'
 import { hrefOf, type Route } from '@shared/navigation'
-import type { SaveState, ScreenChrome } from '@shared/types'
+import type { MapLayer, SaveState, ScreenChrome } from '@shared/types'
 import { STEPS, stepIndexOf } from '@shared/utils/level'
 import { shortActName } from '@shared/utils/map'
 import { MACHINE_STATUS, TERMINAL_LABELS } from './level-layout.constants'
@@ -51,6 +51,7 @@ export interface LevelLayoutInput {
   readonly placement: GuidePlacement | null
   readonly pace: GuidePace
   readonly recall: UseRecallResult
+  readonly regionLayers: readonly MapLayer[] | null
   /** Plays the level again from its scene, on a fresh Machine. */
   readonly replay: () => void
   /** Reboots through GRUB, keeping the level's progress. */
@@ -146,6 +147,7 @@ export function levelLayoutOf(input: LevelLayoutInput): LevelLayoutModel {
             story,
             content,
             recall: input.recall,
+            regionLayers: input.regionLayers,
             next: actions.next,
             navigate: input.navigate,
             replay: input.replay,

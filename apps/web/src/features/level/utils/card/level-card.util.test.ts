@@ -1,8 +1,10 @@
 import type { LevelRunState } from '@kernelfall/game/types'
-import { createLevelRun } from '@kernelfall/game/utils'
+import { createLevelRun, emptyProgress } from '@kernelfall/game/utils'
 import type { LoadedContent } from '@kernelfall/levels/types'
 import { appContent, labelOf } from '@kernelfall/levels/utils'
+import { mapLayers, regionLayers } from '@shared/utils/map'
 import { describe, expect, it, vi } from 'vitest'
+import { nodesFor } from '@/test/fixtures/map.fixture'
 import { DEFAULT_HEADLINE } from './level-card.constants'
 import { type CardInput, levelCardOf } from './level-card.util'
 
@@ -36,6 +38,7 @@ function cardInput(levelId: string, fields: Partial<CardInput> = {}): CardInput 
     story: content.stories.get(levelId),
     content,
     recall: { deck: { region: null, cards: [] }, mark: vi.fn(async () => {}) },
+    regionLayers: null,
     next: vi.fn(async () => ({ success: true }) as const),
     navigate: vi.fn(),
     replay: vi.fn(),
@@ -118,6 +121,24 @@ describe('levelCardOf', () => {
     )
     expect(card.recall?.title).toBe('First Boot: the region in 2 cards')
     expect(card.recall?.note).toMatch(/^2 cards from this region's 4 levels\. /)
+    expect(card.recall?.drawing).toBeNull()
+  })
+
+  it('shows the region it closed, as the Kernel Map draws it', () => {
+    const content = loaded()
+    const cards = (content.game.level(POWER_ON)?.codex ?? []).slice(0, 1).map((card) => ({ card, levelId: POWER_ON }))
+    const layers = regionLayers(mapLayers(content, nodesFor(emptyProgress(), content)), 'prologue/boot-path')
+    const card = levelCardOf(
+      cardInput(FIRST_WORDS, {
+        recall: { deck: { region: { name: 'First Boot', levels: 4 }, cards }, mark: vi.fn() },
+        regionLayers: layers,
+      })
+    )
+    expect(card.recall?.drawing?.layers).toBe(layers)
+    expect(card.recall?.drawing?.description).toMatch(
+      /^First Boot on the Kernel Map, every stop rebuilt: P\.1 Power On, .*P\.4 The Boot Path\.$/
+    )
+    expect(card.recall?.drawing?.caption).toBe('First Boot, rebuilt: 4 of 4 stops are solid on the Kernel Map.')
   })
 
   it('files the card, then replays the level', async () => {

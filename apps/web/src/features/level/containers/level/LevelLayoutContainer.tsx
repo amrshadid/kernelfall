@@ -11,6 +11,7 @@ import { shortcutLabelOf } from '@features/shortcuts/utils/keys'
 import { useTourScreen } from '@features/tour/hooks/tour'
 import {
   useActiveLevel,
+  useKernelMap,
   useLevelActions,
   useLevelCheck,
   useProgress,
@@ -31,7 +32,8 @@ import { useMachineLock } from '@shared/hooks/machine'
 import { useNow } from '@shared/hooks/time'
 import { hrefOf, navigateTo } from '@shared/navigation'
 import { STEPS, stepIndexOf } from '@shared/utils/level'
-import { type ReactNode, useState } from 'react'
+import { mapLayers, mapNodes, regionLayers } from '@shared/utils/map'
+import { type ReactNode, useMemo, useState } from 'react'
 
 export interface LevelLayoutContainerProps {
   levelId: LevelId
@@ -48,6 +50,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   const active = useActiveLevel()
   const check = useLevelCheck()
   const recall = useRecall(levelId)
+  const map = useKernelMap()
   const { saveState, lastSavedAt } = useSaveStatus()
   const content = useContent()
   const chrome = useScreenChrome()
@@ -59,6 +62,17 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
   const lock = useMachineLock(machine)
   const { reboot } = useMachineReboot()
   const now = useNow()
+
+  // A region's last level shows the region on the Kernel Map; no "you are here", the level is done.
+  const closesRegion = recall.deck.region !== null
+  const regionOnMap = useMemo(() => {
+    if (!closesRegion) {
+      return null
+    }
+    const nodes = mapNodes(content, map, null)
+    const regionKey = nodes.find((node) => node.levelId === levelId)?.regionKey
+    return regionKey ? regionLayers(mapLayers(content, nodes), regionKey) : null
+  }, [closesRegion, content, map, levelId])
 
   const run = opening.status === 'ready' ? opening.run : null
   const level = content.game.level(levelId)
@@ -148,6 +162,7 @@ export function LevelLayoutContainer({ levelId, editor, terminal, xray }: LevelL
         restart: () => void reboot(),
         pace,
         recall,
+        regionLayers: regionOnMap,
         placement: offer
           ? {
               offer: offer.check.offer,

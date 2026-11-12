@@ -1,9 +1,10 @@
-import type { LevelCard } from '@features/level/types'
+import type { LevelCard, RecallDrawing } from '@features/level/types'
 import type { UseLevelActionsResult, UseRecallResult } from '@kernelfall/game/hooks'
 import type { LevelDefinition, LevelRunState } from '@kernelfall/game/types'
 import type { LevelLabel, LoadedContent, Story } from '@kernelfall/levels/types'
 import { labelOf } from '@kernelfall/levels/utils'
 import type { Route } from '@shared/navigation'
+import type { MapLayer } from '@shared/types'
 import { DEFAULT_HEADLINE, RECALL_HOW, SENTENCE_END } from './level-card.constants'
 
 export interface CardInput {
@@ -15,11 +16,26 @@ export interface CardInput {
   readonly story: Story | undefined
   readonly content: LoadedContent
   readonly recall: UseRecallResult
+  /** The Kernel Map cut down to the region this level closes; null when it closes none. */
+  readonly regionLayers: readonly MapLayer[] | null
   /** Files the card: the level loop's step from Card to complete. */
   readonly next: UseLevelActionsResult['next']
   readonly navigate: (route: Route) => void
   /** Plays this level again from its scene. */
   readonly replay: () => void
+}
+
+function recallDrawingOf(regionName: string, layers: readonly MapLayer[]): RecallDrawing | null {
+  const stops = layers.flatMap((layer) => layer.regions.flatMap((region) => region.nodes))
+  if (stops.length === 0) {
+    return null
+  }
+  const names = stops.map((stop) => `${stop.number} ${stop.title}`).join(', ')
+  return {
+    layers,
+    description: `${regionName} on the Kernel Map, every stop rebuilt: ${names}.`,
+    caption: `${regionName}, rebuilt: ${stops.length} of ${stops.length} stops are solid on the Kernel Map.`,
+  }
 }
 
 export function levelCardOf(input: CardInput): LevelCard {
@@ -51,6 +67,7 @@ export function levelCardOf(input: CardInput): LevelCard {
               answer: card.simple ?? card.summary,
               seenIn: labelOf(content, levelId)?.heading ?? label.heading,
             })),
+            drawing: deck.region && input.regionLayers ? recallDrawingOf(deck.region.name, input.regionLayers) : null,
             onMark: (cardId, knew) => void input.recall.mark(cardId, knew),
           }
         : null,

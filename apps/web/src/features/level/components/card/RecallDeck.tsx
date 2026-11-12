@@ -1,4 +1,5 @@
 import type { LevelRecall } from '@features/level/types'
+import { MapOverview } from '@features/map/components/map'
 import { InlineText } from '@shared/components/ui'
 import { useState } from 'react'
 
@@ -26,6 +27,19 @@ export function RecallDeck({ recall }: RecallDeckProps) {
         <h3 id="level-recall-h">{recall.title}</h3>
         <p>{recall.note}</p>
       </header>
+      {recall.drawing && (
+        <figure className="level-recall__drawing">
+          <div className="level-recall__map">
+            <MapOverview
+              layers={recall.drawing.layers}
+              description={recall.drawing.description}
+              href={null}
+              pulse={false}
+            />
+          </div>
+          <figcaption>{recall.drawing.caption}</figcaption>
+        </figure>
+      )}
       <ol className="level-recall__cards">
         {recall.cards.map((card) => {
           const face = faces[card.id]

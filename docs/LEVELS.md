@@ -488,7 +488,7 @@ there use `ksh$`, no `sudo` and no quotes; real-world cards keep bash and `sudo`
 | 1.1   | pointers and the heap                            | tokenizer                                  | full    | ~20 min |
 | 1.2   | structs of function pointers                     | command table                              | full    | ~12 min |
 | 1.3   | build and debug tools                            | Makefile, `history`                        | partial | ~20 min |
-| 1.4   | `fork`/`exec`/`wait`                             | runs any program                           | partial | ~18 min |
+| 1.4   | `fork`/`exec`/`wait`                             | runs any program                           | partial | ~30 min |
 | 1.5   | per-process state (cwd, environment)             | `cd`, `pwd`, `export`, `$VAR`              | stub    | ~25 min |
 | 1.6   | file descriptors and redirection                 | `>`, `>>` and `<`                          | stub    | ~20 min |
 | 1.7   | pipes                                            | `\|` pipelines                             | stub    | ~20 min |
@@ -578,7 +578,7 @@ third column names the spec section that carries it.
 | P.6 the lighthouse board's device tree   | 3.14                              | the same `lighthouse.dts`, now with a driver of your own (3.14 Build it)                                                                                                                |
 | P.7 processes, the scheduler on one CPU  | S.3, 1.4, 3.7                     | processes from outside (S.3); `fork` (1.4); EEVDF's run queues (3.7)                                                                                                                    |
 | P.8 virtual memory, `/proc/<pid>/maps`   | 2.5, 3.3                          | two address spaces side by side (2.5); the page-table walk and `pagemap` (3.3)                                                                                                          |
-| S.1 `ls` as a program                    | 1.4                               | "You ran `ls` a dozen times. Who started it?" (1.4 See it)                                                                                                                              |
+| S.1 `ls` as a program                    | 1.4                               | "Watch how bash does it: type `ls`" (1.4 Scene), then `fork`, `execve` and `wait` in X-ray                                                                                              |
 | S.1 `cd` (`chdir` in the shell)          | 1.5                               | the player builds the builtin they used (1.5 Scene)                                                                                                                                     |
 | S.1 / 1.5 reading `/proc`                | 2.7                               | the size-0 file and `proc_pid_status()` replayed from the kernel side, then `/proc/lantern` (2.7 See it)                                                                                |
 | S.1 `cat`, 1.6 fds and the read contract | 2.5, 2.8a                         | the other side of `read`/`write` (2.5 See it); `dd bs=1` still works on the new buffer (2.8a checker)                                                                                   |

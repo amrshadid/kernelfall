@@ -1,63 +1,47 @@
 # Finding Things
 
+**Question:** A command prints answers and complaints on one screen. How are they kept apart, and how do you send each one somewhere else?
+
 ## Scene
 
-> **init:** Before the Kernelfall I kept plans in the attic. Then everything got thrown about. `/home/you/attic` is a mess of folders now.
+> **init:** I told you someone had been hiding papers in your attic. It is `/home/you/attic`. Before the Kernelfall I kept my plans up there; then everything was thrown about, and now it is a mess of folders. One paper in there is a plan of mine, `lantern-plan.txt`.
 >
-> **init:** `ls` shows one folder at a time. `find` walks a whole tree, and prints every path that matches what you ask.
+> **init:** `ls` shows one folder. `find` walks a whole tree, and prints every path that passes its tests. Run `find attic -name lantern-plan.txt`.
 
 ## See it
-
-> **init:** Three examples, from `/home/you`. `find` takes a folder to start from, then _tests_ that each path must pass.
 
 ---
 
 ```
-$ find /etc -name motd
-/etc/motd
-$ find attic -type d
-attic
-attic/boxes
-attic/boxes/old
-attic/shelf
-$ find /tmp -user guest
-/tmp/lamp-oil.txt
-/tmp/guest-note.txt
+$ find attic -name lantern-plan.txt
+attic/boxes/old/lantern-plan.txt
 ```
 
-> **init:** `-name motd`: paths whose last part is exactly `motd`. `-type d`: only folders (`-type f`: only plain files). `-user guest`: only files owned by `guest`. The order is the order each folder hands its names out, not the alphabet.
+> **init:** In X-ray, `find` repeats one pattern: it opens a folder, asks the kernel for the names in it with `getdents64`, asks about each one with `statx`, and goes into every folder it finds. The kernel only answers. The walking is `find`'s.
 >
-> **init:** In X-ray, `find` does what `ls` does, over and over: `open` a folder, read its names with `getdents64`, `statx` each one to learn its type and owner, go into each subfolder. The kernel only answers. The walking is all `find`'s.
+> **init:** `find` takes a folder to start from, then tests. `-name` keeps the paths whose last part is that name, `-type d` keeps only folders, and `-user guest` keeps only what `guest` owns. Now search the whole tree: `find / -name passwd`.
 
-Then from `/`, the whole tree:
+---
 
 ```
-$ find / -name passwd
 /etc/passwd
 find: /proc/tty/driver: Permission denied
 find: /proc/1/task/1/fd: Permission denied
-find: /proc/1/task/1/fdinfo: Permission denied
-...                                             about 380 lines like these
+...
 find: /root: Permission denied
 find: /sys/kernel/tracing: Permission denied
 /usr/bin/passwd
 ```
 
----
-
-> **init:** Two results, buried in complaints. Watch them leave in X-ray: the results through `writev(1, ...)`, _standard output_. The complaints through `write(2, ...)`, _standard error_: file descriptor 2, kept for error messages, so results and errors can be told apart.
+> **init:** Two results, buried under nearly four hundred complaints: folders whose locks keep you out, like `/root`, root's home. `find` reports each one and walks on. Look at them in X-ray. The results left through `writev(1, …)`, and the complaints through `write(2, …)`. `writev` is a `write` of several pieces; what matters is the number.
 >
-> **init:** What's behind those locks? `/root` is root's home, and its lock is `rwx------`. Under `/proc`, each process's `fd`, `fdinfo`, `ns` and `map_files` show its open files and more: for my processes and the kernel's threads, they're root's, so they're closed to you. Yours are open.
+> **init:** File descriptor 1 is _standard output_, for results. File descriptor 2 is _standard error_, for error messages. Both lead to your terminal, so they look mixed.
+>
+> **init:** bash can point either one somewhere else. That is _redirection_: `>` and a file moves standard output, `2>` and a file moves standard error. Run `find attic -type d`, then the same with `> folders.txt` at the end, then `cat folders.txt`.
 
-Both streams end up on your terminal, so they look mixed. Bash can send each one somewhere else. Add `2>` and a file to the end of the command, and standard error goes into that file. `/dev/null`, from the doors in `/dev`, swallows everything written to it:
+## Build it
 
-```
-$ find / -name passwd 2>/dev/null
-/etc/passwd
-/usr/bin/passwd
-```
-
-And `>` does the same for standard output:
+---
 
 ```
 $ find attic -type d > folders.txt
@@ -68,46 +52,24 @@ attic/boxes/old
 attic/shelf
 ```
 
-> **init:** Who did that, `find` or bash? Watch X-ray. Bash forks a child to run `find`, as always. Then, before the child becomes `find`, it does three more calls. The child of `find attic -type d > folders.txt` (trimmed: just before these, it closes and reads bash's own pipe, which holds it until bash is ready):
-
----
+> **init:** Nothing reached the screen, and the list is in the file. X-ray shows what bash's copy did just before it became `find`:
 
 ```
-open("folders.txt", O_WRONLY|O_CREAT|O_TRUNC|O_LARGEFILE, 0666) = 3
-dup2(3, 1)                                                       = 1
-close(3)                                                         = 0
-execve("/usr/bin/find", ["find", "attic", "-type", "d"], ...)    = 0
+open("folders.txt", O_WRONLY|O_CREAT|O_TRUNC|…) = 3
+dup2(3, 1)                                      = 1
 ```
 
-> **init:** It opens the file: for writing, made if it's missing, emptied if it isn't. The kernel hands back the lowest free number, 3. `dup2(3, 1)` makes fd 1 point at that same open file, and `close(3)` drops the spare. Then `execve` starts `find`, and open files stay open across `execve`. `find` writes its results to fd 1 as always, and never knows they go into a file. For `2>/dev/null`, it's `open("/dev/null", …)` and `dup2(3, 2)`: the complaints go nowhere.
+> **init:** It opened the file for writing: made if it is missing, emptied if it isn't. The kernel handed back the lowest free file descriptor, 3. Then `dup2(3, 1)` made 1 lead to that same open file. `find` started, wrote to 1 as always, and never knew.
 >
-> **init:** Careful: `>` empties the file first. Point it at something you need, and it's gone.
-
-## Build it
-
-> **init:** Your errand, in the attic:
+> **init:** Careful: `>` empties the file first. Point it at a file you need, and its old contents are gone.
 >
-> - Find `lantern-plan.txt`, somewhere under `attic`, and `cat` it.
-> - List every folder in the attic, then save that list in `folders.txt` with `>`.
-> - Find the files in `/tmp` that belong to `guest`.
-> - Run `find / -name passwd`. Click one line that's a result and one that's an error; X-ray shows each one's fd. Then run it again with the complaints sent to `/dev/null`.
-
----
-
-```
-$ find attic -name lantern-plan.txt
-attic/boxes/old/lantern-plan.txt
-$ cat attic/boxes/old/lantern-plan.txt
-The Lantern: a driver of our own.
-One door in /dev. Write to it, and a lamp lights.
-Someday.
-```
-
-> **init:** My handwriting. I never got further than "someday".
+> **init:** Your errand. `cat` the plan you found. Find the files in `/tmp` that `guest` owns. Then run `find / -name passwd` again with the complaints thrown away: `/dev/null` is a device file that swallows whatever is written to it.
 
 ## Watch it
 
-> **init:** `find / -name passwd > found.txt`: which lines still show on your screen?
+---
+
+> **init:** One more. `find / -name passwd > found.txt`: which lines still reach your screen?
 >
 > - the results
 > - [x] the complaints
@@ -125,21 +87,19 @@ $ cat found.txt
 /usr/bin/passwd
 ```
 
-> **init:** The complaints. Only fd 1 went into the file; fd 2 still points at your terminal. Each stream goes where its own fd points.
+> **init:** The complaints. `>` moved only file descriptor 1, and 2 still leads to your terminal. Your `2>/dev/null` did the opposite, with `dup2(3, 2)`. Each stream goes where its own number leads. The program doesn't choose: the shell does, before the program starts.
 >
-> **The Watchdog:** The attic lamp's on. Took you long enough.
-
-The Lantern's plan pins itself to the Kernel Map's Device Quarter, far below, as a faint outline.
+> **init:** And the plan you found is my handwriting. "The Lantern: a driver of our own." I never got further than "someday".
 
 ## Debrief
 
-> **init:** You can find anything in the tree now, tell an answer from a complaint, and send each one where you want it.
+> **init:** So a program keeps answers and complaints apart by writing them to two file descriptors, and the shell decides where each one leads. In Counting and Sorting, you send one program's output straight into another program.
 >
-> **init:** Last lesson on the surface, in Counting and Sorting: what to do with a file once you've found it. Count it, search it, sort it, and pass one program's output straight to another.
+> **The Watchdog:** The attic lamp's on. Took you long enough.
 
 ## Real world
 
-On any Linux with bash. Quote a pattern with `*` in it, so bash leaves it for `find` instead of expanding it first:
+On any Linux with bash. Quote a pattern with `*` in it, so bash leaves it for `find`:
 
 ```sh
 find /etc -name hostname
@@ -148,4 +108,4 @@ find / -name 'passwd*' 2>/dev/null      # quote the *, hide the errors
 find /tmp -user "$USER" > mine.txt      # save the list
 ```
 
-GNU `find`, on most distributions, puts quotes around the path in its complaints: `find: '/root': Permission denied`.
+GNU `find`, on most distributions, puts quotes around the path in its complaints.

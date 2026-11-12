@@ -19,7 +19,7 @@ const ETC = '/etc'
 const ROOT = '/'
 // A path the kernel walks from the working directory, climbing first: `../../etc/motd`.
 const RELATIVE_UP = /^\.\.(\/|$)/
-// BusyBox on musl makes the old i386 calls (mkdir, rename); glibc on x86-64 the *at ones.
+// BusyBox on musl makes the old i386 calls (mkdir, rename); GNU mv calls renameat2, and arm64 has only the *at ones.
 const MKDIR_CALLS = ['mkdir', 'mkdirat']
 const RENAME_CALLS = ['rename', 'renameat', 'renameat2']
 // Judged by the calls alone, so sendfile64 counts even where the trace holds no data.

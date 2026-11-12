@@ -37,6 +37,7 @@ export const FACT_COMMANDS = [
   'cat /proc/$$/status',
   'cat /proc/self/maps',
   'cat /proc/uptime',
+  'ls -l /proc/uptime',
   'dmesg | head -5',
   'cat /etc/shadow',
   'chmod 600 /etc/motd',

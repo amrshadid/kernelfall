@@ -6,16 +6,16 @@ issue before you start, so two people don't build the same thing.
 ## Where it stands
 
 A real Linux 6.18 machine runs in the browser, and levels are judged by what its kernel
-really did. All 16 built levels play on it and are fact-checked against it. They are now
-being rewritten to the content standard ([LEVELS.md](LEVELS.md#concepts-and-budgets)):
-one question each, a third of the words, and ideas that link from level to level.
+really did. All 16 built levels play on it, are fact-checked against it, and are written
+to the content standard ([LEVELS.md](LEVELS.md#concepts-and-budgets)): one question
+each, a third of the words, and ideas that link from level to level.
 
 | Region                 | Levels   | Built   | Fact-checked on the Machine | To the content standard |
 | ---------------------- | -------- | ------- | --------------------------- | ----------------------- |
 | First Boot             | P.1–P.4  | 4       | all                         | all                     |
 | The Machine in Section | P.5–P.10 | 6       | all                         | all                     |
-| Surface Survey         | S.1–S.5  | 5       | all                         | none yet                |
-| Act I: Userland        | 1.0–1.B  | 1 (1.4) | 1.4                         | none yet                |
+| Surface Survey         | S.1–S.5  | 5       | all                         | all                     |
+| Act I: Userland        | 1.0–1.B  | 1 (1.4) | 1.4                         | 1.4                     |
 | Acts II and III        | 39       | 0       |                             |                         |
 
 ## Milestones
@@ -35,11 +35,10 @@ one question each, a third of the words, and ideas that link from level to level
 
 ### Content
 
-- **Rewrite S.1–S.5 and 1.4 to the content standard**, each fact-checked against the
-  Machine's recordings by a second reader, then enforced by `pnpm content:report`. The
-  Prologue (P.1–P.10) is done.
-- **Fill the concepts no built level teaches yet:** drivers, `fork`, PIDs, exit status
-  and `errno` are met in the Prologue and taught only in Act I.
+- **Fill the concepts no built level teaches yet:** drivers, PIDs, exit status and
+  `errno` are met in the Prologue and explained in a line; Act I teaches them properly.
+- **Make S.3's zombie certain:** init collects `yes` within a second, so a slow `ps`
+  misses the `Z` line the story shows.
 - **One vocabulary:** the Section drawing's parts and the game's words (the Gate, floors,
   doors) in LEVELS.md, with a lint for stray metaphors.
 - **Then Act I**, in play order, starting with 1.0.

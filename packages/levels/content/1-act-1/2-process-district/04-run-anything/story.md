@@ -1,52 +1,48 @@
 # Run Anything
 
+**Question:** How does a shell start a program, and how does it learn how the program ended?
+
 ## Scene
 
-> **init:** Welcome to the Process District. My home. Look at it. Empty doorways. Nobody running.
+> **init:** Welcome to the Process District. My home. Look at it: empty doorways, nobody running.
 >
-> **init:** On the Surface you watched bash start programs all day. Here you build a shell of your own, `ksh-lite`. It already reads a line, cuts it into words and knows one builtin, `exit`. It can't run a program yet. A real shell can run _anything_. Here's how every process in this city was born.
->
-> **init:** First, a process copies itself. That's `fork`. Two of you, each with a copy of the same memory, same code. Only the return value differs: the child gets 0.
->
-> **init:** Then the copy becomes something else. That's `exec`. Same process ID, brand-new program.
->
-> **init:** And the parent waits for the child to finish. That's `wait`. A finished child who isn't waited for becomes a _zombie_. It's dead, but it still holds its place in the process table.
->
-> **The Watchdog:** Zombies. Ugh. I've seen whole districts full of them. Wait for your children, kid.
->
-> **init:** When nobody waits, I end up adopting them. I'm old. Please don't make me.
+> **init:** On the Surface you used bash all day. Now you build a shell of your own, `ksh-lite`. It already reads a line, cuts it into words, and knows one builtin, `exit`. It can't start a program yet. Watch how bash does it: type `ls`, and look at X-ray's processes view.
 
 ## See it
 
-> **init:** You ran `ls` a dozen times. Who started it? Watch the processes view: `init(1)`, then bash under it.
+---
+
+> **init:** Three calls. First bash copied itself: that is `fork`. Now two processes run the same code, and only the return value tells them apart: the parent gets the child's PID, and the child gets 0.
+>
+> **init:** The child's memory is a copy too, at the same addresses: each process has its own virtual memory, as in Pages and Maps. The kernel copies a page only when one side writes to it.
+>
+> **init:** Then the child swapped its program for `ls`: that is `execve`. Same PID, new program. `execve` comes back only if it failed.
+>
+> **init:** Last, bash waited. `wait4` sleeps until the child ends, and brings back its _exit status_: a number a program leaves behind, 0 for success. Until the parent collects it, the ended child is a zombie, like `yes` in Processes from Outside.
+>
+> **init:** Now type `nosuch`.
 
 ---
 
-> **init:** `fork` returns twice: a second box appears with a new PID, and the syscalls view shows `fork() = 412` in the parent, `= 0` in the child.
->
-> **init:** Then `execve("/bin/ls", ...)` in the child: same PID, new name. When `ls` calls `exit_group(0)` it becomes a zombie, until the parent's `wait4` reaps it.
->
-> **init:** The exit status travels back. `wait4` fills an `int status`, and `WIFEXITED` and `WEXITSTATUS` read the 0 back out. A shell keeps it as `$?`, with two numbers of its own: 127 for "command not found", 128 + n for "killed by signal n".
->
-> **init:** Errors come back as numbers. Run `nosuch`: the kernel answers `execve` with `-ENOENT`, and the C library turns that into `-1` with `errno` set to `ENOENT`, 2. `strerror()` turns it into "No such file or directory".
->
-> **init:** One more thing. Right after `fork`, look at the memory panel: the same variable at the same address in parent and child. The child changes it; the parent's copy doesn't move. Same address, different memory. You met _virtual addresses_ in P.8: each process has its own address space, and `fork` gives the child a copy. Linux shares the pages until one side writes: _copy-on-write_.
+> **init:** bash searched `PATH` itself, as in Speak to the Shell, and found nothing. It forked anyway: the child printed the complaint and ended with status 127, the shells' number for "command not found". No `execve` at all.
 
 ## Build it
 
 > **init:** Fill in `run_external()`. `dispatch()` already calls it when no builtin matches.
 >
-> **init:** `fork()`. In the child, `execvp()`; if it returns, it failed, so print why and `_exit(127)`. In the parent, `waitpid()` for that child and keep its status. `exit` with no argument ends the shell with the last command's status.
+> **init:** Call `fork()`. In the child, call `execvp(argv[0], argv)`, the C library's way to `execve` that searches `PATH` for you. If it returns, it failed: a failed system call returns -1 and leaves the reason in a variable called `errno`. Print why on standard error, then `_exit(127)`, which ends the child at once.
 >
-> **The Watchdog:** And `fork()` can fail too. Check it.
+> **init:** In the parent, `waitpid(pid, &status, 0)` is the C library's `wait4`. It fills `status` with a packed number, and `WEXITSTATUS(status)` takes the exit status out of it. Return that.
 >
-> **init:** Run it, and live in it for a while: `ls /`, `/bin/echo a b`, a command that doesn't exist, ten commands or more, then `false` and `exit`. Then once more: `nosuch` and `exit`. I watch every process it starts.
+> **The Watchdog:** And `fork()` can fail too. Say so on standard error, and keep reading.
 >
-> **The Watchdog:** Then I break your `fork()` on purpose. `(ulimit -u 1; exec ./ksh-lite)` lets your user have one process at most, and your user already has two: bash and your shell. So its next `fork()` gets `EAGAIN`. Ask it for a command and see if it survives.
+> **init:** Run it, and live in it for a while: `ls /`, `/bin/echo a b`, ten commands or more, then `false` and `exit`.
 
 ## Watch it
 
-> **init:** Before you type `nosuch`: who prints "command not found"?
+---
+
+> **init:** Start it again. Before you type `nosuch` in your own shell: who prints "command not found"?
 >
 > - your shell
 > - [x] the child it forked
@@ -54,28 +50,19 @@
 ---
 
 ```
-ksh$ ls /
-bin    dev    home   media  opt    root   sbin   sys    usr
-boot   etc    lib    mnt    proc   run    srv    tmp    var
 ksh$ nosuch
 ksh-lite: nosuch: command not found
 ```
 
-> **init:** The child. Its `execvp` failed, so it printed why and called `_exit(127)`; your shell only read the 127 from `waitpid`.
+> **init:** The child. Its `execvp` came back with `ENOENT`, no such file, so it printed why and called `_exit(127)`. Your shell only read the 127 from `waitpid`: type `exit`, and it ends with 127 too. Had the child not ended there, it would have gone on as a second shell, reading your terminal.
 >
-> **init:** Each command you type walks out of your shell's door as a new process, does its job, and comes back to be counted by `waitpid`.
->
-> **init:** No zombies. Good.
+> **init:** Last, the Watchdog's test. `(ulimit -u 1; exec ./ksh-lite)` allows your user one process, and it already has two, so the next `fork()` fails with `EAGAIN`. The brackets keep that limit away from your bash. Give it a command, and see if it survives.
 
 ## Debrief
 
-> **init:** The streets have people again. Let's send one somewhere. Type `cd /tmp`.
+> **init:** So a shell starts a program with `fork` and `execve`, and learns how it ended with `wait`. One more, in `ksh-lite`: `cd /tmp`. "Command not found": a `cd` program couldn't move your shell anyway. That comes next.
 >
-> **init:** `ksh-lite: cd: command not found`. Of course: there's no `cd` program to run. And there can't be.
->
-> **The Watchdog:** People walking around with no address. Lost, the lot of them.
->
-> **init:** Every process carries a few things of its own: where it stands, what it's called. Next I'll show you where the kernel keeps them, and how to read them.
+> **The Watchdog:** People walking about with no address. Lost, the lot of them.
 
 ## Real world
 
@@ -86,4 +73,4 @@ bash -c 'sleep 1 & exec sleep 30' &
 sleep 2; ps -e -o pid,ppid,stat,comm | grep sleep   # the child shows state Z
 ```
 
-Run your program under `strace -f ./a.out` to find the `fork`, `execve` and `wait4` lines.
+Run your program under `strace -f ./a.out` to find the `fork`, `execve` and `wait4` lines. With glibc, the `fork` shows as `clone`.

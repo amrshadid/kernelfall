@@ -37,7 +37,8 @@ describe('The Surface Survey', () => {
   })
 
   it('quotes the Machine as its facts recorded it', () => {
-    expect(story('01-streets')).toContain(fact('ls /'))
+    expect(story('01-streets')).toContain(fact('ls -l /proc/uptime'))
+    expect(story('01-streets')).toContain(fact('cat /proc/uptime'))
     expect(story('01-streets')).toContain("rmdir: '../notes': Directory not empty")
     expect(fact('rmdir /etc')).toBe("rmdir: '/etc': Directory not empty")
     expect(story('02-who-may-enter')).toContain(fact('cat /etc/shadow'))

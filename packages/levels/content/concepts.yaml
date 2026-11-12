@@ -58,6 +58,7 @@ concepts:
   - { id: fork, term: fork, part: processes, codex: fork }
   - { id: exec, term: execve, part: processes, codex: execve }
   - { id: wait, term: wait, part: processes, codex: wait }
+  - { id: process-state, term: process state, part: processes, codex: process-states }
   - { id: zombie, term: zombie, part: processes, codex: wait }
   - { id: signal, term: signal, part: processes, codex: signals }
   - { id: pending-signal, term: pending signal, part: processes, codex: sending-signals }

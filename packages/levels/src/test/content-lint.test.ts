@@ -42,12 +42,15 @@ describe('the content budgets', () => {
     expect(wrong).toEqual([])
   })
 
-  it('ask a question in most built levels', () => {
-    const asking = content.game.levels.filter((level) =>
-      [...(content.stories.get(level.id)?.values() ?? [])].some((blocks) =>
-        blocks.some((block) => block.kind === 'predict')
+  it('ask a question in every built level', () => {
+    const silent = content.game.levels
+      .filter(
+        (level) =>
+          ![...(content.stories.get(level.id)?.values() ?? [])].some((blocks) =>
+            blocks.some((block) => block.kind === 'predict')
+          )
       )
-    )
-    expect(asking).toHaveLength(14)
+      .map((level) => level.id)
+    expect(silent).toEqual([])
   })
 })

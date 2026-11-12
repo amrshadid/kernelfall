@@ -19,7 +19,7 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - **init's questions wait for your answer.** A question in the Guide now offers its
   answers; pick one (or "Just show me") and your call is marked beside what really
   happens. No score. When the question is about something you are about to run, your
-  call is kept and the answer is marked only after you run it. 14 of the 16 levels ask
+  call is kept and the answer is marked only after you run it. Every built level asks
   one; level authors write it as a list under the question in `story.md`.
 - **Recall cards when a level ends.** The level-complete screen names what the level
   taught and deals three Codex cards from earlier levels, face down: say what each one

@@ -46,7 +46,10 @@
 
 ## Watch it
 
-> **init:** Before you type `nosuch`: who prints "command not found", your shell or the child it forked?
+> **init:** Before you type `nosuch`: who prints "command not found"?
+>
+> - your shell
+> - [x] the child it forked
 
 ---
 

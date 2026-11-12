@@ -72,7 +72,7 @@ bfa3d000-bfa5e000 rw-p 00000000 00:00 0          [stack]
 
 ## Debrief
 
-> **init:** So the kernel gives every process its own map, and spends real memory only on the pages in use. The CPU, the memory: one part of the kernel is left. In Files, Doors and Wires, you see how files, devices and the network all answer to the same few syscalls.
+> **init:** So the kernel gives every process its own map, and spends real memory only on the pages in use. The CPU, the memory: one part of the kernel is left. In Files, Doors and Wires, you see how files and devices all answer to the same few syscalls.
 
 ## Real world
 

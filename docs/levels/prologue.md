@@ -2181,7 +2181,7 @@ each has its own map.
 
 ### Debrief
 
-> **init:** So the kernel gives every process its own map, and spends real memory only on the pages in use. The CPU, the memory: one part of the kernel is left. In Files, Doors and Wires, you see how files, devices and the network all answer to the same few syscalls.
+> **init:** So the kernel gives every process its own map, and spends real memory only on the pages in use. The CPU, the memory: one part of the kernel is left. In Files, Doors and Wires, you see how files and devices all answer to the same few syscalls.
 
 P.9 begins.
 
@@ -2372,18 +2372,19 @@ read(3, "00:22:15:66:d9:a5\n", 256)      = 18
 write(1, "00:22:15:66:d9:a5\n", 18)       = 18
 ```
 
-`open` answered `3`, the next free file descriptor after 0, 1 and 2 (a callback to
-P.2). The three calls were the same in all three runs, and the VFS sent each `read`
+The three calls were the same in all three runs, and the VFS sent each `read`
 somewhere different: to 9p for `/etc/motd`, which fetched stored bytes; to procfs for
-`/proc/uptime`, which worked out how long the Machine has been up; to sysfs for
-`eth0`, the Machine's network card, which printed the address its driver,
-`virtio_net`, keeps for it. X-ray names the kernel part that served each call (the
-trace's routes: `v9fs_file_read_iter`, `proc_reg_read_iter`,
-`kernfs_fop_read_iter`).
+`/proc/uptime`, which worked out its first number, how long the Machine has been up;
+to sysfs for `eth0`, the Machine's network card, which printed the address its
+driver, `virtio_net`, read from the card. X-ray names the kernel part that served
+each call (the trace's routes: `v9fs_file_read_iter`, `proc_reg_read_iter`,
+`kernfs_fop_read_iter`). init then points at `write`: every time it went to a driver,
+the terminal's (`tty_write`), so the same call had a device behind it. That is the
+level's one driver-served call; `look` never opens a device file.
 
 ### Debrief
 
-> **init:** One set of calls, and the VFS behind them: that is how a file, the kernel's state and a device all read alike. You have met every part of the kernel on the drawing.
+> **init:** One set of calls, and the VFS behind them: that is how a stored file, the kernel's state and a device all answer alike. You have met the kernel's biggest parts.
 >
 > **The Watchdog:** And something is wrong with the boot entry. I can feel it. Next restart, we're stuck.
 
@@ -2393,10 +2394,10 @@ P.10 begins.
 
 1. Nudge: "The program reads whatever `path` names. What should it name for the
    `/proc` run?"
-2. Concept: "`/proc` and `/sys` files are opened and read exactly like disk files.
-   Only the path changes."
-3. Point at the spot: "Change the text to `\"/proc/uptime\"`, run, then to
-   `\"/sys/class/net/eth0/address\"`, run."
+2. Concept: "`/proc` and `/sys` files are opened and read exactly like the Machine's
+   other files. Only the path changes."
+3. Point at the spot: "Only one line changes: the one that starts
+   `const char *path`. Put the new path between its quotes, then press Run."
 
 ### Codex (chapter: The Machine in Section)
 
@@ -2468,22 +2469,22 @@ P.10 begins.
 
 ### Moved out of the story
 
-| Fact (old story)                                                       | Now                                                     |
-| ---------------------------------------------------------------------- | ------------------------------------------------------- |
-| eight mounts of seven kinds; tracefs, devpts, tmpfs; "none is stored"  | `filesystems` Simple and Deep; the story explains three |
-| the ext4 filesystem on `/dev/sda1`, unmounted                          | one sentence stays; `filesystems` Deep; P.10            |
-| `cat` on three filesystems; `/proc/uptime`'s two numbers; `lo`'s `mtu` | gone: `look` reads the three files instead              |
-| `cat` uses `open` and `sendfile64`                                     | `vfs` Deep; the real-world card                         |
-| `/dev/tty`; major and minor numbers; `cat /dev/null`; udev             | `device-files` Simple and Deep                          |
-| `ls /sys/class/net`, `lo`, `/proc/net/dev`, packets                    | `network-stack` Deep; the real-world card               |
-| a message's trip: socket, TCP, IP, netfilter, driver, wire             | `network-stack` Simple and Deep; 1.9 and 2.11           |
-| pipes, signals, shared memory, message queues                          | 1.7 and 1.8                                             |
-| `dmesg` again; `printk()`, the ring buffer, `dmesg_restrict`           | `printk-dmesg` card; P.4 taught the kernel's log        |
-| the Harbormaster, the Tollkeeper, the Gatekeeper                       | gone: they return in their own regions                  |
-| the source tree; matching `mm/`, `fs/`, `net/` to parts of the drawing | `kernel-source-tree` card; the real-world card          |
-| the VFS's three read functions by name                                 | `vfs` Deep; X-ray shows them on each call               |
-| "asked for the bytes over the share"; the address's random last bytes  | `fidelity`                                              |
-| `O_LARGEFILE`                                                          | gone here; S.1 explains it                              |
+| Fact (old story)                                                       | Now                                                    |
+| ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| eight mounts of seven kinds; tracefs, devpts, tmpfs; "none is stored"  | the story explains three; `filesystems` names tmpfs    |
+| the ext4 filesystem on `/dev/sda1`, unmounted                          | "the filesystem on that disk" stays; P.10 names `sda1` |
+| `cat` on three filesystems; `/proc/uptime`'s two numbers; `lo`'s `mtu` | gone: `look` reads the three files instead             |
+| `cat` uses `open` and `sendfile64`                                     | `vfs` Deep (`sendfile()`) and its try-it               |
+| `/dev/tty`; major and minor numbers; `cat /dev/null`; udev             | `device-files` has the numbers and udev; rest is gone  |
+| `ls /sys/class/net`, `lo`, `/proc/net/dev`, packets                    | `network-stack` Deep; `lo` and packets are gone        |
+| a message's trip: socket, TCP, IP, netfilter, driver, wire             | `network-stack` Simple and Deep; 1.9 and 2.11          |
+| pipes, signals, shared memory, message queues                          | 1.7 and 1.8                                            |
+| `dmesg` again; `printk()`, the ring buffer, `dmesg_restrict`           | `printk-dmesg` card; P.4 taught the kernel's log       |
+| the Harbormaster, the Tollkeeper, the Gatekeeper                       | gone: they return in their own regions                 |
+| the source tree; matching `mm/`, `fs/`, `net/` to parts of the drawing | `kernel-source-tree` card; the real-world card         |
+| the VFS's three read functions by name                                 | `vfs` Deep; X-ray shows them on each call              |
+| "asked for the bytes over the share"; the address's random last bytes  | `fidelity`                                             |
+| `O_LARGEFILE`                                                          | gone here; S.1 explains it                             |
 
 ### Real-world card
 
@@ -2504,13 +2505,12 @@ No Taint rules are live in the Prologue.
 
 ### Fidelity
 
-- **Faithful:** the Machine's real `/proc/mounts`; the VFS function names for 9p,
-  procfs and sysfs reads, as init names them; sysfs's `address` printing the
-  `dev_addr` `virtio_net` stored at probe; `/dev` modes and numbers as devtmpfs makes them with no
-  udev; `/sys/class/net` with `eth0` (`virtio_net`) and `lo`; `/proc/net/dev`;
-  `cat`'s `open` + `sendfile64` and `look`'s `open`/`read`/`write` with
-  `O_LARGEFILE`; `printk`'s ring buffer read by BusyBox `dmesg` with `syslog()`; the
-  source tree layout.
+- **Faithful:** the Machine's real `/proc/mounts`; which filesystem's code served
+  each read, as the trace's routes show it; sysfs's `address` printing the `dev_addr`
+  `virtio_net` stored at probe; the `/dev` modes, `c` and `b`, as devtmpfs makes them
+  with no udev; `look`'s `open`/`read`/`write`, and the terminal's driver serving its
+  `write`. In the Codex cards only: majors and minors, `/sys/class/net` and
+  `/proc/net/dev`, `cat`'s `sendfile64`, `printk`'s ring buffer, the source tree.
 - **Simplified:** the Machine's own files come over a virtio 9p share, not from a
   disk; the card's address is given by the emulator, its last three bytes at random;
   `eth0` has no network behind it.

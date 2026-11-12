@@ -21,7 +21,7 @@ tmpfs /run tmpfs rw,relatime 0 0
 tracefs /sys/kernel/tracing tracefs rw,relatime 0 0
 ```
 
-> **init:** A _filesystem_ is one way of keeping files and finding them. Each line is one that has been _mounted_: attached to the tree at a folder. The first word says what was mounted, the second where, the third which kind. At `/`, the kind `9p` holds the Machine's own files. At `/proc` and `/sys`, the kernel makes up each file's contents when it is read. At `/dev` it keeps the device files.
+> **init:** A _filesystem_ is one way of keeping files and finding them. Each line is one that has been _mounted_: attached to the tree at a folder. Its second word says where, its third which kind. At `/`, the kind `9p` holds the Machine's own files. At `/proc` and `/sys`, the kernel makes up each file's contents when it is read. At `/dev` it keeps the device files.
 >
 > **init:** A _device file_ is a name in the tree that stands for a device. Run `ls -l /dev/null /dev/sda`.
 
@@ -32,7 +32,7 @@ crw-rw-rw-    1 root     root        1,   3 Nov 12 09:42 /dev/null
 brw-------    1 root     root        8,   0 Nov 12 09:42 /dev/sda
 ```
 
-> **init:** The first letter is the kind of device. `c` passes bytes one after another, like a terminal. `b` is storage, read in blocks, like `sda`, the Machine's disk. Behind each one is a driver. That disk isn't in the list of mounts: nobody has mounted it, so its files aren't in the tree.
+> **init:** The first letter is the kind of file, and for a device it is `c` or `b`. `c` passes bytes one after another, like a terminal. `b` is storage, read in blocks, like `sda`, the Machine's disk. Behind each is a driver. The filesystem on that disk isn't in the list of mounts: nobody has mounted it, so its files aren't in the tree.
 >
 > **init:** So a path can lead to stored bytes, to the kernel's own state, or to a driver. The part of the kernel that makes them all answer to the same calls is the _VFS_, the virtual file system. It hands each request to the code of whatever is behind the path.
 
@@ -63,11 +63,13 @@ read(3, "00:22:15:66:d9:a5\n", 256)      = 18
 write(1, "00:22:15:66:d9:a5\n", 18)       = 18
 ```
 
-> **init:** sysfs, the kind mounted at `/sys`. `open` answered `3`, the next free file descriptor after 0, 1 and 2, and `read` used it. The three calls were the same in all three runs, and the VFS sent each `read` somewhere different. For `/etc/motd`, to 9p, which fetched stored bytes. For `/proc/uptime`, to procfs, which worked out how long the Machine has been up. For `eth0`, the Machine's network card, to sysfs, which printed the address its driver, `virtio_net`, keeps for it. Every card has its own address, so yours ends differently. X-ray names the kernel part that served each call.
+> **init:** sysfs, the kind mounted at `/sys`. The three calls were the same in all three runs, and the VFS sent each `read` somewhere different. For `/etc/motd`, to 9p, which fetched stored bytes. For `/proc/uptime`, to procfs, which worked out its first number, how long the Machine has been up. For `eth0`, the Machine's network card, to sysfs, which printed the address its driver, `virtio_net`, read from the card. Every card has its own address, so yours ends differently.
+>
+> **init:** X-ray names the kernel part that served each call. Look at `write`: every time, it went to a driver, the terminal's. The same call, with a device behind it.
 
 ## Debrief
 
-> **init:** One set of calls, and the VFS behind them: that is how a file, the kernel's state and a device all read alike. You have met every part of the kernel on the drawing.
+> **init:** One set of calls, and the VFS behind them: that is how a stored file, the kernel's state and a device all answer alike. You have met the kernel's biggest parts.
 >
 > **The Watchdog:** And something is wrong with the boot entry. I can feel it. Next restart, we're stuck.
 

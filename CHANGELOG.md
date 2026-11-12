@@ -80,6 +80,9 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Fixed
 
+- **"Kernelfall needs a bigger screen" sits in the middle of the screen.** The box was
+  pinned to the top left; it is now centred both ways, and still starts at the top
+  when the screen is shorter than the box.
 - **A wrong address on the site shows the game's own "No such page".** An address that
   is no file of the site, like `/nope`, got the host's bare text page. It now gets a
   page in the manual's style, in the theme you chose, with the address as the Machine's

@@ -31,13 +31,14 @@ export function isStaleAppCache(name: string, current: string): boolean {
   return name.startsWith(APP_CACHE_PREFIX) && name !== current
 }
 
-const TOKEN_LITERAL = new RegExp(`(['"\`])${SW_MANIFEST_TOKEN}\\1`, 'g')
-
 export function injectSwManifest(code: string, manifest: SwManifest): string | null {
+  // Built here, not at module level: the worker imports this file, and a top-level pattern would
+  // be bundled into it with the token, then turn invalid once the manifest replaces that token.
+  const tokenLiteral = new RegExp(`(['"\`])${SW_MANIFEST_TOKEN}\\1`, 'g')
   // A JS string literal holding the JSON, so the worker's JSON.parse reads it back.
   const literal = JSON.stringify(JSON.stringify(manifest))
   let found = false
-  const injected = code.replace(TOKEN_LITERAL, () => {
+  const injected = code.replace(tokenLiteral, () => {
     found = true
     return literal
   })

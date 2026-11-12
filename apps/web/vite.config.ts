@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { runInNewContext } from 'node:vm'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
@@ -52,6 +53,17 @@ function serviceWorker(): Plugin {
         const code = injectSwManifest(worker.code, { version: hash.digest('hex').slice(0, 12), files })
         if (code === null) {
           return this.error(`${SW_FILE} lost its manifest token`)
+        }
+        try {
+          // A worker that throws while it loads never registers, and the game silently loses
+          // offline play: run its top level here, where that fails the build.
+          runInNewContext(code, {
+            self: { registration: { scope: 'https://kernelfall.invalid/' }, addEventListener() {} },
+          })
+        } catch (error) {
+          return this.error(
+            `${SW_FILE} throws when it loads: ${error instanceof Error ? error.message : String(error)}`
+          )
         }
         worker.code = code
       },

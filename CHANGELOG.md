@@ -24,8 +24,9 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - **Recall cards when a level ends.** The level-complete screen names what the level
   taught and deals three Codex cards from earlier levels, face down: say what each one
   is, turn it, and mark it "I knew it" or "Not yet". No score; a card you missed comes
-  back first. The last level of a region deals five cards from the whole region. Your
-  marks are saved with your progress.
+  back first. The last level of a region deals five cards from the whole region, under
+  that region as the Kernel Map now draws it, every stop rebuilt. Your marks are saved
+  with your progress.
 - **A missed objective says what your last run did instead**, for example "Your program
   exited with status 3, not 0".
 - `make` on the Machine, the loopback interface up, and `/dev/fd`, so bash's `<(…)`

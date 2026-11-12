@@ -76,6 +76,19 @@
   color: var(--ink-2);
 }
 
+.level-recall__drawing {
+  margin: 0;
+  border: var(--rule);
+  background: var(--sheet);
+}
+
+.level-recall__drawing figcaption {
+  padding: 0.375rem 0.75rem 0.5rem;
+  border-top: var(--rule);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
 .level-recall__cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));

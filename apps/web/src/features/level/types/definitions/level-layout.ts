@@ -1,5 +1,6 @@
 import type {
   CodexCardData,
+  MapLayer,
   PanelId,
   PanelSizes,
   RailStep,
@@ -155,7 +156,16 @@ export interface LevelRecall {
   readonly title: string
   readonly note: string
   readonly cards: readonly RecallCard[]
+  /** The region's part of the Kernel Map, now lit; null unless the level closes its region. */
+  readonly drawing: RecallDrawing | null
   onMark(cardId: string, knew: boolean): void
+}
+
+export interface RecallDrawing {
+  readonly layers: readonly MapLayer[]
+  /** The drawing in words, for screen readers. */
+  readonly description: string
+  readonly caption: string
 }
 
 export interface LevelCard {

@@ -4,7 +4,7 @@
 
 ## Scene
 
-> **init:** In The Streets of Userland, a line began `-r--r--r--`. That is a file's lock. Every file has one, and the kernel reads it before it opens the file for anyone. Try a locked door: `cat /etc/shadow`.
+> **init:** In The Streets of Userland, a line began `-r--r--r--`. That is a file's lock. Every file has one, and the kernel reads it before it opens the file for anyone. Try a locked file: `cat /etc/shadow`.
 
 ---
 
@@ -117,7 +117,7 @@ chmod: /etc/motd: Operation not permitted
 
 > **init:** So the kernel decides, on every open: owner, group or everyone else, then that one's three letters. Locks say who may touch a file. In Processes from Outside, you meet the ones doing the touching.
 >
-> **The Watchdog:** Padlocks on every door. Finally, some order.
+> **The Watchdog:** Padlocks on every file. Finally, some order.
 
 ## Real world
 

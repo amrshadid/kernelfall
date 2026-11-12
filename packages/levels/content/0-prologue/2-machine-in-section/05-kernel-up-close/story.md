@@ -23,13 +23,13 @@ $ echo $?
 139
 ```
 
-> **init:** The shell printed that, not `poke`: it never reached its own line. On this Machine every process has its own set of addresses, 4 GiB of them. The lower 3 GiB are _user space_, where its own program and data live, which is why the kernel calls the programs outside it user space. The top 1 GiB, from `0xc0000000` up, is _kernel space_: the kernel's memory, there in every process, and locked while the CPU is in user mode.
+> **init:** The shell printed that, not `poke`: it never reached its own line. On this Machine every process has its own set of addresses, 4 GiB of them. The lower 3 GiB are _user space_, where its own program and data live, which is why the kernel calls the programs outside it user space. The top 1 GiB, from `0xc0000000` up, is _kernel space_: the kernel's memory, there in every process, and closed while the CPU is in user mode.
 >
 > **init:** The CPU refused the read and called the kernel, and the kernel ended `poke` with a _signal_: a short notice it delivers to a process. This one is `SIGSEGV`, number 11, for a bad memory access. `echo $?` prints the exit status of the last command, and the shell reports "ended by signal 11" as 128 + 11.
 
 ## Build it
 
-> **init:** User mode's locks are how the kernel keeps what it owns: the CPU's time, the memory, the devices, the files and the network. It shares them out between programs and checks every request. It is one big program, and it can add pieces to itself while it runs, called _modules_. So a program that wants any of what it owns has to ask.
+> **init:** User mode's limits are how the kernel keeps what it owns: the CPU's time, the memory, the devices, the files and the network. It shares them out between programs and checks every request. It is one big program, and it can add pieces to itself while it runs, called _modules_. So a program that wants any of what it owns has to ask.
 >
 > **init:** `uname` is the syscall that asks the kernel who it is. Open `myuname.c`: it already makes it. `uname(&u)` asks the kernel to fill in `u`, a _record_ of named fields. `u.sysname` is the kernel's name, `u.release` its release, and `u.machine` the type of CPU.
 >
@@ -57,7 +57,7 @@ Linux 6.18.63-0-virt i686
 
 ## Debrief
 
-> **init:** So the kernel's memory is locked to every program. Take, and the kernel ends you. Ask, and it answers. It owns every device too, but who tells it which devices it has? In Finding the Hardware, we go down to the bottom of the drawing.
+> **init:** So the kernel's memory is closed to every program. Take, and the kernel ends you. Ask, and it answers. It owns every device too, but who tells it which devices it has? In Finding the Hardware, we go down to the bottom of the drawing.
 
 ## Real world
 

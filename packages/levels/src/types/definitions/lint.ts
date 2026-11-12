@@ -12,6 +12,17 @@ export interface CardWords {
   readonly deep: number
 }
 
+/** A picture word with one meaning (docs/LEVELS.md, "Vocabulary"). */
+export interface VocabularyRule {
+  readonly word: string
+  readonly means: string
+  readonly pattern: RegExp
+  /** The only ways to write it; anything else is flagged. */
+  readonly allowed?: RegExp
+  /** Level id prefixes that may use it freely. */
+  readonly only?: readonly string[]
+}
+
 export interface BannedUse {
   readonly phrase: string
   readonly section: string

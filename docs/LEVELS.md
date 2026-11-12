@@ -381,6 +381,34 @@ and hedges ("your numbers will differ"); the list is in
 `src/utils/lint/content-lint.constants.ts`. A level over budget is a warning; once
 rewritten, it joins `ENFORCED_LEVELS` there, and over budget fails the tests.
 
+### Vocabulary
+
+One picture carries the whole game: init's drawing of the Machine in section. A story
+uses these words with these meanings only, so a player never has to unlearn one.
+
+| Word                      | Means                                                                         | Never                              |
+| ------------------------- | ----------------------------------------------------------------------------- | ---------------------------------- |
+| the Machine               | the computer the player rebuilds: the real Linux they type into               |                                    |
+| the drawing               | init's Section drawing of the Machine (P.1)                                   | "the map" (below)                  |
+| floor                     | one of the drawing's three: Userland, the kernel, hardware                    | a kernel part ("the memory floor") |
+| part                      | a labelled piece of a floor: the scheduler, memory, the VFS, a driver         |                                    |
+| the Gate                  | the red line between Userland and the kernel: every system call crosses it    | "a door", "the gate" in lower case |
+| door                      | a device file (P.9, Files, Doors and Wires)                                   | the Gate; a file's permissions     |
+| lock, key                 | a file's permissions (from S.1's debrief, through the Survey)                 | the CPU's user mode; a kernel lock |
+| Userland                  | the top floor: every program outside the kernel                               |                                    |
+| the Surface               | the Prologue and the Survey: Linux seen from Userland                         |                                    |
+| the Kernel Map            | the game's map of regions and levels                                          | "the drawing"                      |
+| stop                      | one level on the Kernel Map                                                   | "house"                            |
+| lamp, lit, dark           | whether a stop or a region is rebuilt (P.6's `lighthouse:lamp` is a real LED) |                                    |
+| District, Quarter, Harbor | names of the Kernel Map's regions, as `region.yaml` spells them               | a new place name for one level     |
+
+A picture used once and dropped (a recipe, a waiting room, flats and the post) teaches
+a second vocabulary; say the thing itself instead. `pnpm content:report` flags `floor`,
+`door`, `gate` and `lock` outside their meaning, and the dropped pictures with the
+banned phrases; the rules are `VOCABULARY` in `content-lint.constants.ts`. Inline code
+and code blocks are the Machine's own text and are never flagged. The specs of levels
+not built yet are brought to this table when the level is built.
+
 ## 3. Rules
 
 1. **Follow the level loop:** scene → see it → build it → watch it → real-world card.

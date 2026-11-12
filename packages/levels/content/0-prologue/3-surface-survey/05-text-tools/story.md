@@ -4,7 +4,7 @@
 
 ## Scene
 
-> **init:** You found my plan, and you sent a list into a file. One more skill on the Surface. Your survey is in `census.txt`: one line for each house you passed, with its district and whether its lamp is lit or dark.
+> **init:** You found my plan, and you sent a list into a file. One more skill on the Surface. Your survey is in `census.txt`: one line for each stop you passed, with its district and whether its lamp is lit or dark.
 >
 > **init:** A _line_ is text up to a newline, an invisible character that ends it. The tools you meet now work one line at a time. Start by counting them: `wc -l census.txt`.
 
@@ -28,13 +28,13 @@ $ grep you /etc/passwd
 you:x:1000:1000:you:/home/you:/bin/bash
 ```
 
-> **init:** Thirty-one dark houses; `grep -v dark census.txt` prints the lines without the word, the nine lit ones. And your line: your name, your user ID and group ID, both 1000, your name again as a description, your home folder and your shell, with colons between them. The `x` says your password is kept in `/etc/shadow`, the file you couldn't open.
+> **init:** Thirty-one dark stops; `grep -v dark census.txt` prints the lines without the word, the nine lit ones. And your line: your name, your user ID and group ID, both 1000, your name again as a description, your home folder and your shell, with colons between them. The `x` says your password is kept in `/etc/shadow`, the file you couldn't open.
 >
 > **init:** In X-ray these tools look alike: `open` the file, `read` it, up to 1024 bytes at a time, write the answer. The kernel only moves bytes. The idea of a line lives in the tools.
 
 ## Build it
 
-> **init:** Your errand: how many houses of each kind? `uniq -c` counts repeated lines, but it only sees a line that repeats the one just above it. Try `uniq census.txt` as it is: thirty-seven lines come out of forty, because only three repeated the line above them. So sort first: `sort` prints the lines in order, which puts equal lines next to each other. Keep its output in a file with `>`, then count.
+> **init:** Your errand: how many stops of each kind? `uniq -c` counts repeated lines, but it only sees a line that repeats the one just above it. Try `uniq census.txt` as it is: thirty-seven lines come out of forty, because only three repeated the line above them. So sort first: `sort` prints the lines in order, which puts equal lines next to each other. Keep its output in a file with `>`, then count.
 
 ```
 $ sort census.txt > sorted.txt
@@ -49,7 +49,7 @@ $ uniq -c sorted.txt
 
 ---
 
-> **init:** Six kinds of house, and the counts add up to forty. Only Userland has any light. And `sorted.txt` was only a waiting room. In The Boot Path you typed `dmesg | grep`. That `|` is a _pipe_: it hands one program's output straight to the next program. Run `sort census.txt | uniq -c`.
+> **init:** Six kinds of stop, and the counts add up to forty. Only Userland has any light. And you didn't need `sorted.txt` at all. In The Boot Path you typed `dmesg | grep`. That `|` is a _pipe_: it hands one program's output straight to the next program. Run `sort census.txt | uniq -c`.
 
 ## Watch it
 

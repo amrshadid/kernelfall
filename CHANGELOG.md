@@ -79,6 +79,13 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   builds on the signals of The Kernel, Up Close instead of defining them again; Run
   Anything teaches `fork`, `execve` and `wait`, and no longer says a part of the game
   comes "in the next release". No hint gives the command to type.
+- **The zombie in Processes from Outside (S.3) stays until you look.** `yes` now runs
+  as `sleep`'s child, and `sleep` never collects it, so `ps` shows the `Z` line however
+  slowly you type. End `sleep`, and init adopts the zombie and collects it.
+- **One vocabulary for the stories.** "Floor" is one of the drawing's three, "the Gate"
+  is where system calls cross, a "door" is a device file and a "lock" is a file's
+  permissions; `pnpm content:report` flags any other use. The table is in LEVELS.md.
+  P.5, S.2 and S.5 lost eight stray uses; S.5's census counts stops, not houses.
 - The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p

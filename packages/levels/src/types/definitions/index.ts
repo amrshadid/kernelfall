@@ -21,5 +21,5 @@ export {
   STARTER_DIR,
   STORY_FILE,
 } from '#types/definitions/content'
-export type { BannedUse, CardWords, LevelLint, StepWords } from '#types/definitions/lint'
+export type { BannedUse, CardWords, LevelLint, StepWords, VocabularyRule } from '#types/definitions/lint'
 export * from '#types/definitions/xray'

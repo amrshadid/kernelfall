@@ -71,13 +71,14 @@ fidelity:
     - EPERM when signalling another user's process
     - "/proc/<pid>/status's State, PPid and ShdPnd lines"
   simplified:
-    - "setup starts sleep and yes as you and leaves them to init, as if init had started them"
+    - "setup starts sleep as you and leaves it to init, as if init had started it; yes is started as sleep's child, so that its parent never collects it"
 story:
   scene: story.md#scene
   debrief: story.md#debrief
   realWorld: story.md#real-world
 lab:
   # No fixed pids: the player reads them from ps. A day's sleep never ends by itself.
+  # yes is sleep's child, and sleep never waits: an ended yes stays a zombie until
+  # sleep ends too and init adopts it. Started by init it would be collected at once.
   processes:
-    - { argv: [sleep, "86400"] }
-    - { argv: ["yes"], stdout: /dev/null }
+    - { argv: [sh, -c, "yes > /dev/null & exec sleep 86400"], stdout: /dev/null }

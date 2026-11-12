@@ -13,14 +13,14 @@ objectives:
   - id: counted-lines
     text: "`wc -l census.txt` counts the census: 40 lines."
   - id: counted-dark
-    text: "`grep -c dark census.txt` counts the dark houses: 31. (`grep dark census.txt | wc -l` counts them too.)"
+    text: "`grep -c dark census.txt` counts the dark stops: 31. (`grep dark census.txt | wc -l` counts them too.)"
   - id: own-passwd-line
     text: "`grep` finds your own line in `/etc/passwd`."
     check: { kind: wrote, fd: 1, program: grep, text: { contains: "you:x:1000:1000:" } }
   - id: sorted-file
     text: "`sort census.txt > sorted.txt` writes the census, sorted, into `sorted.txt`."
   - id: counted-kinds
-    text: "`uniq -c sorted.txt` counts the houses of each kind."
+    text: "`uniq -c sorted.txt` counts the stops of each kind."
   - id: piped-counts
     text: "`sort census.txt | uniq -c` counts them again, with no file in between."
 hints:

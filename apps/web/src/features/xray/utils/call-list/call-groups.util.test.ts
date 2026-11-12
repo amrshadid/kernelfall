@@ -193,7 +193,8 @@ describe('callGroupsOf on runs recorded on the Machine', () => {
         expect(group.count).toBe(flat(group).length)
       }
     }
-  })
+    // Six recorded runs are read and folded: about 3 s alone, more beside the other test files.
+  }, 20_000)
 
   it('never folds a call the level teaches: a focused call breaks the bookkeeping around it', async () => {
     const { groups } = await groupsOf(S5, 'sort census.txt | uniq -c', [{ names: ['pipe', 'setpgid'] }])

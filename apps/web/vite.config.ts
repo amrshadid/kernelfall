@@ -75,6 +75,12 @@ export default defineConfig({
   // For a host that serves the site under a sub-path; Vercel serves it at the root.
   base: process.env.KF_BASE ?? '/',
   plugins: [react(), tailwindcss(), serviceWorker()],
+  build: {
+    rollupOptions: {
+      // A static host serves 404.html for an address that is no file of the site.
+      input: { main: src('../index.html'), notFound: src('../404.html') },
+    },
+  },
   resolve: {
     alias: {
       '@': src(''),

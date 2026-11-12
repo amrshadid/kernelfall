@@ -12,8 +12,8 @@ one question each, a third of the words, and ideas that link from level to level
 
 | Region                 | Levels   | Built   | Fact-checked on the Machine | To the content standard |
 | ---------------------- | -------- | ------- | --------------------------- | ----------------------- |
-| First Boot             | P.1–P.4  | 4       | all                         | P.1                     |
-| The Machine in Section | P.5–P.10 | 6       | all                         | P.6                     |
+| First Boot             | P.1–P.4  | 4       | all                         | all                     |
+| The Machine in Section | P.5–P.10 | 6       | all                         | all                     |
 | Surface Survey         | S.1–S.5  | 5       | all                         | none yet                |
 | Act I: Userland        | 1.0–1.B  | 1 (1.4) | 1.4                         | none yet                |
 | Acts II and III        | 39       | 0       |                             |                         |
@@ -30,17 +30,16 @@ one question each, a third of the words, and ideas that link from level to level
 
 ### Engine
 
-- **Routes in the trace:** which filesystem or driver served each call, so X-ray names
-  the real kernel part.
-- **A boot record for a boot that stops** in the initramfs (P.10).
-- **The terminal's real size** for the guest, so `less` and `top` fill the panel.
-- **gcc's diagnostics in the editor**, as marks on the lines they name (0.2.0).
+- **The kernel's build tree in the image** (`linux-virt-dev`, already pinned and
+  mirrored), for the module levels (0.3.0).
 
 ### Content
 
-- **Rewrite P.2–P.5, P.7–P.10, S.1–S.5 and 1.4 to the content standard**, one region at a
-  time, each fact-checked, with golden runs and a play-through, then enforced by
-  `pnpm content:report`. P.1 and P.6 are the pilot.
+- **Rewrite S.1–S.5 and 1.4 to the content standard**, each fact-checked against the
+  Machine's recordings by a second reader, then enforced by `pnpm content:report`. The
+  Prologue (P.1–P.10) is done.
+- **Fill the concepts no built level teaches yet:** drivers, `fork`, PIDs, exit status
+  and `errno` are met in the Prologue and taught only in Act I.
 - **One vocabulary:** the Section drawing's parts and the game's words (the Gate, floors,
   doors) in LEVELS.md, with a lint for stray metaphors.
 - **Then Act I**, in play order, starting with 1.0.

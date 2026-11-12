@@ -20,7 +20,7 @@ sh: can't access tty; job control turned off
 ~ #
 ```
 
-> **init:** Remember the four hands. The firmware, GRUB and the kernel did their part. The initramfs tried to mount the root named by `root=`, failed, and gave you a small shell of its own instead of handing over to me. Its prompt is `~ #`, and the `#` means you are root in it. Ask what the kernel was told, which disks it found and how much memory it has: `cat /proc/cmdline`, then `ls /dev`, then `free`.
+> **init:** Remember the four hands. The firmware, GRUB and the kernel did their part. The initramfs tried to mount the root named by `root=`, failed, and gave you a small shell of its own instead of handing over to me. Its prompt is `~ #`, and the `#` means you are root, the Machine's administrator, in it. Ask what the kernel was told, which disks it found and how much memory it has: `cat /proc/cmdline`, then `ls /dev`, then `free`.
 
 ---
 
@@ -34,15 +34,15 @@ sda1             tty28            tty49            ttyS3
 ...
 ~ # free
               total        used        free      shared  buff/cache   available
-Mem:          45524        8760       33548           0        3216       32392
+Mem:          45508        7852       34420           0        3236       33272
 Swap:             0           0           0
 ```
 
 > **init:** Three words that weren't there in The Boot Path, each about a part you know.
 >
-> **init:** `root=/dev/sda3`: there is no `sda3` in `/dev`. The disk has one partition, `sda1`, and it holds `/boot`, not our files. In Files, Doors and Wires, `/proc/mounts` showed that our root is `host9p`, and the initramfs mounts that by itself when there is no `root=`.
+> **init:** `root=/dev/sda3`: there is no `sda3` in `/dev`. The disk's one filesystem is on `sda1`, and it holds the kernel's own files, not ours. In Files, Doors and Wires, `/proc/mounts` showed that our root is `host9p`, and the initramfs mounts that by itself when there is no `root=`.
 >
-> **init:** `mem=64M`: use only 64 MiB of RAM. `free` shows 45524 KiB, where Pages and Maps showed about 218 MiB.
+> **init:** `mem=64M`: use only 64 MiB of RAM. `free` shows 45508 KiB, where Pages and Maps showed about 218 MiB.
 >
 > **init:** `module_blacklist=virtio_net`: refuse the module that is the network card's driver. Nothing has asked for it yet. It is loaded later, from the root, and then the kernel will say no.
 
@@ -52,7 +52,7 @@ Swap:             0           0           0
 
 ---
 
-> **init:** Now prove every part is up. The root: `cat /proc/cmdline`. The memory: `free`. The card and its driver: `ls /sys/class/net`, then `readlink /sys/class/net/eth0/device/driver`, the link you followed in Finding the Hardware. The processes: `ps`.
+> **init:** Now prove every part is up. The root: `cat /proc/cmdline`. The memory: `free`. The card and its driver: `ls /sys/class/net`, then `readlink /sys/class/net/eth0/device/driver`, the same kind of link you followed in Finding the Hardware. The processes: `ps`.
 
 ---
 
@@ -75,11 +75,11 @@ PID   USER     TIME  COMMAND
 ...
 ```
 
-> **init:** You are at bash, so the root was found and I am PID 1 again. The memory is back: 239640 KiB. And `virtio_net` took the card and made `eth0`.
+> **init:** You are at bash, so the root was found and I am PID 1 again. The memory limit is gone: 239640 KiB. And `virtio_net` took the card and made `eth0`.
 
 ## Watch it
 
-> **init:** `eth0` is still down, and raising it takes root, so I'll do that. Then run `cat /sys/class/net/eth0/operstate`. Before you do: whose report will the answer be?
+> **init:** `eth0` is still down: nobody has switched the card's link on. That takes root, so I'll do it. Then run `cat /sys/class/net/eth0/operstate`. Before you do: whose report will the answer be?
 >
 > - the disk's driver
 > - the terminal's driver

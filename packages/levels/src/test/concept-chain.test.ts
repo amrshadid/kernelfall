@@ -16,6 +16,7 @@ const KNOWN_CONCEPT_GAPS: Readonly<Record<ConceptViolationKind, Readonly<Record<
   },
   'never-used-again': {
     'man-page': 'no later level asks for a man page',
+    'kernel-log': "P.4's dmesg isn't read again in the Prologue or the Survey; Act II's 2.2 writes to it",
     uefi: 'P.4 names UEFI to say the Machine has a BIOS; nothing later needs it',
     'device-tree': "P.6's device tree returns only in Act III's 3.14",
     'pending-signal': "S.3's ShdPnd is never read again",

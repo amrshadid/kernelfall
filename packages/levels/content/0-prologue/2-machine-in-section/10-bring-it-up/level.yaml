@@ -15,17 +15,22 @@ uses:
     boot-chain,
     kernel-cmdline,
     initramfs,
-    kernel-log,
     mount,
     driver,
     bus,
     module,
     ram,
+    storage,
     network-stack,
+    proc-fs,
     sysfs,
     device-file,
     vfs,
+    syscall,
+    user-kernel-mode,
+    process,
     scheduler,
+    kernel-thread,
     pid,
     fork,
     exec,
@@ -49,8 +54,8 @@ runAs:
   - { after: card-bound, user: root, command: ip link set eth0 up }
 hints:
   - "The Machine stopped before init could start. What did its last lines name, and what does `cat /proc/cmdline` say the kernel was told?"
-  - "`root=` names the root filesystem: the Machine's is the share `host9p`, which its initramfs mounts when there's no `root=` at all. `module_blacklist=` makes the kernel refuse a module, and `mem=` makes it use only that much RAM. Once bash runs you're not root and can't restart, so fix the whole line in one edit."
-  - "Type `reboot -f` in the emergency shell. At GRUB, press `e`, go to the end of the `linux` line, delete `root=/dev/sda3 module_blacklist=virtio_net mem=64M`, then press Ctrl-X."
+  - "`root=` names the root filesystem: the Machine's is `host9p`, which its initramfs mounts when there's no `root=` at all. `module_blacklist=` makes the kernel refuse a module, and `mem=` makes it use only that much RAM. Once bash runs you're not root and can't restart, so fix the whole line in one edit."
+  - "Type `reboot -f` in the emergency shell. At GRUB, press `e`, move down to the `linux` line with Ctrl-N and to its end with Ctrl-E, delete `root=/dev/sda3 module_blacklist=virtio_net mem=64M`, then press Ctrl-X."
 chips:
   - { command: cat, explain: "show a file: /proc/cmdline holds what the kernel was told" }
   - { command: ls, explain: "list a folder: /dev, /sys/class/net" }
@@ -108,7 +113,8 @@ fidelity:
     - "GRUB 2.14's menu and editor"
     - "an edit made with e in GRUB lasts one boot"
     - "module_blacklist= making the kernel refuse virtio_net (modprobe: Operation not permitted)"
-    - "mem=64M leaving the kernel 45524 kB in total"
+    - "mem=64M leaving the kernel 45508 kB in total"
+    - "the emergency shell's lines, as BusyBox sh prints them as root; it isn't traced, so X-ray shows nothing until the Machine is up"
     - "reboot and ip link set needing root"
     - "eth0's operstate going from down to up when root raises the link"
   simplified:

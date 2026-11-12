@@ -2567,12 +2567,13 @@ of handing over to init. Nothing is traced until the Machine is up.
 
 **Read the stop** (still See it), in the emergency shell: `cat /proc/cmdline` shows
 the three words; `ls /dev` shows `sda` and `sda1`, no `sda3`; `free` shows
-`Mem: 45524` KiB in total. init reads the three words as recall:
+`Mem: 45508` KiB in total (the shell is untraced; these lines were captured from its
+terminal on the current image). init reads the three words as recall:
 
-- `root=/dev/sda3`: no `sda3`; the disk's one partition, `sda1`, holds `/boot`. The
-  root is `host9p` (P.9's `/proc/mounts`), which `/init` mounts when there's no
-  `root=`.
-- `mem=64M`: 45524 KiB, where P.8 showed about 218 MiB.
+- `root=/dev/sda3`: no `sda3`; the disk's one filesystem is on `sda1` and holds the
+  kernel's own files. The root is `host9p` (P.9's `/proc/mounts`), which `/init`
+  mounts when there's no `root=`.
+- `mem=64M`: 45508 KiB, where P.8 showed about 218 MiB.
 - `module_blacklist=virtio_net`: the kernel will refuse the card's driver when it is
   loaded later, from the root.
 
@@ -2585,7 +2586,7 @@ Command chips offer only the commands' names and one-line explanations.
    player is `you` and can't restart (`reboot: : Operation not permitted`). With only
    `root=` fixed, the boot screen shows `modprobe: can't load module virtio_net
    (kernel/drivers/net/virtio_net.ko.gz): Operation not permitted`, `free` says
-   45524 and `ls /sys/class/net` shows only `lo`.
+   45508 and `ls /sys/class/net` shows only `lo`.
 2. **Prove every part is up** (real output, the `solution` recording):
    `cat /proc/cmdline`; `free` (`Mem: 239640`); `ls /sys/class/net` (`eth0  lo`);
    `readlink /sys/class/net/eth0/device/driver`
@@ -2634,13 +2635,14 @@ The Surface Survey begins with S.1.
 
 1. Nudge: "The Machine stopped before init could start. What did its last lines
    name, and what does `cat /proc/cmdline` say the kernel was told?"
-2. Concept: "`root=` names the root filesystem: the Machine's is the share
-   `host9p`, which its initramfs mounts when there's no `root=` at all.
+2. Concept: "`root=` names the root filesystem: the Machine's is `host9p`, which its
+   initramfs mounts when there's no `root=` at all.
    `module_blacklist=` makes the kernel refuse a module, and `mem=` makes it use
    only that much RAM. Once bash runs you're not root and can't restart, so fix the
    whole line in one edit."
 3. Point at the spot: "Type `reboot -f` in the emergency shell. At GRUB, press `e`,
-   go to the end of the `linux` line, delete `root=/dev/sda3
+   move down to the `linux` line with Ctrl-N and to its end with Ctrl-E, delete
+   `root=/dev/sda3
    module_blacklist=virtio_net mem=64M`, then press Ctrl-X."
 
 ### Codex (chapter: The Machine in Section)
@@ -2673,20 +2675,20 @@ The Surface Survey begins with S.1.
 
 ### Moved out of the story
 
-| Fact (old story)                                                       | Now                                             |
-| ---------------------------------------------------------------------- | ----------------------------------------------- |
-| "Maybe the Dangling, maybe a tired admin"                              | gone                                            |
-| `quiet` hid the kernel's lines; `/init` and `/newroot`; `exit` retries | the boot's own lines show it; `fidelity`        |
-| the emergency shell is BusyBox `sh`, not bash, and isn't traced        | this spec; `fidelity`                           |
-| the root is a share, not a disk                                        | P.9's `/proc/mounts`; the hint says "the share" |
-| 45524 KiB is what's left of 64 MiB; the Machine has 256 MiB            | `boot-parameters-that-break` Deep; P.8          |
-| `reboot -f` against plain `reboot`; `reboot: Restarting system`        | the `reboot` chip                               |
-| GRUB's command line: `c`, `ls`, `(hd0) (hd0,msdos1) (fd0) (fd1)`       | gone                                            |
-| what happens with only `root=` fixed; `reboot`'s refusal as `you`      | this spec; the `root-only` golden run           |
-| `ip link set eth0 up` and its `ioctl 0x8914` refusal                   | this spec; `fidelity`                           |
-| `sendfile64`, `exit_group`, `wait4` by name in the last read           | `command-lifecycle` Deep                        |
-| the Watchdog's meter; the map and the wire to the harbor               | gone                                            |
-| Debian's `(initramfs)` prompt; `update-grub`                           | gone from the real-world card                   |
+| Fact (old story)                                                       | Now                                           |
+| ---------------------------------------------------------------------- | --------------------------------------------- |
+| "Maybe the Dangling, maybe a tired admin"                              | gone                                          |
+| `quiet` hid the kernel's lines; `/init` and `/newroot`; `exit` retries | the boot's own lines show it; `fidelity`      |
+| the emergency shell is BusyBox `sh`, not bash, and isn't traced        | this spec; `fidelity`                         |
+| the root is a share, not a disk                                        | P.9's `fidelity`; the story says `host9p`     |
+| the kernel's share explains 64 MiB showing as about 44; 256 MiB        | gone here; P.8 has the 256 MiB                |
+| `reboot -f` against plain `reboot`; `reboot: Restarting system`        | the `reboot` chip explains `-f`; rest is gone |
+| GRUB's command line: `c`, `ls`, `(hd0) (hd0,msdos1) (fd0) (fd1)`       | gone                                          |
+| what happens with only `root=` fixed; `reboot`'s refusal as `you`      | this spec; the `root-only` golden run         |
+| `ip link set eth0 up` and its `ioctl 0x8914` refusal                   | this spec; `fidelity` says it needs root      |
+| `sendfile64`, `exit_group`, `wait4` by name in the last read           | `command-lifecycle` Deep                      |
+| the Watchdog's meter; the map and the wire to the harbor               | gone                                          |
+| Debian's `(initramfs)` prompt; `update-grub`                           | gone from the real-world card                 |
 
 ### Real-world card
 
@@ -2697,10 +2699,11 @@ lspci -k | grep -A3 -i ethernet            # is your network card's driver in us
 strace -f -e trace=fork,clone,execve,open,openat,read,write,sendfile64,wait4 sh -c 'cat /sys/class/net/lo/operstate; true'
 ```
 
-`; true` keeps `sh` from exec'ing `cat` in place, so the fork shows. On a test
-virtual machine: at GRUB, press `e`, add `mem=512M` for one boot, and compare `free`
-before and after; to make it last, edit `GRUB_CMDLINE_LINUX` and run
-`grub-mkconfig -o /boot/grub/grub.cfg` (`update-grub` on Debian and Ubuntu).
+`; true` keeps `sh` from exec'ing `cat` in place, so the fork shows. With glibc,
+`clone` and `openat` appear where the Machine's musl uses `fork` and `open`. On a
+test virtual machine: at GRUB, press `e`, add `mem=512M` for one boot, and compare
+`free` before and after; to make it last, edit `GRUB_CMDLINE_LINUX` and run
+`grub-mkconfig -o /boot/grub/grub.cfg`.
 
 ### Taint
 
@@ -2709,19 +2712,20 @@ No Taint rules are live in the Prologue.
 ### Fidelity
 
 - **Faithful:** GRUB 2.14's menu and editor; one-boot edits; `module_blacklist=` making the kernel refuse `virtio_net` (EPERM);
-  `mem=64M` leaving 45524 kB; `reboot` and `ip link set` needing root; `operstate`
-  going from `down` to `up`; the order of syscalls in the route.
+  `mem=64M` leaving 45508 kB; `reboot` and `ip link set` needing root; `operstate`
+  going from `down` to `up`; the emergency shell's lines, as BusyBox `sh` prints them
+  as root, untraced.
 - **Simplified:** the initramfs `/init` is a short script written for the game,
-  modelled on Alpine's, with its own messages (Debian's and Ubuntu's prompt is
-  `(initramfs)`). The start-up script loads `virtio_net` with `modprobe`; on most
-  systems udev does it from the card's `modalias`. init raises `eth0` through the
-  game's control channel; a real system's network manager or `ifup` does it at boot.
-  `eth0` has no network behind it.
+  modelled on Alpine's, with its own messages. The start-up script loads `virtio_net`
+  with `modprobe`; on most systems udev does it from the card's `modalias`. init
+  raises `eth0` through the game's control channel; a real system's network manager
+  or `ifup` does it at boot. `eth0` has no network behind it: once it's up, v86
+  reports a link, and its frames go nowhere.
 
 ### Lab needs
 
-Done: `lab.boot`, the emergency shell, `reboot -f` back to GRUB, `runAs` as root.
-Wanted: a Watchdog restart from the level UI (`useMachineReboot()`), so a player who
-boots with only part of the line fixed isn't stuck as `you` until the level is set
-up again; the boot view of a boot that stopped in the initramfs (no report reaches
-the page without kf-control); the order-the-path Predict.
+Done: `lab.boot`, the emergency shell, `reboot -f` back to GRUB, `runAs` as root, the
+report of a boot that stopped in the initramfs. Wanted: a Watchdog restart from the
+level UI (`useMachineReboot()`), so a player who boots with only part of the line
+fixed isn't stuck as `you` until the level is set up again; the order-the-path
+Predict.

@@ -10,6 +10,7 @@ const SHEET = v('--sheet', '#fafaf7')
 const SOFT = v('--soft', '#e5e5df')
 const INK = v('--ink', '#141414')
 const INK_2 = v('--ink-2', '#55554f')
+const RED = v('--red', '#c8201a')
 const RED_WASH = v('--red-wash', '#f3e9e6')
 const BLUE = v('--blue', '#1f4fa3')
 const MONO = v('--mono', '"IBM Plex Mono", ui-monospace, Menlo, monospace')
@@ -42,6 +43,13 @@ const chrome = EditorView.theme({
     maxWidth: 'min(72ch, calc(100vw - 32px))',
   },
   '.cm-panels': { backgroundColor: SOFT, color: INK, borderColor: INK },
+  // gcc's marks: the one signal red for an error, ink for a warning.
+  '.cm-kf-line--error': { backgroundColor: RED_WASH, boxShadow: `inset 3px 0 0 ${RED}` },
+  '.cm-kf-line--warning': { boxShadow: `inset 3px 0 0 ${INK}` },
+  '.cm-kf-mark--error': { textDecoration: `underline wavy ${RED}`, textUnderlineOffset: '3px' },
+  '.cm-kf-mark--warning': { textDecoration: `underline dashed ${INK}`, textUnderlineOffset: '3px' },
+  '.cm-kf-diagnostic': { padding: '4px 8px', fontFamily: MONO, fontSize: '13px' },
+  '.cm-kf-diagnostic p': { margin: '0' },
 })
 
 // Built-in types (int, char, void) read as keywords, typedefs (pid_t) as types.

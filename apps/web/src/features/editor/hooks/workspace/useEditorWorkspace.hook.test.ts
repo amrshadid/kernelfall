@@ -69,6 +69,26 @@ describe('useEditorWorkspace', () => {
     expect(result.current.run).toEqual({ kind: 'idle' })
   })
 
+  it("marks what gcc said about the player's files when the build ends, until the next Run", async () => {
+    const line = 'gcc a.c -o a && ./a'
+    const { result } = workspace({ runCommand: line })
+    expect(result.current.diagnostics.items).toEqual([])
+    await act(async () => result.current.onRun())
+    const said = "a.c:1:6: error: expected ';'\n/usr/include/stdio.h:3:1: warning: not the player's\n"
+    const events = [{ type: 'console_write', bytes: new TextEncoder().encode(said) }]
+    act(() => machine.finish?.({ commandLine: line, status: 1, events: events as unknown as [] }))
+
+    expect(result.current.diagnostics.items).toEqual([
+      { path: 'a.c', line: 1, column: 6, severity: 'error', message: "expected ';'" },
+    ])
+    expect(result.current.status).toBe('gcc: 1 error, marked on its line')
+
+    const before = result.current.diagnostics.id
+    await act(async () => result.current.onRun())
+    expect(result.current.diagnostics.items).toEqual([])
+    expect(result.current.diagnostics.id).toBeGreaterThan(before)
+  })
+
   it('opens the starter and writes it into the VM once Linux is ready', () => {
     const { result } = workspace()
     expect(result.current.files.map((file) => file.path)).toEqual(['a.c', 'Makefile'])

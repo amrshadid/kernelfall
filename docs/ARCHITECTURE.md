@@ -123,7 +123,9 @@ The game is an engine; the levels are data.
 Players write C in the editor (CodeMirror). The editor writes their files into
 `/home/you` over 9p, and **Run** types the level's build command into the player's
 terminal (by default `gcc -Wall -Wextra x.c -o x && ./x`). gcc's errors and warnings are its real output, and the
-program runs on the real kernel, traced like any other command.
+program runs on the real kernel, traced like any other command. When the build ends, the
+editor reads gcc's `file:line:column` lines from what the trace saw reach the terminal
+and marks them in the player's files until the next Run.
 
 ## The image
 

@@ -122,9 +122,11 @@ up
 
 ## Watch it
 
-> **init:** Before you look: guess which floors of the Section that one small read passes through.
-
----
+> **init:** Before you look: that `up` is one driver's report. Whose?
+>
+> - the disk's driver
+> - the terminal's driver
+> - [x] `virtio_net`, the one the boot entry had blocked
 
 X-ray replays the run. bash reads your line and `fork`s a copy of itself; the copy calls `execve` and becomes `cat`; the scheduler gives it the CPU; `open` walks the path through the VFS down to sysfs; `sendfile64` asks the kernel to copy the file straight to the terminal, and sysfs asks for the card's state, which the network code keeps from what `virtio_net` reported; the terminal's driver shows the three bytes; `cat` calls `exit_group`, and bash's `wait4` returns, and the prompt comes back.
 

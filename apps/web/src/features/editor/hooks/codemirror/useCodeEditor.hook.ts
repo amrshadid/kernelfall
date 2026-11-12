@@ -1,9 +1,10 @@
-import type { EditorFile, EditorHandle, EditorHandlers, RevealRequest } from '@features/editor/types'
+import type { DiagnosticSet, EditorFile, EditorHandle, EditorHandlers, RevealRequest } from '@features/editor/types'
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export interface CodeEditorOptions {
   readonly file: EditorFile | undefined
   readonly reveal: RevealRequest | null
+  readonly diagnostics: DiagnosticSet
   readonly handlers: EditorHandlers
 }
 
@@ -17,7 +18,7 @@ export interface CodeEditor {
 /** CodeMirror is imported on mount, so it stays out of the first-load bundle. */
 export function useCodeEditor(
   container: RefObject<HTMLDivElement | null>,
-  { file, reveal, handlers }: CodeEditorOptions
+  { file, reveal, diagnostics, handlers }: CodeEditorOptions
 ): CodeEditor {
   const [editor, setEditor] = useState<EditorHandle | null>(null)
   const [failed, setFailed] = useState(false)
@@ -71,6 +72,11 @@ export function useCodeEditor(
       editor.reveal(reveal.line, reveal.column)
     }
   }, [editor, revealId, path])
+
+  // After the file is shown, so the marks land on the file they belong to.
+  useEffect(() => {
+    editor?.setDiagnostics(diagnostics)
+  }, [editor, diagnostics])
 
   const format = useCallback(() => editor?.format(), [editor])
 

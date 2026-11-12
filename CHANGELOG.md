@@ -58,6 +58,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Fixed
 
+- **A wrong address on the site shows the game's own "No such page".** An address that
+  is no file of the site, like `/nope`, got the host's bare text page. It now gets a
+  page in the manual's style, in the theme you chose, with the address as the Machine's
+  `ls` would report it and a way back to the title.
 - **The game starts offline.** On the public site the service worker threw as it loaded, so it never
   registered and nothing was kept for offline play. The build now runs the worker and
   fails if it throws.

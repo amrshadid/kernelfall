@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { LevelRecall } from '@features/level/types'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RecallDeck } from './RecallDeck'
 
@@ -8,6 +9,7 @@ const recall = (onMark = vi.fn()): LevelRecall => ({
   title: 'Before you go on',
   note: '1 card from earlier levels.',
   cards: [{ id: 'kernel', term: 'the kernel', answer: 'The one program with full control.', seenIn: 'P.1 Power On' }],
+  drawing: null,
   onMark,
 })
 
@@ -21,6 +23,17 @@ describe('RecallDeck', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Turn the card' }))
     expect(screen.getByText('The one program with full control.')).toBeTruthy()
+  })
+
+  it('shows the region on the Kernel Map only when the level closes it', () => {
+    expect(renderToStaticMarkup(<RecallDeck recall={recall()} />)).not.toContain('<figure')
+
+    const drawing = { layers: [], description: 'First Boot on the Kernel Map.', caption: 'First Boot, rebuilt.' }
+    const html = renderToStaticMarkup(<RecallDeck recall={{ ...recall(), drawing }} />)
+    expect(html).toContain('<figcaption>First Boot, rebuilt.</figcaption>')
+    expect(html).toContain('First Boot on the Kernel Map.')
+    // Not a link: leaving from the card goes through its own buttons, which file it first.
+    expect(html).not.toContain('<a ')
   })
 
   it("keeps the player's own call, once", () => {

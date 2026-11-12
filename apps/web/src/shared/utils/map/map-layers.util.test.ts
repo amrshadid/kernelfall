@@ -1,7 +1,7 @@
 import { emptyProgress } from '@kernelfall/game/utils'
 import { describe, expect, it } from 'vitest'
 import { doneWithHelp, levelIdsIn, nodesFor, realContent } from '@/test/fixtures/map.fixture'
-import { layersOf, mapLayers, toneOf } from './map-layers.util'
+import { layersOf, mapLayers, regionLayers, toneOf } from './map-layers.util'
 
 describe('mapLayers', () => {
   it('puts every region in its layer, going deeper down the Machine', () => {
@@ -14,6 +14,15 @@ describe('mapLayers', () => {
     expect(regions('deep')?.at(-1)).toBe('act2/mainline')
     expect(regions('core')?.at(-1)).toBe('act3/mainline')
     expect(regions('bedrock')).toEqual([])
+  })
+
+  it('cuts the map down to one region, in the layer that holds it', () => {
+    const loaded = realContent()
+    const layers = mapLayers(loaded, nodesFor(emptyProgress(), loaded))
+    const cut = regionLayers(layers, 'prologue/machine-in-section')
+    expect(cut.map((layer) => layer.id)).toEqual(['surface'])
+    expect(cut[0]?.regions.map((region) => region.key)).toEqual(['prologue/machine-in-section'])
+    expect(regionLayers(layers, 'no/such-region')).toEqual([])
   })
 
   it("draws every layer the content defines, with each region's caption, source and guide", () => {

@@ -22,6 +22,14 @@ export function layersOf(content: LoadedContent): readonly LayerInfo[] {
   return content.layers.flatMap(({ key, ...text }) => (isLayerId(key) ? [{ id: key, ...text }] : []))
 }
 
+/** The one layer that holds a region, drawn with that region alone; empty when no layer has it. */
+export function regionLayers(layers: readonly MapLayer[], regionKey: string): readonly MapLayer[] {
+  return layers.flatMap((layer) => {
+    const regions = layer.regions.filter((region) => region.key === regionKey)
+    return regions.length > 0 ? [{ ...layer, regions }] : []
+  })
+}
+
 /** Bedrock has no levels, but it is always drawn. */
 export function mapLayers(content: LoadedContent, nodes: readonly MapNode[]): readonly MapLayer[] {
   const regions = new Map<string, MapRegion[]>()

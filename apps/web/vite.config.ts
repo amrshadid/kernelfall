@@ -10,6 +10,7 @@ import { injectSwManifest, precacheFiles, SW_FILE } from './src/shared/utils/off
 
 const src = (path: string): string => fileURLToPath(new URL(`./src/${path}`, import.meta.url))
 const PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url))
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 // The machine caches the image's files itself, and they are far too big to precache.
 const VM_DIR = 'vm'
 
@@ -75,6 +76,11 @@ export default defineConfig({
   // For a host that serves the site under a sub-path; Vercel serves it at the root.
   base: process.env.KF_BASE ?? '/',
   plugins: [react(), tailwindcss(), serviceWorker()],
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    // Vercel names the commit it builds; a local build has none.
+    __APP_COMMIT__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA ?? ''),
+  },
   build: {
     rollupOptions: {
       // A static host serves 404.html for an address that is no file of the site.

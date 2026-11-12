@@ -21,15 +21,15 @@ PID   PPID  USER     STAT TIME  COMMAND
     1     0 root     S     0:00 init
     2     0 root     SW    0:00 kthreadd
 ...
-  483     1 you      S     0:00 sleep
-  485     1 you      R     0:01 yes
-  487     1 you      S     0:00 bash
-  490   487 you      R     0:00 ps
+  481     1 you      S     0:00 sleep
+  483   481 you      R     0:01 yes
+  484     1 you      S     0:00 bash
+  487   484 you      R     0:00 ps
 ```
 
 > **init:** Read the PIDs from your own list: the kernel numbers processes in the order they start. The first letter of `STAT` is the _state_: `R` is running, or ready to run, and `S` is sleeping, waiting for something. `TIME` is the CPU time used. `yes` has used some already; `sleep` has used none.
 >
-> **init:** The lines with `PPID` 2 are the kernel's own threads, the ones from Who Runs: their parent is `kthreadd`. `sleep`, `yes` and your shell have me, PID 1, as their parent; `ps` has your shell, which started it.
+> **init:** The lines with `PPID` 2 are the kernel's own threads, the ones from Who Runs: their parent is `kthreadd`. `sleep` and your shell have me, PID 1, as their parent. `yes` is `sleep`'s child, and `ps` is your shell's.
 >
 > **init:** `kill` sends a signal. It is a builtin, so X-ray shows bash making the `kill` call itself. `kill -STOP` sends `SIGSTOP`, which pauses a process, and `kill -CONT` sends `SIGCONT`, which lets it carry on. Pause `sleep`, wake it, then read the kernel's own page on it: `cat /proc/PID/status`, with its PID.
 
@@ -73,10 +73,10 @@ ShdPnd:	0000000000004000
 > **init:** Not yet. A stopped process doesn't run, so it can't act on a signal. The `SIGTERM` waits on it, _pending_. `ShdPnd` has one on-or-off switch for each signal, and `4000` in hexadecimal has only the fifteenth on: `SIGTERM` is signal 15. When `SIGCONT` woke `yes`, it acted on the waiting signal and ended.
 
 ```
-  485 Z    yes
+  483 Z    yes
 ```
 
-> **init:** A quick `ps` catches this. `Z` is a _zombie_: an ended process, listed until its parent collects its result. I'm its parent, so a moment later it is gone.
+> **init:** `Z` is a _zombie_: an ended process, listed until its parent collects its result. Its parent is `sleep`, which never does. When you ended `sleep`, I adopted the zombie and collected it.
 
 ```
 $ kill 1

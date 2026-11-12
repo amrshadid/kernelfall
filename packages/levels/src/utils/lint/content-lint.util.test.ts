@@ -1,6 +1,6 @@
 import type { LevelDefinition } from '@kernelfall/game/types'
 import { describe, expect, it } from 'vitest'
-import { countAsides, countWords, lintLevel } from '#utils/lint/content-lint.util'
+import { countAsides, countWords, lintLevel, strayWords } from '#utils/lint/content-lint.util'
 import { parseStory } from '#utils/story/story.util'
 
 const words = (n: number) => Array.from({ length: n }, () => 'word').join(' ')
@@ -78,5 +78,33 @@ describe('lintLevel', () => {
       'codex syscall: simple 30 words (budget 25)',
       'codex syscall: deep 81 words (budget 80)',
     ])
+  })
+})
+
+describe('strayWords', () => {
+  const P2 = 'prologue-boot-path-02-first-words'
+  const P9 = 'prologue-machine-in-section-09-files-doors-wires'
+  const S2 = 'prologue-surface-survey-02-who-may-enter'
+
+  it("keeps a floor to the drawing's three", () => {
+    expect(strayWords(P2, 'Three floors, most of them dark. The hardware floor fills in.')).toEqual([])
+    expect(strayWords(P2, 'One floor up, the scheduler decides.')).toEqual([expect.stringContaining('floor')])
+  })
+
+  it('keeps a door to device files: P.9, and its title anywhere', () => {
+    expect(strayWords(P9, 'A door to a driver.')).toEqual([])
+    expect(strayWords(P2, 'In Files, Doors and Wires you saw it.')).toEqual([])
+    expect(strayWords(P2, 'There is no other door.')).toEqual([expect.stringContaining('door')])
+  })
+
+  it('wants the Gate by its name, and leaves inline code alone', () => {
+    expect(strayWords(P2, 'Every request crosses the Gate. See `syscall-gate dark`.')).toEqual([])
+    expect(strayWords(P2, 'It goes through the gate.')).toEqual([expect.stringContaining('gate')])
+  })
+
+  it('keeps a lock to the Survey', () => {
+    expect(strayWords(S2, "That is a file's lock. Padlocks on every file.")).toEqual([])
+    expect(strayWords(P2, "User mode's locks keep it out.")).toEqual([expect.stringContaining('lock')])
+    expect(strayWords(P2, 'The kernel takes a block of memory.')).toEqual([])
   })
 })

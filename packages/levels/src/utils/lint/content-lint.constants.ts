@@ -1,4 +1,5 @@
 import type { LevelId } from '@kernelfall/game/types'
+import type { VocabularyRule } from '#types/index'
 
 export const STEP_WORD_BUDGETS: Readonly<Record<string, number>> = {
   scene: 80,
@@ -27,6 +28,38 @@ export const BANNED_PHRASES: readonly string[] = [
   'yours will differ',
   'next release',
   'tomorrow',
+  // Pictures that collided with the Section drawing.
+  'the Deep',
+  'the Smith',
+  'waiting room',
+  'tap on the shoulder',
+  'house',
+  'houses',
+]
+
+// One meaning per picture word, so "floor" is never a kernel part and "door" never the Gate.
+export const VOCABULARY: readonly VocabularyRule[] = [
+  {
+    word: 'floor',
+    means: "one of the drawing's three: Userland, the kernel, hardware",
+    pattern: /\bfloors?\b/gi,
+    allowed: /\b(three|hardware|kernel's|Userland's) floors?\b/gi,
+  },
+  {
+    word: 'door',
+    means: 'a device file',
+    pattern: /\bdoors?\b/gi,
+    allowed: /Files, Doors and Wires/g,
+    only: ['prologue-machine-in-section-09-'],
+  },
+  // Lower case only: "the Gate" is the name.
+  { word: 'gate', means: 'written "the Gate": the line every system call crosses', pattern: /\bgates?\b/g },
+  {
+    word: 'lock',
+    means: "a file's permissions",
+    pattern: /\b(pad)?lock(s|ed)?\b/gi,
+    only: ['prologue-surface-survey-'],
+  },
 ]
 
 // Rewritten to the standard: their budgets fail the tests; the others only warn.

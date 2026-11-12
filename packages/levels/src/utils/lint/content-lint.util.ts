@@ -7,6 +7,7 @@ import {
   CODEX_WORD_BUDGETS,
   STEP_WORD_BUDGETS,
   STORY_WORD_BUDGET,
+  VOCABULARY,
 } from '#utils/lint/content-lint.constants'
 
 const INLINE_CODE = /`[^`]*`/g
@@ -24,6 +25,16 @@ export function countAsides(text: string): number {
 
 const escaped = (phrase: string) => phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const BANNED = BANNED_PHRASES.map((phrase) => ({ phrase, pattern: new RegExp(`\\b${escaped(phrase)}\\b`, 'i') }))
+
+// Inline code is the Machine's text, not the story's picture.
+export function strayWords(levelId: string, prose: string): string[] {
+  const text = prose.replace(INLINE_CODE, '')
+  return VOCABULARY.filter(
+    (rule) =>
+      !rule.only?.some((prefix) => levelId.startsWith(prefix)) &&
+      new RegExp(rule.pattern).test(rule.allowed ? text.replace(rule.allowed, '') : text)
+  ).map((rule) => `${rule.word} (only ${rule.means})`)
+}
 
 function proseOf(story: Story, section: string): string[] {
   // A question and its answers are read like any line.
@@ -81,7 +92,10 @@ export function lintLevel(level: LevelDefinition, story: Story): LevelLint {
   const stepProse = steps.flatMap((step) => proseOf(story, step.section)).join(' ')
   const banned: BannedUse[] = [...story.keys()].flatMap((section) => {
     const prose = proseOf(story, section).join(' ')
-    return BANNED.filter(({ pattern }) => pattern.test(prose)).map(({ phrase }) => ({ phrase, section }))
+    return [
+      ...BANNED.filter(({ pattern }) => pattern.test(prose)).map(({ phrase }) => phrase),
+      ...strayWords(level.id, prose),
+    ].map((phrase) => ({ phrase, section }))
   })
   const lint = {
     levelId: level.id,

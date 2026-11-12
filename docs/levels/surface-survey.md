@@ -295,7 +295,7 @@ text, which an `echo` of the same text would match.
 
 ## S.2 — Who May Enter
 
-- **Id:** `prologue-surface-survey-02-who-may-enter` · **Region / NPC:** Userland's locked doors / init, the neighbour (user `guest`, uid 1001) · **Tracks:** `userland` · **Time:** ~20 min · **Prerequisites:** `io-fs-hierarchy` · **Skills unlocked:** `io-permissions`
+- **Id:** `prologue-surface-survey-02-who-may-enter` · **Region / NPC:** Userland's locked files / init, the neighbour (user `guest`, uid 1001) · **Tracks:** `userland` · **Time:** ~20 min · **Prerequisites:** `io-fs-hierarchy` · **Skills unlocked:** `io-permissions`
 
 **Question:** Who decides whether you may open a file, and by what rule? The kernel,
 on every open: it picks owner, group or everyone else, then checks that one's three
@@ -326,7 +326,7 @@ $ ls -l /etc/shadow
 open("/etc/shadow", O_RDONLY|O_LARGEFILE) = -1 EACCES (Permission denied)
 ```
 
-The Scene opens from S.1's `-r--r--r--` and has the player try the locked door.
+The Scene opens from S.1's `-r--r--r--` and has the player try a locked file.
 See it names the _user ID_ (`id`), the _group_, and the _permissions_: the first
 character is the kind, then three letters each for owner, group and everyone else,
 kept in the file's inode. The kernel uses one of the three: not the owner, not in
@@ -416,8 +416,10 @@ beats.
 
 ### Lab
 
-Setup starts `sleep 86400` and `yes > /dev/null` as `you`, in a subshell that exits,
-so init adopts them (PPID 1). No fixed PIDs: the player reads them from `ps`.
+Setup runs `sh -c 'yes > /dev/null & exec sleep 86400'` as `you`, in a subshell that
+exits: init adopts `sleep` (PPID 1), and `yes` is `sleep`'s child. `sleep` never waits,
+so an ended `yes` stays a zombie until `sleep` ends too and init adopts and collects
+it. No fixed PIDs: the player reads them from `ps`.
 
 ### Scene
 
@@ -433,15 +435,15 @@ PID   PPID  USER     STAT TIME  COMMAND
     1     0 root     S     0:00 init
     2     0 root     SW    0:00 kthreadd
 ...
-  483     1 you      S     0:00 sleep
-  485     1 you      R     0:01 yes
-  487     1 you      S     0:00 bash
-  490   487 you      R     0:00 ps
+  481     1 you      S     0:00 sleep
+  483   481 you      R     0:01 yes
+  484     1 you      S     0:00 bash
+  487   484 you      R     0:00 ps
 ```
 
 **Name:** the _state_, the first `STAT` letter: `R` running or ready, `S` sleeping;
 `TIME` is CPU time used. The `PPID` 2 lines are the kernel's threads from Who Runs.
-`kill` sends a signal and is a builtin (`kill(483, SIGSTOP) = 0` is bash's own call).
+`kill` sends a signal and is a builtin (`kill(481, SIGSTOP) = 0` is bash's own call).
 **Do:** `kill -STOP` and `kill -CONT` on `sleep`, then `cat /proc/PID/status`:
 `State:	S (sleeping)`, `PPid:	1`.
 
@@ -450,8 +452,7 @@ PID   PPID  USER     STAT TIME  COMMAND
 - Run `ps -o pid,stat,time,comm` twice and watch `yes`'s `TIME` grow.
 - **Errand:** pause `yes`, check `T` and a `TIME` that stops; send `SIGTERM` (plain
   `kill`) while paused and `cat` its status; `kill -CONT`; `ps` again; end `sleep`;
-  check with `ps` that it is gone; try `kill 1`. The zombie line is shown as what a
-  quick `ps` catches: init collects `yes` within about a second.
+  check with `ps` that it is gone; try `kill 1`.
 - **Checker:** a `ps` listing with `sleep` and `yes`; a read of `sleep`'s or `yes`'s
   `/proc/<pid>/status` (its `Name:` line); `yes` shown in `T` by `ps` or its status;
   its status with `State:	T (stopped)` and `ShdPnd:	0000000000004000`; a full `ps`
@@ -463,7 +464,8 @@ PID   PPID  USER     STAT TIME  COMMAND
 
 **Predict:** does a paused `yes` end on `SIGTERM`? No: the signal waits in `ShdPnd`
 (`4000` hexadecimal, the fifteenth bit), `State` stays `T`; after `SIGCONT` it ends,
-and `ps` shows `485 Z    yes`, a _zombie_, until init collects it. `kill 1` →
+and `ps` shows `483 Z    yes`, a _zombie_: its parent, `sleep`, never collects it.
+Once the player ends `sleep`, init adopts the zombie and collects it. `kill 1` →
 `-bash: kill: (1) - Operation not permitted`: `EPERM`; root may signal anyone, by
 another capability.
 

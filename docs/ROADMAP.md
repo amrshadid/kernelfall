@@ -37,10 +37,8 @@ each, a third of the words, and ideas that link from level to level.
 
 - **Fill the concepts no built level teaches yet:** drivers, PIDs, exit status and
   `errno` are met in the Prologue and explained in a line; Act I teaches them properly.
-- **Make S.3's zombie certain:** init collects `yes` within a second, so a slow `ps`
-  misses the `Z` line the story shows.
-- **One vocabulary:** the Section drawing's parts and the game's words (the Gate, floors,
-  doors) in LEVELS.md, with a lint for stray metaphors.
+- **Bring the unbuilt specs to the vocabulary** ([LEVELS.md](LEVELS.md#vocabulary)) as
+  each level is built: Act I's specs still speak of houses and aqueducts.
 - **Then Act I**, in play order, starting with 1.0.
 
 ### Later acts: gaps the public kernel roadmaps point to

@@ -7,12 +7,12 @@ minutes: 25
 tracks: [kernel]
 skills: [mem-virtual-memory-basics]
 prerequisites: [proc-process-basics]
-teaches: [virtual-memory, page, page-cache]
-uses: [ram, memory-address, hex, kernel-space, user-kernel-mode, signal, process, proc-fs, c-basics, compiler]
+teaches: [virtual-memory, page]
+uses: [ram, memory-address, hex, kernel-space, user-space, user-kernel-mode, process, proc-fs, c-basics, compiler]
 objectives:
   - id: reads-meminfo
     # cat copies /proc/meminfo with sendfile64, whose bytes the trace doesn't carry yet; free read()s it.
-    text: "`free` reads how the Machine's memory is used from `/proc/meminfo`, and does the sums."
+    text: "`free` reads how much memory the Machine really has, from `/proc/meminfo`."
   - id: exits-zero
     text: "`./where` exits with status 0."
     check: { kind: exit-status, status: 0, program: where }
@@ -27,8 +27,8 @@ hints:
   - "`&name` is the address of any variable. `%p` prints an address; cast it to `(void *)` first."
   - "Inside `main`, add `int local = 0;` and `printf(\"local  at %p\\n\", (void *)&local);` before the maps are printed."
 chips:
-  - { command: cat, explain: "show a file: /proc/meminfo is the kernel's memory count, /proc/self/maps cat's own map" }
-  - { command: free, explain: "read /proc/meminfo and do the sums: total, used, free, cache" }
+  - { command: free, explain: "how much memory the Machine has, and how much is in use, in KiB" }
+  - { command: cat, explain: "show a file: /proc/self/maps is cat's own map, /proc/meminfo the kernel's memory count" }
 xray: [memory, syscalls]
 codex:
   - id: virtual-memory
@@ -38,14 +38,13 @@ codex:
       Each process uses its own made-up addresses; the CPU's MMU translates them to
       real RAM, page by page.
     deep: >-
-      Physical memory is managed in page frames (struct page, grouped as folios). Each
-      process's address space is a struct mm_struct with a list of regions (struct
+      A process's address space is a struct mm_struct with its regions (struct
       vm_area_struct) and its page tables: three levels on 32-bit x86 with PAE, the
-      Machine's (PGD, PMD, PTE), four on most x86-64 machines (PGD, PUD, PMD, PTE),
-      five with LA57. A page fault on a user address goes through do_user_addr_fault()
-      to handle_mm_fault(); one on a kernel address from user mode, like poke's, is
-      refused in do_kern_addr_fault(). The CPU's error code says which kind it was:
-      bit 0 set means the page was present and the access was forbidden.
+      Machine's, four or five on x86-64. A page fault on a user address goes through
+      do_user_addr_fault() to handle_mm_fault(), which may fill it in; one on a
+      kernel address from user mode, like poke's, is refused in do_kern_addr_fault().
+      In the CPU's error code, bit 0 set means the page was present and the access
+      forbidden.
     sources: [include/linux/mm_types.h, mm/memory.c, arch/x86/mm/fault.c, arch/x86/include/asm/pgtable-3level_types.h]
     docs: https://docs.kernel.org/admin-guide/mm/concepts.html
     tryIt: getconf PAGESIZE

@@ -1866,7 +1866,7 @@ Every block is one recorded session, so its PIDs agree: the shell is 472 through
 
 ### Scene
 
-> **init:** In Finding the Hardware, the kernel gave every device a driver. One of those devices is the CPU, and the Machine has just one. Yet `ps` is about to show you dozens of processes. How do they all run?
+> **init:** Finding the Hardware ended on a question: one CPU, and many programs that want it. Who decides? The Machine really has just one CPU, and `ps` is about to show you dozens of processes. How do they all run?
 >
 > **The Watchdog:** One CPU. One. Everybody wants it.
 >
@@ -1904,11 +1904,11 @@ Every block is one recorded session, so its PIDs agree: the shell is 472 through
    ...
    ```
 
-   `S (sleeping)`: waiting for the player to type, so it needs no CPU. `PPid: 1`:
-   its parent is init.
-3. Almost every process on the list is asleep like the shell, waiting for a key, a
-   file or a timer; the kernel shares the CPU only among the few that are ready to
-   run. That is the first half of the answer.
+   `S (sleeping)`: the shell is waiting, at that instant for `cat` to finish, so it
+   needs no CPU. `PPid: 1`: its parent is init.
+3. Almost every process on the list is asleep like the shell, waiting for something
+   to do; the kernel shares the CPU only among the few that are ready to run. That
+   is the first half of the answer.
 
 ### Build it
 
@@ -1972,15 +1972,16 @@ number); the same parent (the shell started both, and 472 is the PID `ps` showed
 $ ./mypid
 I am process 493
 My parent is 472
+[3]+  Terminated                 yes > /dev/null
 $ ./mypid
 I am process 494
 My parent is 472
 ```
 
 init closes on the family tree: init started the shell, the shell started `mypid`,
-and the kernel threads all descend from `kthreadd`, PID 2. After the crowd, bash also
-prints a `Terminated` line for a `yes` before the next prompt; the story's excerpt
-leaves it out.
+and the other kernel threads all descend from `kthreadd`, PID 2. The `Terminated`
+line is the shell reporting a `yes` that `kill` ended; a live player may see one for
+each `yes`.
 
 ### Debrief
 
@@ -1993,8 +1994,8 @@ P.8 begins.
 1. Nudge: "`getpid()` gives your own number. Is there a function for your parent's?"
 2. Concept: "`getppid()` returns the parent's PID. `printf` with `%d` prints a whole
    number."
-3. Point at the spot: "After the first `printf`, add
-   `printf(\"My parent is %d\\n\", (int)getppid());`."
+3. Point at the spot: "After the first `printf`, add a second one like it, with
+   `My parent is %d` as its text and `(int)getppid()` as its number."
 
 ### Codex (chapter: The Machine in Section)
 
@@ -2039,9 +2040,9 @@ P.8 begins.
 | what `/proc` is                                                           | P.1 named it; P.9 teaches it                            |
 | "your PIDs will differ"; counts change from moment to moment              | gone: a banned hedge                                    |
 | `VmRSS`; voluntary and nonvoluntary context switches                      | `scheduler` card's try-it (`grep ctxt`); P.8 for memory |
-| `nproc` prints 1                                                          | the `nproc` chip; the real-world card                   |
-| the run queue; "a short slice of time"; the `CPU` column is always 0      | `scheduler` Deep; the story says "a short turn"         |
-| what tracing costs: the `sys` and `irq` shares, `ttyS1`, 5,000 interrupts | `fidelity`; one sentence stays                          |
+| `nproc` prints 1                                                          | gone: the story says the Machine has one CPU            |
+| the run queue; "a short slice of time"; the `CPU` column is always 0      | `scheduler` Deep has the run queue; the rest is gone    |
+| what tracing costs: the `sys` and `irq` shares, `ttyS1`, 5,000 interrupts | one sentence stays; `fidelity` says tracing costs CPU   |
 | a race on a shared counter; the Verger and locks                          | 2.9 (many users at once)                                |
 | the Section drawing filling with figures; district labels                 | gone                                                    |
 
@@ -2069,109 +2070,73 @@ No Taint rules are live in the Prologue.
 ### Lab needs
 
 None beyond the shared Machine. Risk: three traced `yes` flood the trace with
-`write` events (about 6,000 events in the 4-second reference run); the app's X-ray
+`write` events (about 4,600 events in the reference run's crowd line); the app's X-ray
 must stay responsive.
 
 ---
 
 ## P.8 — Pages and Maps
 
-- **Id:** `prologue-machine-in-section-08-pages-and-maps` · **Region / NPC:** The Machine in Section, the memory floor / init; on the drawing: kswapd · **Tracks:** `kernel` · **Time:** ~25 min · **Prerequisites:** `proc-process-basics` · **Skills unlocked:** `mem-virtual-memory-basics`
+- **Id:** `prologue-machine-in-section-08-pages-and-maps` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `kernel` · **Time:** ~25 min · **Prerequisites:** `proc-process-basics` · **Skills unlocked:** `mem-virtual-memory-basics`
+
+**Question:** How can every process have 3 GiB of addresses on a Machine with 256
+MiB of memory? Each has its own map, and RAM is spent only on the pages in use.
+
+**Teaches:** `virtual-memory`, `page`. **Tools:** `free`, `/proc/self/maps`, `&name`.
+The story text is the level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** You saw every process get its own number. Here's the stranger part: every one of them also gets its own memory, or thinks it does.
->
-> **init:** 256 MiB. That's all the RAM the Machine has. And yet every process here believes it has 3 GiB of addresses to itself, about twelve times more.
+> **init:** In The Kernel Up Close, every process had 3 GiB of user space to itself. In Who Runs, you counted dozens of processes. The Machine has 256 MiB of RAM. That doesn't add up.
 >
 > **The Watchdog:** Lies. The kernel tells everyone lies.
 >
-> **init:** Useful ones. Each process gets its own map. The kernel decides which parts of each map are backed by real memory, and by which memory.
+> **init:** Useful ones. Run `free`, and see what there really is.
 
 ### See it (X-ray)
 
-1. **Physical and virtual.** **Physical memory** is the RAM chips, each byte with
-   its own real address. A process never sees those. It uses **virtual addresses**,
-   its own numbering, and a part of the CPU, the **MMU** (memory management unit),
-   translates each one into a real address on every memory access.
-
-   > **init:** Like flat numbers in a building. Two buildings both have a flat 4B; the city map tells the post which street each is on.
-
-   Where the picture stops being true: the translation isn't looked up by a person;
-   the MMU does it in hardware, for every access, and the kernel can change a
-   process's map at any time.
-2. **Pages and page tables.** Memory is handled in **pages** of 4 KiB (4096 bytes).
-   For each process the kernel keeps **page tables**: a lookup from a virtual page
-   to a physical page (a "frame"); three levels of tables on the Machine (32-bit
-   with PAE), four or five on a 64-bit PC. One picture: two processes, both using
-   the virtual address `0xbf9bb000` on their stacks, mapped to two different
-   frames; the kernel's top gigabyte mapped the same in both. An access the page
-   tables don't allow causes a **page fault**: the page has no mapping, or it has
-   one that forbids this access (a write to a read-only page, a user-mode read of a
-   kernel page). The kernel decides: fill it in, or end the process. P.5's `poke`
-   was the second kind: the page at `0xc0000000` was mapped, supervisor-only (the
-   CPU's error code 5: present, user mode).
-3. **The whole Machine.** `cat /proc/meminfo`, then `free` (real output, one run;
-   numbers move a little from moment to moment):
+1. **Do** (the Scene's last line): `free` (real output):
 
    ```
-   $ cat /proc/meminfo
-   MemTotal:         223588 kB
-   MemFree:          203128 kB
-   MemAvailable:     201096 kB
-   Buffers:               0 kB
-   Cached:             2852 kB
-   ...
    $ free
                  total        used        free      shared  buff/cache   available
-   Mem:         223588       17276      203128           8        3184      201096
+   Mem:         223636       28536      191876           8        3224      189860
    Swap:             0           0           0
    ```
 
-   `MemTotal` is about 218 of the 256 MiB: the firmware keeps part, the kernel's code
-   and data take more (`dmesg`: `Memory: 220092K/245368K available (10068K kernel
-   code, ...)`; the first number moves a little from boot to boot). `Cached` is the **page cache** (a **cache** is any copy kept close
-   by to make the next use faster). BusyBox `free` takes totals from `sysinfo()` and
-   `Cached` + `SReclaimable` from `/proc/meminfo` into `buff/cache`; `used` = total −
-   free − buff/cache (223588 − 203128 − 3184 = 17276). Where the cache picture stops
-   being true on the Machine: the 9p root (`cache=0x5`, mmap mode) hands each `read`
-   to the host without keeping a copy, so `Cached` stays at a few MiB, mostly
-   programs' mapped code. kswapd, on the drawing: "When memory runs short, I wake up
-   and clear room. Slab Mines, 2.8."
-4. **One process's map.** `cat /proc/self/maps` (`self` means whichever process is
-   reading, here `cat`, which is BusyBox; real output):
+   `free` counts in KiB: about 218 MiB, once the firmware and the kernel have taken
+   their share of the 256. **Name:** _physical memory_, the RAM itself, which a
+   process never sees, and _virtual addresses_, its own numbering, which a part of
+   the CPU, the MMU, turns into a place in RAM on every access.
+2. **Name:** _pages_ of 4096 bytes. For each process the kernel keeps a map from its
+   virtual pages to pages of RAM; most of a process's 3 GiB has no RAM behind it
+   until it is used. That answers the question.
+3. **Do:** `cat /proc/self/maps` (`self` is whoever is reading, here `cat`, which is
+   BusyBox; real output, cut with `...`):
 
    ```
-   004ac000-004b0000 r--p 00000000 00:14 10         /bin/busybox
-   004b0000-00550000 r-xp 00004000 00:14 10         /bin/busybox
-   00550000-00572000 r--p 000a4000 00:14 10         /bin/busybox
-   00572000-00574000 r--p 000c6000 00:14 10         /bin/busybox
-   00574000-00575000 rw-p 000c8000 00:14 10         /bin/busybox
-   01dd7000-01dd8000 ---p 00000000 00:00 0          [heap]
-   01dd8000-01dd9000 rw-p 00000000 00:00 0          [heap]
-   b7f07000-b7f17000 rw-p 00000000 00:00 0
-   b7f17000-b7f1b000 r--p 00000000 00:00 0          [vvar]
-   b7f1b000-b7f1d000 r--p 00000000 00:00 0          [vvar_vclock]
-   b7f1d000-b7f20000 r-xp 00000000 00:00 0          [vdso]
-   b7f20000-b7f31000 r--p 00000000 00:14 267        /lib/ld-musl-i386.so.1
-   b7f31000-b7f90000 r-xp 00011000 00:14 267        /lib/ld-musl-i386.so.1
-   b7f90000-b7fc4000 r--p 00070000 00:14 267        /lib/ld-musl-i386.so.1
-   b7fc4000-b7fc5000 r--p 000a3000 00:14 267        /lib/ld-musl-i386.so.1
-   b7fc5000-b7fc6000 rw-p 000a4000 00:14 267        /lib/ld-musl-i386.so.1
-   b7fc6000-b7fc8000 rw-p 00000000 00:00 0
-   bff47000-bff68000 rw-p 00000000 00:00 0          [stack]
+   004cb000-004cf000 r--p 00000000 00:14 10         /bin/busybox
+   004cf000-0056f000 r-xp 00004000 00:14 10         /bin/busybox
+   ...
+   0189e000-0189f000 rw-p 00000000 00:00 0          [heap]
+   ...
+   b7e7e000-b7edd000 r-xp 00011000 00:14 267        /lib/ld-musl-i386.so.1
+   ...
+   bfb3f000-bfb60000 rw-p 00000000 00:00 0          [stack]
    ```
 
-   Each line is one region: its addresses (eight hex digits: 32 bits), what may be
-   done there (`r` read, `w` write, `x` run as code, `p` private to this process),
-   and what it holds: the program's code (`r-x`), its data (`rw-`), the **heap**
-   (memory a program asks for while it runs) and the **stack** (local variables),
-   just under `0xc0000000`. Between the heap and the stack: musl, shared by every
-   program; the vdso (small kernel-provided functions, including the doorway for
-   syscalls on this Machine); and long gaps. Run it again and every address moves:
-   **ASLR**.
+   Each line is one region: where it starts and ends, what may be done there (`r`
+   read, `w` write, `x` run as code), and what it holds. `cat`'s code is at the top;
+   its _stack_, where a function keeps its variables, is at the bottom, just under
+   the kernel's gigabyte.
 
 ### Build it
+
+init first names the _page fault_: an access the map doesn't allow makes the CPU stop
+and call the kernel. Often the kernel fills the page in and the program goes on,
+which is how unused addresses cost nothing until touched; sometimes it ends the
+program, as it ended P.5's `poke`, whose page at `0xc0000000` was in its map but for
+kernel mode only. `&global` gets one clause: "the address of `global`".
 
 - **Starter provides:** `where.c`. It prints the address of a global variable (one
   declared outside any function) and then prints its own `/proc/self/maps` (with
@@ -2198,26 +2163,23 @@ in the program's data region, near the bottom. Real output:
 
 ```
 $ ./where
-global at 0x467004
-local  at 0xbf9bbbb8
-00463000-00464000 r--p 00000000 00:14 6402       /home/you/where
-00464000-00465000 r-xp 00001000 00:14 6402       /home/you/where
-00465000-00466000 r--p 00002000 00:14 6402       /home/you/where
-00466000-00467000 r--p 00002000 00:14 6402       /home/you/where
-00467000-00468000 rw-p 00003000 00:14 6402       /home/you/where
+global at 0x4e6004
+local  at 0xbfa5c338
+004e2000-004e3000 r--p 00000000 00:14 7030       /home/you/where
 ...
-bf99b000-bf9bc000 rw-p 00000000 00:00 0          [stack]
+004e6000-004e7000 rw-p 00003000 00:14 7030       /home/you/where
+...
+bfa3d000-bfa5e000 rw-p 00000000 00:00 0          [stack]
 ```
 
-The memory floor of the Section drawing lights: RAM frames at the bottom, two
-process maps above with arrows down to them, the page cache as a shelf of file
-pages. Labels: the Slab Mines (2.8a–b), the Page-Table Labyrinth (3.3–3.5).
+Run again, both addresses move (the kernel places each new program's pieces
+somewhere new, so an attacker can't know where anything is), but each stays in its
+region. Another process can use the very same addresses for different pages of RAM:
+each has its own map.
 
 ### Debrief
 
-> **init:** Pages, page tables, a map for each of us, and a cache of files in whatever memory is left. The kernel keeps all of it straight.
->
-> **init:** One floor left before you've seen it all: files, devices and wires, in Files, Doors and Wires. And one rule that ties them together.
+> **init:** So the kernel gives every process its own map, and spends real memory only on the pages in use. The CPU, the memory: one part of the kernel is left. In Files, Doors and Wires, you see how files, devices and the network all answer to the same few syscalls.
 
 P.9 begins.
 
@@ -2235,15 +2197,13 @@ P.9 begins.
 - **Virtual memory** (`virtual-memory`, deepens: `kernel-user-space`)
   - **Simple:** Each process uses its own made-up addresses; the CPU's MMU
     translates them to real RAM, page by page.
-  - **Deep:** Physical memory is managed in page frames (`struct page`, grouped as
-    folios). Each process's address space is a `struct mm_struct` with a list of
-    regions (`struct vm_area_struct`) and its page tables (three levels on 32-bit
-    x86 with PAE, the Machine's: PGD, PMD, PTE; four on most x86-64 machines; five
-    with LA57). A page fault on a user address goes through
-    `do_user_addr_fault()` to `handle_mm_fault()`; one on a kernel address from
-    user mode, like `poke`'s, is refused in `do_kern_addr_fault()`. The CPU's error
-    code says which kind: bit 0 set means the page was present and the access
-    forbidden. — `include/linux/mm_types.h`, `mm/memory.c`,
+  - **Deep:** A process's address space is a `struct mm_struct` with its regions
+    (`struct vm_area_struct`) and its page tables: three levels on 32-bit x86 with
+    PAE, the Machine's, four or five on x86-64. A page fault on a user address goes
+    through `do_user_addr_fault()` to `handle_mm_fault()`, which may fill it in; one
+    on a kernel address from user mode, like `poke`'s, is refused in
+    `do_kern_addr_fault()`. In the CPU's error code, bit 0 set means the page was
+    present and the access forbidden. — `include/linux/mm_types.h`, `mm/memory.c`,
     `arch/x86/mm/fault.c`.
   - **Read:** https://docs.kernel.org/admin-guide/mm/concepts.html. Deepened by
     1.4 (memory after `fork`), 2.5 (separate address spaces) and the Page-Table
@@ -2275,6 +2235,24 @@ P.9 begins.
     first when memory runs short. — `mm/filemap.c`, `include/linux/fs.h`.
   - **Read:** https://docs.kernel.org/admin-guide/mm/concepts.html. Deepened by
     P.10 (one `read`, end to end).
+
+### Moved out of the story
+
+| Fact (old story)                                                     | Now                                                   |
+| -------------------------------------------------------------------- | ----------------------------------------------------- |
+| the flats-in-two-buildings picture and where it stops being true     | gone: one picture, the map                            |
+| page tables, frames, three levels of tables, four or five on 64-bit  | `virtual-memory` Deep; the Page-Table Labyrinth (3.3) |
+| two processes with the same stack address reaching different RAM     | the last line of Watch it                             |
+| the two kinds of page fault                                          | one sentence in Build it; `virtual-memory` Deep       |
+| `cat /proc/meminfo`; `MemFree`, `MemAvailable`, `Buffers`, `Cached`  | `meminfo` card; the story keeps `free`'s total        |
+| the `dmesg` memory line                                              | gone                                                  |
+| the page cache; what a cache is; `SReclaimable`; `free`'s arithmetic | `page-cache` and `meminfo` cards                      |
+| the 9p root keeps no copy, so `Cached` stays small                   | `page-cache` Deep; `fidelity`                         |
+| kswapd's line                                                        | `meminfo` Deep                                        |
+| every line of `cat`'s map; `p` for private; eight hex digits         | the excerpt keeps four regions; `proc-maps` Deep      |
+| the heap; `ld-musl` shared by every program; the vdso and vvar       | gone from the story; `proc-maps` Deep names them      |
+| "ASLR" by name                                                       | `proc-maps` Deep; the story says what it does         |
+| the drawing's memory floor lighting                                  | gone                                                  |
 
 ### Real-world card
 

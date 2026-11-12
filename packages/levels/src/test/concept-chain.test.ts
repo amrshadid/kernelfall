@@ -19,7 +19,6 @@ const KNOWN_CONCEPT_GAPS: Readonly<Record<ConceptViolationKind, Readonly<Record<
     'man-page': 'no later level asks for a man page',
     uefi: 'P.4 names UEFI to say the Machine has a BIOS; nothing later needs it',
     'device-tree': "P.6's device tree returns only in Act III's 3.14",
-    'page-cache': "P.8's page cache never returns",
     'pending-signal': "S.3's ShdPnd is never read again",
     stderr: "S.4's standard error is not used by S.5 or 1.4",
     'text-line': "S.5's lines return only with Act I's 1.0, which isn't built",

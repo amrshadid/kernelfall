@@ -38,4 +38,5 @@ export const ENFORCED_LEVELS: readonly LevelId[] = [
   'prologue-machine-in-section-05-kernel-up-close',
   'prologue-machine-in-section-06-finding-the-hardware',
   'prologue-machine-in-section-07-who-runs',
+  'prologue-machine-in-section-08-pages-and-maps',
 ]

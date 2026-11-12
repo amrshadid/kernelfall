@@ -4,7 +4,7 @@
 
 ## Scene
 
-> **init:** In Finding the Hardware, the kernel gave every device a driver. One of those devices is the CPU, and the Machine has just one. Yet `ps` is about to show you dozens of processes. How do they all run?
+> **init:** Finding the Hardware ended on a question: one CPU, and many programs that want it. Who decides? The Machine really has just one CPU, and `ps` is about to show you dozens of processes. How do they all run?
 >
 > **The Watchdog:** One CPU. One. Everybody wants it.
 >
@@ -30,7 +30,7 @@ PID   USER     TIME  COMMAND
 
 > **init:** PID 1 is me. The names in square brackets are _kernel threads_: the kernel's own workers. They take turns on the CPU like processes, but they run only the kernel's code. Near the bottom is your shell, `-bash`, and `ps` itself.
 >
-> **init:** Every process has a _parent_: the process that started it. The kernel shows what it keeps about each one in `/proc`, in a folder named by its PID, and `$$` is the shell's word for its own PID. Run `cat /proc/$$/status`.
+> **init:** A process's _parent_ is the process that started it. The kernel shows what it keeps about each one in `/proc`, in a folder named by its PID, and `$$` is the shell's word for its own PID. Run `cat /proc/$$/status`.
 
 ---
 
@@ -44,9 +44,9 @@ PPid:	1
 ...
 ```
 
-> **init:** `S (sleeping)`: your shell is waiting for you to type, so it needs no CPU. `PPid: 1`: its parent is me.
+> **init:** `S (sleeping)`: your shell is waiting, right now for `cat` to finish, so it needs no CPU. `PPid: 1`: its parent is me.
 >
-> **init:** Almost every process on that long list is asleep like your shell, waiting for a key, a file or a timer. The kernel shares the CPU only among the few that are ready to run. That is the first half of how one CPU serves them all.
+> **init:** Almost every process on that long list is asleep like your shell, waiting for something to do. The kernel shares the CPU only among the few that are ready to run. That is the first half of how one CPU serves them all.
 
 ## Build it
 
@@ -89,6 +89,7 @@ Load average: 1.26 0.30 0.10 4/59 492
 $ ./mypid
 I am process 493
 My parent is 472
+[3]+  Terminated                 yes > /dev/null
 $ ./mypid
 I am process 494
 My parent is 472
@@ -96,7 +97,7 @@ My parent is 472
 
 > **init:** A new PID each time: every run is a new process, and the kernel hands out the next free number. The same parent: your shell started both, and 472 is the PID `ps` showed for it.
 >
-> **init:** That is the family tree of the Machine. I started your shell, your shell started `mypid`, and the kernel threads all descend from `kthreadd`, PID 2.
+> **init:** That is the family tree of the Machine. I started your shell, your shell started `mypid`, and the other kernel threads all descend from `kthreadd`, PID 2. The `Terminated` line is your shell reporting a `yes` that `kill` ended.
 
 ## Debrief
 

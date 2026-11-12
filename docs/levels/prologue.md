@@ -2087,7 +2087,7 @@ The story text is the level's `story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** In The Kernel Up Close, every process had 3 GiB of user space to itself. In Who Runs, you counted dozens of processes. The Machine has 256 MiB of RAM. That doesn't add up.
+> **init:** In The Kernel Up Close, every process had 3 GiB of user space to itself. In Who Runs, you saw dozens of processes. The Machine has 256 MiB of RAM, its memory chips. That doesn't add up.
 >
 > **The Watchdog:** Lies. The kernel tells everyone lies.
 >
@@ -2109,10 +2109,11 @@ The story text is the level's `story.md`; this section lists its beats.
    process never sees, and _virtual addresses_, its own numbering, which a part of
    the CPU, the MMU, turns into a place in RAM on every access.
 2. **Name:** _pages_ of 4096 bytes. For each process the kernel keeps a map from its
-   virtual pages to pages of RAM; most of a process's 3 GiB has no RAM behind it
-   until it is used. That answers the question.
-3. **Do:** `cat /proc/self/maps` (`self` is whoever is reading, here `cat`, which is
-   BusyBox; real output, cut with `...`):
+   virtual pages to pages of RAM, and a page gets RAM only when the process first
+   touches it. That answers the question.
+3. A process uses only some regions of its 3 GiB. **Do:** `cat /proc/self/maps`
+   lists them (`self` is whoever is reading, here `cat`, which is BusyBox; real
+   output, cut with `...`):
 
    ```
    004cb000-004cf000 r--p 00000000 00:14 10         /bin/busybox
@@ -2126,22 +2127,23 @@ The story text is the level's `story.md`; this section lists its beats.
    ```
 
    Each line is one region: where it starts and ends, what may be done there (`r`
-   read, `w` write, `x` run as code), and what it holds. `cat`'s code is at the top;
-   its _stack_, where a function keeps its variables, is at the bottom, just under
-   the kernel's gigabyte.
+   read, `w` write, `x` run as code), and what it holds. The first lines are `cat`'s
+   program file, and the `r-xp` one is its code; its _stack_, where a function keeps
+   its variables, is at the bottom, just under the kernel's gigabyte.
 
 ### Build it
 
-init first names the _page fault_: an access the map doesn't allow makes the CPU stop
-and call the kernel. Often the kernel fills the page in and the program goes on,
-which is how unused addresses cost nothing until touched; sometimes it ends the
-program, as it ended P.5's `poke`, whose page at `0xc0000000` was in its map but for
-kernel mode only. `&global` gets one clause: "the address of `global`".
+init first names the _page fault_: when a page has no RAM yet, or the access is
+forbidden, the CPU stops and calls the kernel. Inside one of the listed regions, the
+kernel puts a page of RAM there and the program goes on; outside every region, it
+ends the program, as it ended P.5's `poke`, whose `0xc0000000` is above the last
+line of the list, in the kernel's gigabyte. `&global` gets one clause: "the address
+of `global`".
 
 - **Starter provides:** `where.c`. It prints the address of a global variable (one
   declared outside any function) and then prints its own `/proc/self/maps` (with
-  `open`, `read` and `write`, all written for you, under init's comment "you'll
-  write this kind of loop in 1.6").
+  `open`, `read` and `write`, all written for you, under init's comment "You'll
+  write this kind of loop yourself one day").
 - **Player does:** add a local variable (one declared inside `main`) and print its
   address next to the global's (`printf("local  at %p\n", (void *)&local);`), run
   `./where`, and find which region each address falls in.
@@ -2150,8 +2152,8 @@ kernel mode only. `&global` gets one clause: "the address of `global`".
   - One printed address falls inside the run's `[stack]` region and one inside a
     `rw-p` region of `where` itself.
   - `/proc/meminfo` was read with its text visible in the trace: `free` reads it
-    with `read()`; `cat` copies it with `sendfile64`, whose bytes the trace doesn't
-    carry yet, so the objective names `free`.
+    with `read()`, and `cat /proc/meminfo` (`sendfile64`, whose bytes the trace
+    carries) meets it too.
 - **Golden runs:** `solution` (`cat /proc/meminfo`, `free`, `./where`); `starter`
   (one address: rejected for `local-on-stack`, `prints-maps`, `reads-meminfo`).
 
@@ -2173,7 +2175,7 @@ bfa3d000-bfa5e000 rw-p 00000000 00:00 0          [stack]
 ```
 
 Run again, both addresses move (the kernel places each new program's pieces
-somewhere new, so an attacker can't know where anything is), but each stays in its
+somewhere new, so an attacker can't count on where anything is), but each stays in its
 region. Another process can use the very same addresses for different pages of RAM:
 each has its own map.
 
@@ -2189,8 +2191,9 @@ P.9 begins.
    a variable inside `main`?"
 2. Concept: "`&name` is the address of any variable. `%p` prints an address; cast it
    to `(void *)` first."
-3. Point at the spot: "Inside `main`, add `int local = 0;` and
-   `printf(\"local  at %p\\n\", (void *)&local);` before the maps are printed."
+3. Point at the spot: "In `main`, declare a variable of your own, then print its
+   address the way the line beside it prints the global's, before `print_maps()` is
+   called."
 
 ### Codex (chapter: The Machine in Section)
 
@@ -2238,21 +2241,21 @@ P.9 begins.
 
 ### Moved out of the story
 
-| Fact (old story)                                                     | Now                                                   |
-| -------------------------------------------------------------------- | ----------------------------------------------------- |
-| the flats-in-two-buildings picture and where it stops being true     | gone: one picture, the map                            |
-| page tables, frames, three levels of tables, four or five on 64-bit  | `virtual-memory` Deep; the Page-Table Labyrinth (3.3) |
-| two processes with the same stack address reaching different RAM     | the last line of Watch it                             |
-| the two kinds of page fault                                          | one sentence in Build it; `virtual-memory` Deep       |
-| `cat /proc/meminfo`; `MemFree`, `MemAvailable`, `Buffers`, `Cached`  | `meminfo` card; the story keeps `free`'s total        |
-| the `dmesg` memory line                                              | gone                                                  |
-| the page cache; what a cache is; `SReclaimable`; `free`'s arithmetic | `page-cache` and `meminfo` cards                      |
-| the 9p root keeps no copy, so `Cached` stays small                   | `page-cache` Deep; `fidelity`                         |
-| kswapd's line                                                        | `meminfo` Deep                                        |
-| every line of `cat`'s map; `p` for private; eight hex digits         | the excerpt keeps four regions; `proc-maps` Deep      |
-| the heap; `ld-musl` shared by every program; the vdso and vvar       | gone from the story; `proc-maps` Deep names them      |
-| "ASLR" by name                                                       | `proc-maps` Deep; the story says what it does         |
-| the drawing's memory floor lighting                                  | gone                                                  |
+| Fact (old story)                                                     | Now                                                                             |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| the flats-in-two-buildings picture and where it stops being true     | gone: one picture, the map                                                      |
+| page tables, frames, three levels of tables, four or five on 64-bit  | `virtual-memory` Deep has the levels; frames wait for 3.3                       |
+| two processes with the same stack address reaching different RAM     | the last line of Watch it                                                       |
+| the two kinds of page fault                                          | one sentence in Build it; `virtual-memory` Deep                                 |
+| `cat /proc/meminfo`; `MemFree`, `MemAvailable`, `Buffers`, `Cached`  | `meminfo` card has `MemTotal` and `MemAvailable`; the rest is gone              |
+| the `dmesg` memory line                                              | gone                                                                            |
+| the page cache; what a cache is; `SReclaimable`; `free`'s arithmetic | `page-cache` and `meminfo` cards                                                |
+| the 9p root keeps no copy, so `Cached` stays small                   | `page-cache` Deep; `fidelity`                                                   |
+| kswapd's line                                                        | `meminfo` Deep                                                                  |
+| every line of `cat`'s map; `p` for private; eight hex digits         | the excerpt keeps five lines; the two facts are gone                            |
+| the heap; `ld-musl` shared by every program; the vdso and vvar       | shown in the excerpt, unexplained; `proc-maps` Deep names `[heap]` and `[vdso]` |
+| "ASLR" by name                                                       | `proc-maps` Deep; the story says what it does                                   |
+| the drawing's memory floor lighting                                  | gone                                                                            |
 
 ### Real-world card
 
@@ -2279,29 +2282,34 @@ No Taint rules are live in the Prologue.
 
 ### Lab needs
 
-None beyond the shared Machine. Engine: `sendfile64` data in the trace would let
-`cat /proc/meminfo` meet `reads-meminfo` too.
+None beyond the shared Machine.
 
 ---
 
 ## P.9 — Files, Doors and Wires
 
-- **Id:** `prologue-machine-in-section-09-files-doors-wires` · **Region / NPC:** The Machine in Section, the files, devices and network floors / init; on the drawing: udev, the Harbormaster, the Tollkeeper · **Tracks:** `userland`, `kernel` · **Time:** ~25 min · **Prerequisites:** `drv-hardware-discovery`, `mem-virtual-memory-basics` · **Skills unlocked:** `io-everything-is-a-file`, `sys-kernel-subsystems`
+- **Id:** `prologue-machine-in-section-09-files-doors-wires` · **Region / NPC:** The Machine in Section / init, the Watchdog · **Tracks:** `userland`, `kernel` · **Time:** ~25 min · **Prerequisites:** `drv-hardware-discovery`, `mem-virtual-memory-basics` · **Skills unlocked:** `io-everything-is-a-file`, `sys-kernel-subsystems`
+
+**Question:** How can one small program read a stored file, the kernel's own state
+and a device, all the same way? The same three calls, and the VFS behind them.
+
+**Teaches:** `vfs`, `mount`, `device-file`. **Names:** `network-stack`, by its card
+`eth0` and its driver `virtio_net`, which P.10 reads again. **Tools:** `/proc/mounts`,
+`ls -l /dev/…`, `look` (`open`, `read`, `write`). The story text is the level's
+`story.md`; this section lists its beats.
 
 ### Scene
 
-> **init:** The last floor, and the rule I promised. A file of settings. A number the kernel works out when you ask. A door to a driver. On Linux, you open all three the same way.
+> **init:** In Pages and Maps I promised the last part of the kernel. Here it is. A file of settings. A number the kernel works out when you ask. A setting of a device. On Linux, a program opens all three the same way.
 >
-> **init:** That's the rule people quote: "everything is a file." It isn't quite everything. But it's close, and it's why one small `cat` can read half the Machine.
+> **init:** People say "everything is a file." It isn't quite everything, but it is why one small program can read half the Machine. Start with what the file tree is made of: run `cat /proc/mounts`.
 
 ### See it (X-ray)
 
-1. **One tree, many filesystems.** A **filesystem** is the way files and folders are
-   laid out and found; several kinds are **mounted** (attached) into the one tree.
-   `cat /proc/mounts` (real output):
+1. **Do** (the Scene's last line): `cat /proc/mounts` (real output):
 
    ```
-   dev /dev devtmpfs rw,relatime,size=110896k,nr_inodes=27724,mode=755 0 0
+   dev /dev devtmpfs rw,relatime,size=110856k,nr_inodes=27714,mode=755 0 0
    host9p / 9p rw,relatime,cache=0x5,access=client,msize=512000,trans=virtio 0 0
    proc /proc proc rw,relatime 0 0
    sys /sys sysfs rw,relatime 0 0
@@ -2311,133 +2319,73 @@ None beyond the shared Machine. Engine: `sendfile64` data in the trace would let
    tracefs /sys/kernel/tracing tracefs rw,relatime 0 0
    ```
 
-   Eight mounts of seven kinds (`tmpfs` twice): **9p** at `/` (the Machine's files,
-   from the game over the virtio share met in P.6, earlier the same night). None of
-   the others is stored anywhere lasting: **procfs**, **sysfs** (P.6) and
-   **tracefs** (the trace X-ray reads) make a file's contents when it is read;
-   **devtmpfs** holds device nodes the kernel makes as drivers find devices,
-   **devpts** the terminals' nodes, and **tmpfs** ordinary files kept in RAM. The ext4 filesystem on `/dev/sda1` is not mounted, so none of its
-   files are in the tree: a filesystem joins the tree only when mounted.
-2. **The VFS.** `cat` on three filesystems (real output); `cat` itself uses `open`
-   and `sendfile64` (the kernel copies file to terminal without passing through
-   `cat`'s memory). The read code differs underneath; the player watches it with
-   `look` in Build it:
+   **Name:** _filesystem_, one way of keeping files and finding them, and _mounted_,
+   attached to the tree at a folder. Each line says what was mounted, where, and
+   which kind. Three kinds are explained: `9p` at `/` holds the Machine's own files;
+   at `/proc` and `/sys` the kernel makes up each file's contents when it is read;
+   `/dev` keeps the device files.
+2. **Name:** _device file_, a name in the tree that stands for a device. **Do:**
+   `ls -l /dev/null /dev/sda` (real output; BusyBox `ls`; the date is the boot's):
 
    ```
-   $ cat /etc/motd
-   Welcome to the Machine.
-   The kernel panicked tonight, and every process froze.
-   Find the way down, and bring the kernel back.
-   $ cat /proc/uptime
-   45.38 6.46
-   $ cat /sys/class/net/lo/mtu
-   65536
-   ```
-3. **Devices.** `ls -l /dev/null /dev/tty /dev/sda` (real output; BusyBox `ls`):
-
-   ```
-   crw-rw-rw-    1 root     root        1,   3 Oct 31 16:16 /dev/null
-   brw-------    1 root     root        8,   0 Oct 31 16:16 /dev/sda
-   crw-rw-rw-    1 root     root        5,   0 Oct 31 16:16 /dev/tty
+   crw-rw-rw-    1 root     root        1,   3 Nov 12 09:42 /dev/null
+   brw-------    1 root     root        8,   0 Nov 12 09:42 /dev/sda
    ```
 
-   `c` is a **character device** (a stream of bytes, like a terminal), `b` a
-   **block device** (storage read in fixed-size blocks, like a disk). The two
-   numbers are the **major** (which driver: 8 is the SCSI disk driver, which also
-   runs the IDE disk through libata) and **minor** (which device of that driver).
-   `cat /dev/null` returns at once: the null driver always answers "end of file".
-   The kernel made these nodes in devtmpfs; most systems run udev to set owners and
-   names, the Machine runs none, so all stay root's and the disk is root-only.
-4. **Networking, shown, not built.** `ls /sys/class/net` prints `eth0  lo` (`lo`,
-   loopback, is a pretend network inside the Machine; `eth0` is the virtio card run
-   by `virtio_net`, down, with no wire out of the browser yet).
-   `cat /proc/net/dev` counts each one's bytes and **packets** (the small pieces data
-   is sent in). The drawing shows one message's trip: a program's **socket** (a file
-   descriptor for talking over a network) → **TCP** (keeps the bytes in order, resends
-   lost ones) → **IP** (addresses each packet) → the netfilter gates → the network
-   card's driver (`virtio_net`) → the wire. The Harbormaster: "I run the stack. Socket
-   Harbor, 1.9." The Tollkeeper: "And I stand at the gates. Netfilter Wall, 2.11."
-5. **Processes talking to each other** (one line): pipes, signals, shared memory and
-   message queues. "The Aqueducts and the Alarm Bells, 1.7 and 1.8."
-6. **The kernel's own log.** `dmesg` shows the boot from P.4 again, and the lines
-   drivers wrote while taking their devices:
-
-   ```
-   [    0.000000] Linux version 6.18.63-0-virt (buildozer@build-3-24-x86) (cc (Alpine 15.2.0) 15.2.0, GNU ld (GNU Binutils) 2.45.1) #1-Alpine SMP PREEMPT_DYNAMIC 2026-11-11 03:02:54
-   ...
-   [    1.588336] scsi host0: ata_piix
-   ...
-   [    1.782304] ata1.00: ATA-0: v86 ATA HD, 1.00, max MWDMA2
-   ```
-
-   The kernel writes these with `printk()` into a ring buffer (a fixed-size log
-   where the newest lines push out the oldest); BusyBox `dmesg` reads it with the
-   `syslog` syscall. `kernel.dmesg_restrict` is 0 on the Machine, so uid 1000 may
-   read it (many distributions set 1).
-7. **What ties it together.** Every one of these went through the Syscall Gate:
-   `open`, `read`, `write`. The Gatekeeper: "Every floor. Through me."
-
-Then the Section drawing completes, and every part gets its label, its folder in the
-kernel's source code and its map region: the table at the top of this spec, on one
-page.
+   `c` passes bytes one after another, like a terminal; `b` is storage, read in
+   blocks, like `sda`, the Machine's disk. Behind each is a driver. The disk isn't
+   in the list of mounts, so its files aren't in the tree.
+3. **Name:** the _VFS_, the virtual file system: a path can lead to stored bytes, to
+   the kernel's own state, or to a driver, and the VFS makes them all answer to the
+   same calls by handing each request to the code behind the path.
 
 ### Build it
 
 - **Starter provides:** `look.c`: it opens one path, reads up to 256 bytes and
   writes them to standard output, with every return value checked. The path is on
-  one line: `const char *path = "/etc/motd";`.
-- **Player does:** run it as it is, then change the path and run it on a file in
-  `/proc` and on a file in `/sys` (any; init suggests `/proc/uptime` and
-  `/sys/class/net/eth0/address`). Last, on the Section drawing's table, match three
-  parts to their source folders (drag `mm/`, `fs/`, `net/`).
+  one line: `const char *path = "/etc/motd";`. init ties `open`, `read` and `write`
+  back to the `write` of P.2.
+- **Player does:** run it as it is, then change the path to `/proc/uptime` and run
+  it, and to `/sys/class/net/eth0/address` and run it again.
 - **Checker verifies (behavior):**
   - `./look` read successfully from files on the 9p root, procfs and sysfs (three
     runs; objectives `reads-9p`, `reads-procfs`, `reads-sysfs`), each read returning
     more than 0 bytes, each followed by a `write` on fd 1. The checker's mount table
     is tested against the Machine's `/proc/mounts` in `machine-facts.json`.
-  - The three folder matches (drag-to-match, unjudged).
 - **Golden runs:** `solution-9p`, `solution-procfs`, `solution-sysfs`; `dev-null`
   (the null driver answers end of file at once: rejected for all three reads).
 
 ### Watch it
 
-**Predict:** before the `/sys` run: "Which filesystem will answer?" X-ray shows
-`look`'s syscalls, the same three for each file; it does not show which
-filesystem's code answered (nothing in the trace says so). init explains that part:
-the VFS hands the `read` to `v9fs_file_read_iter()` for `/etc/motd` (9p asks the
-game over the share), `proc_reg_read_iter()` for `/proc/uptime` (procfs works the
-numbers out) and `kernfs_fop_read_iter()` for the card's address, which sysfs
-formats from `dev_addr`, the address `virtio_net` stored in the card's
-`struct net_device` at probe (`net/core/net-sysfs.c`). Real output; the emulator
-picks the last three bytes at random:
+**Predict:** before the `/sys` run: "Which filesystem will answer?" sysfs, the kind
+mounted at `/sys`. Real output (every card has its own address, so the player's ends
+differently):
 
 ```
 $ ./look
-00:22:15:76:df:a8
+00:22:15:66:d9:a5
 ```
 
 ```
-open("/sys/class/net/eth0/address", O_RDONLY|O_LARGEFILE) = 3
-read(3, "00:22:15:76:df:a8\n", 256)      = 18
-write(1, "00:22:15:76:df:a8\n", 18)       = 18
+open("/sys/class/net/eth0/address", ...) = 3
+read(3, "00:22:15:66:d9:a5\n", 256)      = 18
+write(1, "00:22:15:66:d9:a5\n", 18)       = 18
 ```
 
-musl adds `O_LARGEFILE` on 32-bit (it lets a 32-bit program use files whose size
-or offsets don't fit a 32-bit `off_t`, past 2 GiB) and uses `open`, not `openat`.
-
-The whole Section drawing lights up once, floor by floor, then dims to show what is
-still dark: everything but one lamp in Userland. init: "Every region on your map is
-one of these parts. That's what we're rebuilding."
+`open` answered `3`, the next free file descriptor after 0, 1 and 2 (a callback to
+P.2). The three calls were the same in all three runs, and the VFS sent each `read`
+somewhere different: to 9p for `/etc/motd`, which fetched stored bytes; to procfs for
+`/proc/uptime`, which worked out how long the Machine has been up; to sysfs for
+`eth0`, the Machine's network card, which printed the address its driver,
+`virtio_net`, keeps for it. X-ray names the kernel part that served each call (the
+trace's routes: `v9fs_file_read_iter`, `proc_reg_read_iter`,
+`kernfs_fop_read_iter`).
 
 ### Debrief
 
-> **init:** You've seen every floor of the Machine. The kernel's parts, where they live in its source, and which street of the map will teach each one.
+> **init:** One set of calls, and the VFS behind them: that is how a file, the kernel's state and a device all read alike. You have met every part of the kernel on the drawing.
 >
-> **The Watchdog:** Pretty drawing. Now it's going to fall down again.
->
-> **init:** What? Old dog, what did you do?
->
-> **The Watchdog:** Nothing! Something in the boot entry. I can feel it. Next restart, we're stuck. You'll have to bring it up yourself.
+> **The Watchdog:** And something is wrong with the boot entry. I can feel it. Next restart, we're stuck.
 
 P.10 begins.
 
@@ -2518,20 +2466,37 @@ P.10 begins.
   - **Read:** https://docs.kernel.org/, https://elixir.bootlin.com/linux/v6.18/source.
     Deepened by 2.1 (finding things in the source).
 
+### Moved out of the story
+
+| Fact (old story)                                                       | Now                                                     |
+| ---------------------------------------------------------------------- | ------------------------------------------------------- |
+| eight mounts of seven kinds; tracefs, devpts, tmpfs; "none is stored"  | `filesystems` Simple and Deep; the story explains three |
+| the ext4 filesystem on `/dev/sda1`, unmounted                          | one sentence stays; `filesystems` Deep; P.10            |
+| `cat` on three filesystems; `/proc/uptime`'s two numbers; `lo`'s `mtu` | gone: `look` reads the three files instead              |
+| `cat` uses `open` and `sendfile64`                                     | `vfs` Deep; the real-world card                         |
+| `/dev/tty`; major and minor numbers; `cat /dev/null`; udev             | `device-files` Simple and Deep                          |
+| `ls /sys/class/net`, `lo`, `/proc/net/dev`, packets                    | `network-stack` Deep; the real-world card               |
+| a message's trip: socket, TCP, IP, netfilter, driver, wire             | `network-stack` Simple and Deep; 1.9 and 2.11           |
+| pipes, signals, shared memory, message queues                          | 1.7 and 1.8                                             |
+| `dmesg` again; `printk()`, the ring buffer, `dmesg_restrict`           | `printk-dmesg` card; P.4 taught the kernel's log        |
+| the Harbormaster, the Tollkeeper, the Gatekeeper                       | gone: they return in their own regions                  |
+| the source tree; matching `mm/`, `fs/`, `net/` to parts of the drawing | `kernel-source-tree` card; the real-world card          |
+| the VFS's three read functions by name                                 | `vfs` Deep; X-ray shows them on each call               |
+| "asked for the bytes over the share"; the address's random last bytes  | `fidelity`                                              |
+| `O_LARGEFILE`                                                          | gone here; S.1 explains it                              |
+
 ### Real-world card
 
 ```sh
 cat /proc/mounts                          # every filesystem in your tree
 ls -l /dev/null /dev/tty                  # two character devices
-ls /sys/class/net; cat /proc/net/dev      # interfaces and their counters
-sudo dmesg | tail -n 20                   # the newest kernel messages (sudo where only root may read them)
+ls /sys/class/net; cat /proc/net/dev      # network interfaces and their counters
 strace cat /proc/uptime                   # every call cat makes
 ```
 
-On a 64-bit glibc system `strace` shows `openat` where the Machine's musl uses
-`open`, and GNU `cat` copies with `read` and `write` (or `copy_file_range`) where
-BusyBox's uses `sendfile64`. Browse the source tree at https://elixir.bootlin.com/linux/v6.18/source and
-open `mm/`, `fs/` and `net/`.
+On a 64-bit PC with glibc, `strace` shows `openat` where the Machine's musl uses
+`open`. Browse the kernel's source at https://elixir.bootlin.com/linux/v6.18/source
+and open `fs/`, `mm/` and `net/`.
 
 ### Taint
 
@@ -2546,10 +2511,9 @@ No Taint rules are live in the Prologue.
   `cat`'s `open` + `sendfile64` and `look`'s `open`/`read`/`write` with
   `O_LARGEFILE`; `printk`'s ring buffer read by BusyBox `dmesg` with `syslog()`; the
   source tree layout.
-- **Simplified:** X-ray shows `look`'s syscalls, not which filesystem answered them:
-  the routing under the VFS is init's explanation, not something the trace shows;
-  the network trip is a drawing (packets are built in 1.9); `eth0` has no network
-  behind it.
+- **Simplified:** the Machine's own files come over a virtio 9p share, not from a
+  disk; the card's address is given by the emulator, its last three bytes at random;
+  `eth0` has no network behind it.
 
 ### Lab needs
 

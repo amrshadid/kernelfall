@@ -11,7 +11,7 @@ teaches: [virtual-memory, page]
 uses: [ram, memory-address, hex, kernel-space, user-space, user-kernel-mode, process, proc-fs, c-basics, compiler]
 objectives:
   - id: reads-meminfo
-    # cat copies /proc/meminfo with sendfile64, whose bytes the trace doesn't carry yet; free read()s it.
+    # free read()s /proc/meminfo; `cat /proc/meminfo` (sendfile64, whose bytes the trace carries) meets it too.
     text: "`free` reads how much memory the Machine really has, from `/proc/meminfo`."
   - id: exits-zero
     text: "`./where` exits with status 0."
@@ -25,7 +25,7 @@ objectives:
 hints:
   - "`&global` is the address of the global. How would you get the address of a variable inside `main`?"
   - "`&name` is the address of any variable. `%p` prints an address; cast it to `(void *)` first."
-  - "Inside `main`, add `int local = 0;` and `printf(\"local  at %p\\n\", (void *)&local);` before the maps are printed."
+  - "In `main`, declare a variable of your own, then print its address the way the line beside it prints the global's, before `print_maps()` is called."
 chips:
   - { command: free, explain: "how much memory the Machine has, and how much is in use, in KiB" }
   - { command: cat, explain: "show a file: /proc/self/maps is cat's own map, /proc/meminfo the kernel's memory count" }
@@ -99,8 +99,7 @@ fidelity:
     - "the free, /proc/meminfo and /proc/<pid>/maps output of the Machine's kernel and BusyBox"
     - "the 32-bit layout: program low, musl and the vdso high, the stack under 0xc0000000"
     - "ASLR: addresses change from run to run"
-    - "the page cache, MemAvailable counting it, and the 9p root caching little"
-    - "kswapd's role"
+    - "the page cache, MemAvailable counting it, the 9p root caching little, and kswapd's role (the meminfo and page-cache cards)"
   simplified:
     - "the drawing's RAM frames and arrows are a picture; the real page tables aren't shown until Act III"
 story:

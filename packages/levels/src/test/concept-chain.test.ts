@@ -11,7 +11,6 @@ const KNOWN_CONCEPT_GAPS: Readonly<Record<ConceptViolationKind, Readonly<Record<
       "1.4 calls execvp() and strerror(); library functions are taught in Act I's 1.0, which isn't built",
   },
   'taught-twice': {
-    'proc-fs': 'S.1 explains /proc again after P.9',
     signal: 'S.3 defines signals in the same words as P.5',
     'virtual-memory': '1.4 introduces the virtual address space as new after P.8',
   },

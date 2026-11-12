@@ -370,6 +370,7 @@ defined. The player finds it with `git grep -n "config KASAN$"` (or the in-game
 source browser) in `lib/Kconfig.kasan` and reads its `depends on` lines.
 
 Checker verifies (behavior):
+
 - The booted kernel's `uname -r` ends with `-lantern`.
 - `zcat /proc/config.gz` shows `CONFIG_KASAN=y`, `CONFIG_PROVE_LOCKING=y`,
   `CONFIG_LOCKDEP=y` (pulled in by `select`), `CONFIG_DEBUG_KMEMLEAK=y`,
@@ -544,6 +545,7 @@ from S.2, not the `EACCES` of a locked file.
 ### Build it
 
 **Beat 1: the module.** The player writes `lantern.c`:
+
 - `// SPDX-License-Identifier: GPL-2.0` first line, `#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt`.
 - `static int __init lantern_init(void)` that logs a greeting with `pr_info()` and
   returns `0`; `static void __exit lantern_exit(void)` that logs goodbye.
@@ -555,6 +557,7 @@ calling `make -C /lib/modules/$(uname -r)/build M=$(PWD) modules`, the same `mak
 the player wrote rules for in 1.3; `lantern.c` itself starts empty.
 
 Checker verifies:
+
 - `make` builds `lantern.ko` with no warnings.
 - `insmod lantern.ko` succeeds; `lsmod` lists `lantern`; `dmesg` has exactly one new
   line with the `lantern: ` prefix at `KERN_INFO` level.
@@ -754,6 +757,7 @@ Then `modinfo` reads the descriptions straight out of the `.ko` file.
 
 Starter (stub): the player's `lantern.c` from 2.2, with the two `MODULE_PARM_DESC()`
 texts written as comments. The player adds:
+
 - `static unsigned int brightness = 128;` with `module_param(brightness, uint, 0444)`
   (`0444` is S.2's `r--r--r--`: everyone may read the parameter's sysfs file, nobody
   may write it) and `MODULE_PARM_DESC()`.
@@ -762,6 +766,7 @@ texts written as comments. The player adds:
   with a `pr_err()` that says why.
 
 Checker verifies:
+
 - `insmod lantern.ko` with no arguments logs the defaults.
 - `insmod lantern.ko brightness=200 colour=amber` logs those values;
   `cat /sys/module/lantern/parameters/brightness` prints `200`.
@@ -892,6 +897,7 @@ command table from 1.2: the same shape, a struct of function pointers. Today onl
 Starter (stub): the player's `lantern.c` from 2.3 and empty `err_*` labels at the
 bottom of `lantern_init()`. The player adds to `lantern_init()` (with `goto`
 unwinding in reverse order):
+
 - `alloc_chrdev_region(&lantern_devt, 0, 1, "lantern")` for a dynamic major.
 - `cdev_init()` with a `file_operations` that has only `.owner = THIS_MODULE` for
   now, then `cdev_add()`.
@@ -903,6 +909,7 @@ unwinding in reverse order):
   `unregister_chrdev_region()`.
 
 Checker verifies:
+
 - After `insmod`, `/proc/devices` lists `lantern` under "Character devices" with
   some major M; `/dev/lantern` is a character device with major M, minor 0.
 - `open("/dev/lantern", O_RDONLY)` succeeds; `read()` on it fails with `EINVAL`
@@ -1063,6 +1070,7 @@ Starter (stub): the player's `lantern.c` from 2.4 with empty `lantern_read()` an
 `lantern_write()` signatures (the `__user` marks included). The device's state goes
 in one global, `static struct lantern_dev ldev`: the `struct cdev` from 2.4, a
 64-byte message buffer and its length. Then `.read` and `.write`:
+
 - `lantern_write()`: reject `count > sizeof(ldev.msg)` with `-EINVAL`;
   `copy_from_user()`; if it doesn't copy everything, return `-EFAULT`; store the
   length; return `count`.
@@ -1074,6 +1082,7 @@ in one global, `static struct lantern_dev ldev`: the `struct cdev` from 2.4, a
 `f_pos`), so every `open()` starts reading at 0.
 
 Checker verifies (driving the device through the player's `ksh-lite`):
+
 - `echo hello > /dev/lantern`, then `cat /dev/lantern`, prints `hello`.
 - Reading one byte at a time (`dd bs=1`) returns the full message, then EOF.
 - A second `cat` from a new `open()` starts at the beginning again.
@@ -1250,6 +1259,7 @@ fields: direction, size, type ("magic") and number, using the real `_IOC` layout
 Starter (stub): an empty `lanternctl.c` with a `lanternctl` target in the player's
 own user-space `Makefile` (1.3's rules, `-Wall -Wextra`). The player writes a
 shared header `lantern_ioctl.h` (usable from user and kernel code, `__u32` types):
+
 - `LANTERN_IOC_MAGIC` (a value the game reserves; real drivers pick one from
   `ioctl-number.rst`), `LANTERN_SET_BRIGHTNESS` as `_IOW(magic, 1, __u32)` and
   `LANTERN_GET_BRIGHTNESS` as `_IOR(magic, 2, __u32)`.
@@ -1259,6 +1269,7 @@ shared header `lantern_ioctl.h` (usable from user and kernel code, `__u32` types
 - A small userspace tool `lanternctl get|set N` that uses the header.
 
 Checker verifies:
+
 - `lanternctl set 200` then `lanternctl get` prints `200`.
 - `set 300` fails with `EINVAL` and the brightness stays 200.
 - An unknown command number fails with `ENOTTY`.
@@ -1367,6 +1378,7 @@ you've read was somebody's show function. Now write one."
 ### Build it
 
 Starter (blank): only the player's own Lantern. The player adds:
+
 - `/proc/lantern` with `proc_create_single("lantern", 0444, NULL, lantern_proc_show)`;
   `lantern_proc_show()` uses `seq_printf()` to print the message length,
   brightness and colour. Removed with `proc_remove()` in exit.
@@ -1375,6 +1387,7 @@ Starter (blank): only the player's own Lantern. The player adds:
   registered through `ATTRIBUTE_GROUPS()` and `device_create_with_groups()`.
 
 Checker verifies:
+
 - `cat /proc/lantern` shows the current values; they change after `lanternctl set`.
 - `cat /sys/class/lantern/lantern/brightness` prints the value with one newline.
 - `echo 50 > .../brightness` changes the value, and `lanternctl get` agrees.
@@ -1512,6 +1525,7 @@ struct lantern_msg {
 ```
 
 The player:
+
 - Moves the device to the heap: `ldev = kzalloc(sizeof(*ldev), GFP_KERNEL)` first
   thing in `lantern_init()` (`-ENOMEM` on failure, `kfree(ldev)` as the last
   unwinding step and the last line of exit). From here on `ldev` is a pointer.
@@ -1529,6 +1543,7 @@ overflow. The flexible array member is optional reading: the Codex card explains
 it, and a version with a separately allocated text buffer passes too.
 
 Checker verifies:
+
 - Messages of 1 byte and 4096 bytes round-trip; 4097 bytes fail with `EINVAL`.
 - The 2.5 read contract still holds on the new buffer: a 4096-byte message read
   one byte at a time (`dd bs=1`) comes back whole, then EOF.
@@ -1701,6 +1716,7 @@ Starter (stub, the new memory model continues): the player's Lantern from 2.8a,
 `struct lantern_msg` with a `struct kref ref;` added as its first member, an empty
 `lantern_msg_release(struct kref *ref)`, and empty `lantern_open()` and
 `lantern_release()` signatures. The player:
+
 - `lantern_write()`: `kref_init()` the new message (count 1: the device's
   reference), swap it in, then `kref_put(&old->ref, lantern_msg_release)` instead of
   `kfree()`.
@@ -1721,6 +1737,7 @@ from `inode->i_cdev` to a driver's device struct, and takes a timer callback to 
 device in 2.10a.
 
 Checker verifies:
+
 - A reader that opened before a write keeps reading the **old** message, whole; a
   new `open()` sees the new one.
 - The crash-on-purpose sequence runs clean on the player's code: no KASAN report.
@@ -1941,6 +1958,7 @@ that fails, so a waiting process can still be stopped with Ctrl-C.
 **Beat 2: break a rule on purpose (guided, ~5 min).** A scratch copy of the
 player's Lantern has one early `return -EINVAL;` inside `lantern_write()`'s locked
 section, and its `lantern_ioctl()` takes the lock with plain `mutex_lock()`.
+
 1. `echo` hits the early return. The moment its `write()` returns to user space,
    the Verger speaks: lockdep's "lock held when returning to user space" report,
    naming the lock and the line that took it.
@@ -1958,6 +1976,7 @@ The first time anyone takes them the other way round, I'll say so."
 
 Checker verifies (with the lab's deterministic race harness, 4 processes on 2 CPUs,
 replaying known bad interleavings):
+
 - No refcount warning, no KASAN report, no oops across all interleavings.
 - Every reader sees a whole message, never a mix of two.
 - `writes` in `/proc/lantern` equals the exact number the harness did.
@@ -2135,6 +2154,7 @@ task likely holding the mutex with `CONFIG_DETECT_HUNG_TASK_BLOCKER`; not shown
 **Beat 1: the record (git, guided, ~4 min).** The **Git and patches view**
 unlocks here. The lab has committed each level's work, so the Lantern already has a
 history. Guided, one command at a time:
+
 1. `git log --oneline`: one commit per level, newest first ("lantern: take turns
    with a mutex", "lantern: count references to messages", …).
 2. `git show HEAD`: one commit: author, message, then the diff of what 2.9 changed
@@ -2163,12 +2183,14 @@ writer stays stuck). After compressed time the hung-task warning prints for the
 ### Build it
 
 Starter (blank, plus the salvaged patch as content). The player:
+
 - Reads the lockdep report and finds the two call paths.
 - Chooses one order (`msg_lock` before `history_lock`), writes it down in a
   comment above the lock definitions, and changes `lantern_proc_show()` to follow
   it (or to copy what it needs under one lock at a time).
 
 Checker verifies:
+
 - The deadly interleaving (and 50 other forced interleavings) completes: no task
   stuck, no hung-task warning.
 - lockdep reports nothing during a full stress run, including the single-run
@@ -2512,6 +2534,7 @@ returns `IRQ_HANDLED` a few microseconds later → a kworker runs the work on th
 process lane (the **bottom half**), takes the mutex and sets the brightness.
 
 Then two bad versions:
+
 1. The handler takes `msg_lock` itself. The lab prints the real "BUG: sleeping
    function called from invalid context" report, and X-ray marks the IRQ lane as
    "must not sleep", like 2.10a's softirq lane, only stricter.
@@ -2844,6 +2867,7 @@ X-ray highlights the two netfilter gates and shows they run on the softirq lane.
 
 Starter (blank): only the player's Lantern, and the player's own `harbor` binary
 from 1.10, rebuilt with their Act I `Makefile`. The player adds:
+
 - A read-only module parameter `chat_port` (2.3's pattern, `0444`), default 7777,
   the port `harbor` listens on.
 - A `struct nf_hook_ops` with `.hook = lantern_nf_hook`, `.pf = NFPROTO_IPV4`,
@@ -2858,6 +2882,7 @@ from 1.10, rebuilt with their Act I `Makefile`. The player adds:
   glow follows the rate.
 
 Checker verifies:
+
 - Running the player's own `harbor` from Act I and 3 `nc` clients sending 20
   messages: `chat_packets` equals the lab's own count of TCP segments received for
   that port (including handshakes and ACKs), exactly. If the player's `harbor`
@@ -3030,6 +3055,7 @@ in `lantern_fade_fn`, with who allocated the message and who freed it.
 
 Starter (blank): only the player's Lantern, the sum of every Act II level. The
 player adds the fade feature, following the old driver's design:
+
 - `struct lantern_msg` gains `unsigned int glow`; new messages start at 255.
 - `struct lantern_dev` gains `struct timer_list fade` and `struct lantern_msg
   *fading`: the message the fader is dimming, the oldest in the 2.9b history.
@@ -3050,6 +3076,7 @@ reports it, and the Dangling speaks for the first time, from the report.
 
 The player reads the report (the 2.8b skill) and fixes the lifetime. Either fix
 passes; the checker tests behavior:
+
 1. **Stop, move, then drop.** In the write path, `timer_delete_sync(&ldev->fade)`
    (it waits for a running tick; the write path holds `msg_lock`, which the
    callback never takes, so the wait can't deadlock), point `fading` at the new
@@ -3067,6 +3094,7 @@ immediately; the level then asks them to move the `kref_put()` before the stop i
 a scratch copy and reproduce the report, so everyone reads it.
 
 Checker verifies:
+
 - The replay and 100 other forced interleavings of write/evict/tick run with no
   KASAN report, no oops, no lockdep or "sleeping in atomic" report.
 - Glow values fade correctly for live messages, oldest first.
@@ -3285,6 +3313,7 @@ body, tags, `---`, diffstat, diff.
 
 Starter (blank): the Lantern's git history and the player's fix from 2.12. The
 player:
+
 - Commits the fix with a message like:
 
   ```
@@ -3314,6 +3343,7 @@ player:
   changelog below the `---` line.
 
 Checker verifies (behavior of the patch, not wording):
+
 - The patch applies cleanly with `git am` on the pre-fix tree, builds, and the
   fixed tree passes the finale replay with no KASAN report.
 - `checkpatch.pl --strict` reports 0 errors and 0 warnings.

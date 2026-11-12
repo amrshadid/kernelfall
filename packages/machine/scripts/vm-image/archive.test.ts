@@ -64,4 +64,10 @@ describe('writeCpioGz', () => {
     expect(cpio).toContain('TRAILER!!!\0')
     expect(cpio.length % 4).toBe(0)
   })
+
+  it('names Unix as the OS in the gzip header, whatever machine builds the image', () => {
+    const archive = writeCpioGz([{ path: 'init', mode: 0o100755, data: encoder.encode('#!/bin/sh\n') }])
+
+    expect(archive[9]).toBe(3)
+  })
 })

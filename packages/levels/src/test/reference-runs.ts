@@ -197,21 +197,23 @@ export const REFERENCE_RUNS: readonly ReferenceRun[] = [
   },
   ...(
     [
-      ['solution', grubEdit('quiet', 'initcall_debug greeting=hello')],
-      // quiet only quiets the console: dmesg still holds every line.
-      ['kept-quiet', grubEdit('', ' initcall_debug greeting=hello')],
-      ['plain-boot', [{ keys: '\r' }]],
-    ] satisfies [string, RunLine[]][]
-  ).map(([name, boot]) => ({
+      ['solution', grubEdit('quiet', 'initcall_debug greeting=hello'), []],
+      // quiet only quiets the console: dmesg still holds every line. Its last line has grep leave
+      // after four matches, so dmesg writes into a pipe nobody reads: X-ray's EPIPE on the Machine.
+      ['kept-quiet', grubEdit('', ' initcall_debug greeting=hello'), ['dmesg | grep -m 4 "calling  "']],
+      ['plain-boot', [{ keys: '\r' }], []],
+    ] satisfies [string, RunLine[], string[]][]
+  ).map(([name, boot, more]) => ({
     level: 'prologue-boot-path-04-the-boot-path',
     name,
     lines: [
       ...boot,
       ...typed(
         'cat /proc/cmdline',
-        'dmesg | grep -i "command line"',
-        'dmesg | grep -m 4 "calling  "',
-        'ls /sys/firmware/efi'
+        'dmesg | grep "command line"',
+        'dmesg | grep serial8250_init',
+        'ls /sys/firmware/efi',
+        ...more
       ),
     ],
   })),

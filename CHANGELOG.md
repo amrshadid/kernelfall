@@ -39,6 +39,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   works.
 - **Run shows its progress:** "Building…" while gcc compiles, "Running…" while the
   program runs (an interactive one until it exits), then Run again.
+- **gcc's errors and warnings are marked in the editor.** After Run, each line gcc named
+  is ruled in red (an error) or ink (a warning), the token it points at is underlined,
+  and hovering it shows gcc's message. The marks follow your typing and clear on the
+  next Run. gcc's full output is still in the terminal.
 - `pnpm vm:facts` records what the Machine prints for the commands levels quote (uname,
   lspci, /proc, ps, BusyBox errors) into `packages/levels/src/test/machine-facts.json`.
 - **Usage recordings with Microsoft Clarity** on the public site, only with the player's
@@ -57,6 +61,12 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - **X-ray fits a small laptop screen.** On a 1280×720 screen its drawing is larger and the
   sentence under it is no longer hidden: the controls keep to one row, and on a short
   screen the title block gives its height to the drawing.
+- **First Boot is rewritten to the content standard.** First Words (P.2), Speak to the
+  Shell (P.3) and The Boot Path (P.4) each answer one question, teach three ideas
+  (they taught seven, nine and eight), and use about half the words. What left the
+  stories is in their Codex cards or in the level that teaches it. P.3 has one manual
+  objective instead of two, and P.4's commands need no options:
+  `dmesg | grep "command line"` and `dmesg | grep serial8250_init`.
 - The levels quote kernel 6.18.63's own lines (they still quoted 6.18.59's).
 - After a build, X-ray opens on your program's own output, not on the compiler's calls.
 - The Prologue and Survey specs describe the real Machine: one CPU, i386, BIOS, the 9p
@@ -64,6 +74,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Fixed
 
+- **A wrong address on the site shows the game's own "No such page".** An address that
+  is no file of the site, like `/nope`, got the host's bare text page. It now gets a
+  page in the manual's style, in the theme you chose, with the address as the Machine's
+  `ls` would report it and a way back to the title.
 - **The game starts offline.** On the public site the service worker threw as it loaded, so it never
   registered and nothing was kept for offline play. The build now runs the worker and
   fails if it throws.

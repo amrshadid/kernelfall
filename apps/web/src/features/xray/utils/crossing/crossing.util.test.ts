@@ -31,7 +31,7 @@ const GCC = 'gcc -Wall -Wextra hello.c -o hello && ./hello'
 const CMDLINE = 'cat /proc/cmdline'
 const NEAR = 'cat /etc/mo*'
 const MAN = 'MANPAGER=cat man ls'
-const DMESG = 'dmesg | grep -i "command line"'
+const DMESG = 'dmesg | grep "command line"'
 const YES = 'yes > /dev/null & yes > /dev/null & yes > /dev/null & sleep 4; top -b -n 1 | head -12; kill %1 %2 %3'
 
 async function recordedCalls(level: string, run: string, commandLine: string): Promise<readonly XrayCall[]> {

@@ -63,7 +63,7 @@ Find the way down, and bring the kernel back.
 
 On the drawing, two lines run from `cat` in Userland down through the Gate into the kernel.
 
-> **init:** The kernel. The `cat` process can't touch a file on its own. It asked the kernel to open the file, then asked it to copy the file to your terminal, and the kernel did both. Each request crossed the Gate; in First Words you see every one `cat` made.
+> **init:** The kernel. The `cat` process can't touch a file on its own. It asked the kernel to open the file, then asked it to copy the file to your terminal, and the kernel did both. Each request crossed the Gate; in First Words you watch a program make them, one by one.
 >
 > **init:** That is the whole arrangement on the drawing: programs above the Gate, the kernel below it, and only the kernel reaches down to the hardware.
 

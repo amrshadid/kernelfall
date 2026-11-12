@@ -16,6 +16,7 @@ function editor(run: RunState, onRun = vi.fn()) {
     activePath: 'a.c',
     modified: new Set(),
     reveal: null,
+    diagnostics: { id: 0, items: [] },
     run,
     status: null,
     onSelectFile: () => {},

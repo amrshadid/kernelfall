@@ -7,8 +7,10 @@ minutes: 20
 tracks: [userland, kernel]
 skills: [sys-user-kernel-mode]
 prerequisites: [sys-computer-basics]
-teaches: [syscall, exec, fd, user-kernel-mode, compiler, library-function, builtin]
-uses: [kernel, process, shell, hex, c-basics]
+teaches: [syscall, fd, user-kernel-mode]
+# Met here, taught later: exec, C and the compiler in Act I.
+names: [exec, compiler, c-basics]
+uses: [kernel, process, shell]
 objectives:
   - id: fixed-an-error
     text: "A build failed with an error, and a later build of `hello.c` succeeded."
@@ -21,15 +23,15 @@ objectives:
     check: { kind: exit-status, status: 0 }
   # printf() passes too: musl's stdio hands the line to the kernel with writev(1, …).
   - id: writes-stdout
-    text: "A `write` on fd 1 reaches the kernel, and it returns the count you asked for."
+    text: "A `write` on file descriptor 1 reaches the kernel, and it returns the count you asked for."
     check: { kind: wrote, fd: 1 }
   - id: ends-in-newline
     text: "The bytes that reach the terminal end in a newline."
     check: { kind: terminal, text: { endsWith: "\n" } }
 hints:
-  - You want your line to reach the terminal. Every program starts with three file descriptors already open. Which one is standard output?
-  - "`write(fd, buf, count)` hands `count` bytes from `buf` to the kernel. File descriptor 1 is standard output; here, it leads to your terminal. The kernel answers with how many bytes it took."
-  - "Inside `main`, call `write` with fd 1, your string, and the string's length in bytes. Count the `\\n` too. `sizeof` on a string literal counts the hidden `\\0` at the end, so subtract one."
+  - You want your line to reach the terminal. Every program starts with three file descriptors already open. Which one is the program's output?
+  - "`write(fd, buf, count)` hands `count` bytes from `buf` to the kernel. File descriptor 1 is the program's output; here, it leads to your terminal. The kernel answers with how many bytes it took."
+  - "Inside `main`, above `return 0`, add `write` with file descriptor 1, your text in double quotes, and the number of bytes in it. `\\n` is one byte: count it too."
 chips:
   - { command: /bin/echo hello, explain: "the program /bin/echo prints what you give it" }
   - { command: ls /bin, explain: "list the folder /bin, where the Machine's programs live" }
@@ -40,19 +42,14 @@ codex:
     term: syscall(2)
     simple: >-
       A request from a program to the kernel: show text, open a file, start a
-      program. The only way a program gets the kernel to do anything.
+      program. Programs have no other way to reach it.
     deep: >-
-      Each syscall has a name, a number and up to six arguments; the kernel answers
-      with a value, or a negative error code that the C library turns into -1 plus
-      errno. On this 32-bit Machine a program enters the kernel with sysenter
-      (through __kernel_vsyscall, in the vDSO the kernel maps into every process) or
-      with the older int $0x80. They land at two entry points in entry_32.S,
-      entry_SYSENTER_32 and entry_INT80_32: the Syscall Gate. Each saves the
-      program's registers and calls into syscall_32.c (do_fast_syscall_32() or
-      do_int80_syscall_32()). There ia32_sys_call() runs the handler numbered in
-      eax: a switch statement generated at build time from syscall_32.tbl (since
-      Linux 6.9 the old sys_call_table[] array is kept only for tracing). On a
-      64-bit PC the syscall instruction enters at entry_SYSCALL_64 instead.
+      Each syscall has a number and up to six arguments. The kernel answers with a
+      value, or a negative error code that the C library turns into -1 and errno. On
+      this 32-bit Machine a program enters with sysenter or the older int $0x80, at
+      entry_SYSENTER_32 and entry_INT80_32 in entry_32.S: the Gate. From there
+      ia32_sys_call() in syscall_32.c runs the handler numbered in eax, a switch
+      statement generated from syscall_32.tbl.
     sources: [arch/x86/entry/entry_32.S, arch/x86/entry/syscall_32.c, arch/x86/entry/syscalls/syscall_32.tbl]
     docs: https://man7.org/linux/man-pages/man2/syscalls.2.html
     tryIt: strace echo hello
@@ -108,26 +105,11 @@ codex:
       source line with a ^ at the spot, sometimes a suggested fix under it, and ~
       under the code it was reading when it noticed. clang uses the same
       file:line:column: error: shape with its own wording. Fix the first error first:
-      later ones are often caused by it. The kernel is built by the same compilers
-      (gcc, or clang with LLVM=1) and its build can treat warnings as errors
-      (CONFIG_WERROR).
+      later ones are often caused by it. The kernel is built by the same compilers,
+      and CONFIG_WERROR makes its build treat warnings as errors.
     sources: [Documentation/kbuild/llvm.rst, init/Kconfig]
     docs: https://gcc.gnu.org/onlinedocs/gcc/Diagnostic-Message-Formatting-Options.html
     tryIt: gcc -Wall -Wextra -o hello hello.c
-  - id: taint-meter
-    term: Taint (the game's meter)
-    simple: >-
-      The Machine's stain meter: hacks add Taint, clean code adds none. It is a game
-      score, not a Linux feature.
-    deep: >-
-      Linux has its own, different "taint": flags the kernel sets when something makes
-      it less trustworthy (a proprietary or out-of-tree module, a previous oops). They
-      are bits set by add_taint(), readable in /proc/sys/kernel/tainted, and shown as
-      letters on an oops's "Tainted:" line. The game's meter borrows the word, not the
-      mechanism.
-    sources: [kernel/panic.c, Documentation/admin-guide/tainted-kernels.rst]
-    docs: https://docs.kernel.org/admin-guide/tainted-kernels.html
-    tryIt: cat /proc/sys/kernel/tainted
 # No Taint rule is live in the Prologue: compiler warnings get init's note, and
 # count as Taint from 1.3, where they are taught.
 taint: []

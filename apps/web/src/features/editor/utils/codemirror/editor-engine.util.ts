@@ -12,10 +12,11 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view'
-import type { EditorFile, EditorHandle, EditorHandlers } from '@features/editor/types'
+import type { DiagnosticSet, EditorFile, EditorHandle, EditorHandlers } from '@features/editor/types'
 import { formatC, formatEdit } from '@features/editor/utils/format'
 import { isSourceFile } from '@features/editor/utils/workspace'
 import { FORMAT_BINDING, isMacPlatform, matches } from '@shared/utils/keyboard'
+import { diagnosticMarks, setDiagnosticMarks } from './diagnostic-marks.util'
 import { section2Theme } from './section2-theme.constants'
 import { wrapWithIndent } from './wrap-indent.util'
 
@@ -106,6 +107,7 @@ function fileExtensions(file: EditorFile, handlers: EditorHandlers): Extension {
     indentUnit.of('\t'),
     EditorState.tabSize.of(TAB_SIZE),
     wrapWithIndent(),
+    diagnosticMarks,
     EditorState.readOnly.of(file.readOnly ?? false),
     EditorView.contentAttributes.of({ 'aria-label': `Editor, ${file.path}` }),
     EditorView.updateListener.of((update) => {
@@ -122,6 +124,16 @@ export function mountEditor(parent: HTMLElement, handlers: EditorHandlers): Edit
   const view = new EditorView({ parent })
   const states = new Map<string, EditorState>()
   let current: string | null = null
+  let diagnostics: DiagnosticSet = { id: 0, items: [] }
+  // The set each file last took: applied once, so marks the player's typing has moved are not reset.
+  const marked = new Map<string, number>()
+  const markOpenFile = () => {
+    if (current === null || (marked.get(current) ?? 0) === diagnostics.id) {
+      return
+    }
+    marked.set(current, diagnostics.id)
+    view.dispatch({ effects: setDiagnosticMarks.of(diagnostics.items.filter((item) => item.path === current)) })
+  }
 
   return {
     showFile(file) {
@@ -142,6 +154,11 @@ export function mountEditor(parent: HTMLElement, handlers: EditorHandlers): Edit
         // Changed outside the editor (reset to starter): one undoable edit.
         view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: file.content } })
       }
+      markOpenFile()
+    },
+    setDiagnostics(set) {
+      diagnostics = set
+      markOpenFile()
     },
     format() {
       if (current !== null) {

@@ -37,7 +37,7 @@ describe('screenTitleOf', () => {
   it('names the screen that replaces the route when content fails or the window is narrow', () => {
     const map = { name: 'map' } as const
     expect(screenTitleOf(map, null, true)).toBe('Content errors · Kernelfall')
-    expect(screenTitleOf(map, content, false)).toBe('Needs a bigger screen · Kernelfall')
+    expect(screenTitleOf(map, content, false)).toBe('Kernelfall: rebuild a fallen machine')
     expect(screenTitleOf(map, content, true)).toBe('Kernel Map · Kernelfall')
   })
 })

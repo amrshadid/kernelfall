@@ -3,14 +3,78 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Learn the Linux kernel by rebuilding a fallen machine." />
+    <meta name="description" content="A free, open-source game that teaches Linux kernel development from zero, on a real Linux kernel running in your browser. Nothing to install." />
+    <meta name="author" content="Amr Shadid" />
     <meta name="theme-color" content="#eeeee9" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#141514" media="(prefers-color-scheme: dark)" />
+    <!-- The drawn icon for browsers; the bitmaps for search results and home screens, which want fixed sizes. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" sizes="48x48" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- The public site's address, for search engines and for the card a shared link shows.
+         These must be absolute, so they name the public site whatever host serves this build. -->
+    <link rel="canonical" href="https://kernelfall.shadid.dev/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Kernelfall" />
+    <meta property="og:url" content="https://kernelfall.shadid.dev/" />
+    <meta property="og:title" content="Kernelfall: rebuild a fallen machine" />
+    <meta property="og:description" content="A free, open-source game that teaches Linux kernel development from zero, on a real Linux kernel running in your browser. Nothing to install." />
+    <meta property="og:image" content="https://kernelfall.shadid.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Kernelfall title screen: the name cut by a section line at the Syscall Gate, a New game button, and the Kernel Map of the Prologue" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Kernelfall: rebuild a fallen machine" />
+    <meta name="twitter:description" content="A free, open-source game that teaches Linux kernel development from zero, on a real Linux kernel running in your browser. Nothing to install." />
+    <meta name="twitter:image" content="https://kernelfall.shadid.dev/og.png" />
+    <meta name="twitter:image:alt" content="Kernelfall title screen: the name cut by a section line at the Syscall Gate, a New game button, and the Kernel Map of the Prologue" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Kernelfall",
+        "url": "https://kernelfall.shadid.dev/",
+        "description": "A free, open-source game that teaches Linux kernel development from zero, on a real Linux kernel running in your browser. Nothing to install.",
+        "image": "https://kernelfall.shadid.dev/og.png",
+        "genre": "Educational",
+        "about": "Linux kernel development",
+        "gamePlatform": "Web browser",
+        "applicationCategory": "Game",
+        "operatingSystem": "Any",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "license": "https://opensource.org/license/mit",
+        "sameAs": "https://github.com/amrshadid/kernelfall",
+        "author": {
+          "@type": "Person",
+          "name": "Amr Shadid",
+          "url": "https://shadid.dev"
+        }
+      }
+    </script>
     <title>Kernelfall: rebuild a fallen machine</title>
   </head>
   <body>
     <div id="root"></div>
+    <!-- The game is drawn by its script. Without it, this says what the game is and where its source is. -->
+    <noscript>
+      <main style="max-width: 40rem; margin: 4rem auto; padding: 0 1.5rem; font: 1rem/1.6 system-ui, sans-serif">
+        <h1>Kernelfall</h1>
+        <p>Kernelfall is a free, open-source game that teaches Linux kernel development in your browser, starting from zero. You start as a tiny process in a machine that crashed, learn the shell, write your own C, and go down toward the kernel, while X-ray mode shows what the kernel does for every command you run.</p>
+        <p>The Machine is real: a Linux kernel running in an emulated PC inside your browser. There is nothing to install and no server, and your progress stays in your browser.</p>
+        <p>
+          Kernelfall needs JavaScript and a desktop browser. The source is on
+          <a href="https://github.com/amrshadid/kernelfall">GitHub</a>, under the MIT license. Made by
+          <a href="https://shadid.dev">Amr Shadid</a>.
+        </p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

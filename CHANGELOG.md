@@ -9,6 +9,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Added
 
+- **A loading sheet while the game arrives.** Until the game's script has loaded, the
+  page shows the manual's frame, in the theme you chose, with the name and "Opening the
+  manual…", instead of a blank page. The title screen then takes its place in the same
+  frame.
 - **A shared link shows a card, and search engines get the site's address.** A link to
   the public site now carries the title screen as its picture, with the game's name and
   what it teaches. The page names its canonical address, says it is a free game and who
@@ -110,6 +114,13 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   is no file of the site, like `/nope`, got the host's bare text page. It now gets a
   page in the manual's style, in the theme you chose, with the address as the Machine's
   `ls` would report it and a way back to the title.
+- **A wrong address reaches "No such page" on a return visit too.** Once the game had
+  been opened, the offline worker answered every address with the game, so `/nope`
+  showed the title and `/robots.txt` opened in a browser showed the game. It now answers
+  only the site's root, and leaves any other address to the site.
+- **`pnpm dev` and `vite preview` show "No such page" for a wrong address,** as the
+  public site does, instead of the game, so contributors can see that page before it
+  ships.
 - **The game starts offline.** On the public site the service worker threw as it loaded, so it never
   registered and nothing was kept for offline play. The build now runs the worker and
   fails if it throws.

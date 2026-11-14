@@ -9,6 +9,11 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Added
 
+- **A shared link shows a card, and search engines get the site's address.** A link to
+  the public site now carries the title screen as its picture, with the game's name and
+  what it teaches. The page names its canonical address, says it is a free game and who
+  made it, and has a `robots.txt` and a sitemap. With JavaScript off, the page says what
+  Kernelfall is and where its source is.
 - **Settings → About shows the real version, the source and how to join in.** The
   version is the release's own (`0.1.0-alpha.1 · alpha 1 of The Surface`), with a link
   to what changed in each version, and on the public site the commit it was built
@@ -93,6 +98,11 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Fixed
 
+- **A search result names the game, not "Needs a bigger screen".** Search engines read
+  the page at a phone's width, where the game shows its small-screen notice, and listed
+  that notice's title. The page keeps the game's title at every width, the notice now
+  says first what Kernelfall is, and the page has bitmap icons beside the drawn one, for
+  search results and home screens.
 - **"Kernelfall needs a bigger screen" sits in the middle of the screen.** The box was
   pinned to the top left; it is now centred both ways, and still starts at the top
   when the screen is shorter than the box.

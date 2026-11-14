@@ -6,7 +6,8 @@ import type { Route } from '@shared/types/definitions/route'
 // Level numbers that name a level on their own: "1.4", "2.10a", "S.1".
 const NUMBERED_LEVEL = /^(\d|S\.)/
 
-const SMALL_SCREEN_TITLE = `Needs a bigger screen · ${APP}`
+// The game's own title, not the wall's: search engines read the page at a phone's width, and this is the title they list.
+const SMALL_SCREEN_TITLE = `${APP}: ${TAGLINE}`
 const CONTENT_ERROR_TITLE = `Content errors · ${APP}`
 
 /** `content` is null when it failed its checks; below the play width every route shows the small-screen wall. */

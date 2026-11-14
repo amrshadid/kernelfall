@@ -118,6 +118,9 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
   been opened, the offline worker answered every address with the game, so `/nope`
   showed the title and `/robots.txt` opened in a browser showed the game. It now answers
   only the site's root, and leaves any other address to the site.
+- **`pnpm dev` and `vite preview` show "No such page" for a wrong address,** as the
+  public site does, instead of the game, so contributors can see that page before it
+  ships.
 - **The game starts offline.** On the public site the service worker threw as it loaded, so it never
   registered and nothing was kept for offline play. The build now runs the worker and
   fails if it throws.

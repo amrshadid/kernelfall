@@ -127,6 +127,14 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 - The Machine's image has the same version on every build machine: an image built on
   macOS and one built on Linux differed in one byte of the initramfs's gzip header.
 
+### Security
+
+- **The site sends security headers.** A Content-Security-Policy lets the page run only the
+  site's own code, the WebAssembly of the Machine and clang-format and, once allowed,
+  Clarity; no other site can frame the game; and the page asks for no camera, microphone or
+  other device. The Machine itself already had no way to the internet, and what is typed in
+  it changes only the player's own copy.
+
 ## [0.1.0-alpha.1] - 2026-10-31
 
 The first public pre-release: the engine, and the levels built so far, playable at

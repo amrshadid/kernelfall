@@ -192,6 +192,24 @@ without booting a VM.
 - **Releases** (`release.yml`): on a `v*` tag, verifies, builds and creates the GitHub
   Release, and uploads the pinned downloads to the `vm-mirror` release.
 
+## Security
+
+- **The Machine is the player's own.** It runs in their tab, inside v86, inside the
+  browser's sandbox. Whatever is typed there changes only that copy: a reset or a reload
+  brings back the saved boot, and the image's files are only ever read from the site.
+- **It has no way out.** Its network card is there for the levels that bring it up, with
+  nothing behind it: v86 is given no relay, so no packet leaves the Machine.
+- **The player is not root,** and nothing in the image is secret: it is built from public,
+  pinned packages, and `/etc/shadow` is readable by root and the shadow group only.
+- **Its output is text.** The terminal draws what the Machine prints with xterm; no output
+  of the Machine and no save file is ever inserted into the page as HTML.
+- **The host's headers** (`vercel.json`, sent with every file): a Content-Security-Policy
+  that allows only the site itself, WebAssembly (`'wasm-unsafe-eval'`, for v86 and
+  clang-format) and Clarity's hosts; no framing by other sites; `nosniff`; a strict
+  referrer; no camera, microphone or other device. An inline script runs only if the policy
+  names its hash: the build fails with the hash to add when one changes, and `vite preview`
+  sends the same headers.
+
 ## Decisions
 
 - Client-side only: free to host as a static site.

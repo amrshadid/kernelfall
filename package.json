@@ -25,7 +25,7 @@
     "verify": "pnpm check && pnpm type-check && pnpm test && pnpm content:report && pnpm build"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.6",
+    "@biomejs/biome": "^2.6.7",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.6.6",
     "@wasm-fmt/clang-format": "23.1.1",

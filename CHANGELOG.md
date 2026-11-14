@@ -9,6 +9,10 @@ the Surface Survey), complete and checked; until then, releases are alpha pre-re
 
 ### Added
 
+- **A loading sheet while the game arrives.** Until the game's script has loaded, the
+  page shows the manual's frame, in the theme you chose, with the name and "Opening the
+  manual…", instead of a blank page. The title screen then takes its place in the same
+  frame.
 - **A shared link shows a card, and search engines get the site's address.** A link to
   the public site now carries the title screen as its picture, with the game's name and
   what it teaches. The page names its canonical address, says it is a free game and who
